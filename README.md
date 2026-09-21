@@ -20,21 +20,14 @@ phones through your own free Supabase project.
 The app needs to be on an `https://` address for offline mode and home-screen install
 to work. GitHub Pages does that for free.
 
-1. On **github.com**, create a new repository called `vanbudget`. Public or private
-   both work — Pages serves from private repos too on a free account. Don't tick
-   "Add a README", the repo needs to start empty.
-2. Push this folder (it's already a git repo with a commit ready):
+This lives at **https://github.com/Draumbear/vanlife** and is already pushed.
 
-   ```bash
-   git remote add origin https://github.com/YOUR-USERNAME/vanbudget.git
-   git push -u origin main
-   ```
+To switch Pages on: in the repo go to **Settings → Pages**, under *Source* pick
+**Deploy from a branch**, branch **main**, folder **/ (root)**, and Save.
 
-3. In the repo: **Settings → Pages**. Under *Source* pick **Deploy from a branch**,
-   branch **main**, folder **/ (root)**. Save.
-4. Wait a minute, then your app is live at:
+A minute later the app is live at:
 
-   `https://YOUR-USERNAME.github.io/vanbudget/`
+**https://draumbear.github.io/vanlife/**
 
 That URL is what you open on both phones.
 
@@ -47,7 +40,7 @@ git push
 ```
 
 Pages redeploys on its own in about a minute. Bump `CACHE` in `sw.js` (e.g.
-`vanbudget-v2`) whenever you change `index.html`, otherwise the phones will keep
+`vanlife-v2`) whenever you change `index.html`, otherwise the phones will keep
 serving the old version out of their cache.
 
 > Your Supabase keys are **not** in this repo — you type them into the app on each

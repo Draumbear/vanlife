@@ -413,20 +413,14 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     </div>
 
     <div class="card">
-      <h2>Names</h2>
-      <span class="lbl" style="display:block;margin-bottom:7px">Who is holding this phone?</span>
+      <h2>Whose phone is this?</h2>
       <div class="seg two" id="s-me">
-        <button data-me="p1" class="sel">Me</button>
-        <button data-me="p2">Partner</button>
+        <button data-me="p1" class="sel">Tanguy</button>
+        <button data-me="p2">Zita</button>
       </div>
-      <div class="grid2" style="margin-top:15px">
-        <label class="f"><span>You</span><input id="s-you" type="text" placeholder="Me"></label>
-        <label class="f"><span>Them</span><input id="s-them" type="text" placeholder="Partner"></label>
-      </div>
-      <div class="note" style="margin-top:0">Who this phone is decides which of you the
-        names above belong to, and stamps who added each expense so you can tell that
-        apart from who actually paid. Names are for this phone only — change them here
-        and nothing changes on the other phone, and no past expense changes hands.</div>
+      <div class="note" style="margin-top:0">Stamps who added each expense, so you can
+        tell that apart from who actually paid. This is per phone — picking one here
+        changes nothing on the other phone and nothing about past expenses.</div>
     </div>
 
     <div class="card">
@@ -496,6 +490,10 @@ const CATS = [
 ];
 const catOf = id => CATS.find(c => c.id === id) || CATS[CATS.length-1];
 
+/* The two of you. Expenses record 'p1'/'p2', never the name, so these are only
+   ever labels — nothing below changes hands if they're edited. */
+const PEOPLE = { p1: 'Tanguy', p2: 'Zita' };
+
 const MODE_LABEL = {
   daily:   'Budget per day (NZD)',
   weekly:  'Budget per week (NZD)',
@@ -526,7 +524,6 @@ const DEFAULTS = {
     start: todayISO(),
     end: (() => { const d = new Date(); d.setMonth(d.getMonth()+4); return d.toLocaleDateString('en-CA'); })(),
     preSpent: 0,
-    p1: 'Me', p2: 'Partner',  // what each of you is called here; never synced
     rate: 0.498, rateAt: 0,
     updated_at: new Date().toISOString(),
     dirty: false,
@@ -546,6 +543,7 @@ function migrate(st){
   if (!Array.isArray(st.accounts) || !st.accounts.length) st.accounts = ['BNZ', 'Revolut', 'Cash'];
   if (!MODE_LABEL[st.budgetMode]) st.budgetMode = 'total';
   delete st.budget; delete st.dailyRate;
+  delete st.p1; delete st.p2;          // the pair is fixed now, see PEOPLE
   return st;
 }
 
@@ -829,8 +827,8 @@ function renderSplit(){
   box.innerHTML =
     '<div class="bar" style="margin-top:0"><i style="width:' + (a/tot*100) + '%;background:var(--pa)"></i></div>' +
     '<div class="sub" style="margin-bottom:12px">' +
-      '<span style="color:var(--pa)">' + esc(st.p1) + ' ' + nz(a) + '</span>' +
-      '<span style="color:var(--pb)">' + esc(st.p2) + ' ' + nz(b) + '</span>' +
+      '<span style="color:var(--pa)">' + esc(PEOPLE.p1) + ' ' + nz(a) + '</span>' +
+      '<span style="color:var(--pb)">' + esc(PEOPLE.p2) + ' ' + nz(b) + '</span>' +
     '</div>' +
     (Math.abs(owed) < 1
       ? '<div class="ok" style="font-size:14px">✓ You’re square.</div>'
@@ -908,9 +906,7 @@ function renderTrend(){
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-const who   = p => p === 'p1' ? S.settings.p1 : S.settings.p2;
-const meP   = () => S.settings.me === 'p2' ? 'p2' : 'p1';   // this phone
-const themP = () => meP() === 'p1' ? 'p2' : 'p1';           // the other phone
+const who = p => PEOPLE[p] || PEOPLE.p1;
 
 function itemHTML(e){
   const c = catOf(e.category), st = S.settings;
@@ -988,8 +984,8 @@ function buildAddPills(){
     '<button class="pill' + (c.id === aCat ? ' sel' : '') + '" data-cat="' + c.id + '">' + c.icon + ' ' + c.name + '</button>').join('');
   const st = S.settings;
   document.getElementById('a-payers').innerHTML =
-    '<button class="pill pa' + (aPayer === 'p1' ? ' sel' : '') + '" data-payer="p1">' + esc(st.p1) + '</button>' +
-    '<button class="pill pb' + (aPayer === 'p2' ? ' sel' : '') + '" data-payer="p2">' + esc(st.p2) + '</button>';
+    '<button class="pill pa' + (aPayer === 'p1' ? ' sel' : '') + '" data-payer="p1">' + esc(PEOPLE.p1) + '</button>' +
+    '<button class="pill pb' + (aPayer === 'p2' ? ' sel' : '') + '" data-payer="p2">' + esc(PEOPLE.p2) + '</button>';
 
   // remembered accounts, plus whatever this expense used even if since removed
   const accts = st.accounts.slice();
@@ -1166,11 +1162,6 @@ function fillSettings(){
     b.classList.toggle('sel', +b.dataset.for === +st.budgetFor));
   document.querySelectorAll('#s-me button').forEach(b =>
     b.classList.toggle('sel', b.dataset.me === st.me));
-  document.querySelector('#s-me [data-me="p1"]').textContent = st.p1;
-  document.querySelector('#s-me [data-me="p2"]').textContent = st.p2;
-  // The two name boxes follow the phone: "You" is always whoever is holding it.
-  $('s-you').value  = st[meP()];
-  $('s-them').value = st[themP()];
   $('s-start').value = st.start;
   $('s-end').value = st.end;
   $('s-pre').value = st.preSpent || '';
@@ -1202,8 +1193,6 @@ function commitSettings(){
   st.start    = $('s-start').value || st.start;
   st.end      = $('s-end').value || st.end;
   st.preSpent = num($('s-pre').value, 0);
-  st[meP()]   = $('s-you').value.trim()  || (meP()   === 'p1' ? 'Me' : 'Partner');
-  st[themP()] = $('s-them').value.trim() || (themP() === 'p1' ? 'Me' : 'Partner');
   st.rate     = num($('s-rate').value, st.rate);
   st.updated_at = new Date().toISOString();
   st.dirty = true;
@@ -1619,7 +1608,7 @@ document.getElementById('a-cats').closest('.card').addEventListener('click', e =
   f.dispatchEvent(new Event('input'));
 });
 
-['s-budget','s-start','s-end','s-pre','s-you','s-them','s-rate'].forEach(id =>
+['s-budget','s-start','s-end','s-pre','s-rate'].forEach(id =>
   document.getElementById(id).addEventListener('change', commitSettings));
 document.getElementById('s-rate-fetch').addEventListener('click', () => fetchRate(true));
 // Keep the connection details the moment they're entered — no need to remember

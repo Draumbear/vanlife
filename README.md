@@ -74,6 +74,8 @@ With sync on, you both see the same expenses within seconds.
    - the **anon / publishable** key (the long `eyJ...` one — *not* the service_role key)
 4. In the app: **Settings → Sync between phones**, paste both, tap
    **Save & test connection**. You should get a green ✓.
+   (Names and the Both of us / Per person toggle stay on each phone — only the
+   budget, the expenses and the trip dates are shared.)
 5. Do exactly the same on the second phone with the **same** URL and key.
 
 The URL and key are kept on the phone as soon as you type them — you enter them
@@ -179,6 +181,11 @@ If you'd already spent something before installing this, put the running total i
 - **Note suggestions** — type two or more characters and past entries matching
   anywhere in the note appear. Picking one fills the category, who paid and the
   account as well, so most repeat expenses are three taps.
+- **Names** (Settings) — say who is holding the phone, then fill in **You** and
+  **Them**. The boxes follow that choice, so each of you types your own name into
+  **You**. Names live on the phone that set them: renaming on hers changes nothing
+  on his, and nothing about who paid a past expense — every entry stores *which*
+  of you paid, not the name, so relabelling only changes what's printed.
 - **Last 8 weeks** — a bar per week against that week's target, red where you went over.
 - Every NZD figure has the euro equivalent under it.
 - The **Both of us / Per person** toggle at the top of Home halves every total,

@@ -414,17 +414,19 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 
     <div class="card">
       <h2>Names</h2>
-      <div class="grid2">
-        <label class="f"><span>You</span><input id="s-p1" type="text" placeholder="Me"></label>
-        <label class="f"><span>Partner</span><input id="s-p2" type="text" placeholder="Partner"></label>
-      </div>
       <span class="lbl" style="display:block;margin-bottom:7px">Who is holding this phone?</span>
       <div class="seg two" id="s-me">
         <button data-me="p1" class="sel">Me</button>
         <button data-me="p2">Partner</button>
       </div>
-      <div class="note" style="margin-top:0">Used to stamp who added each expense, so you
-        can tell an entry apart from who actually paid for it.</div>
+      <div class="grid2" style="margin-top:15px">
+        <label class="f"><span>You</span><input id="s-you" type="text" placeholder="Me"></label>
+        <label class="f"><span>Them</span><input id="s-them" type="text" placeholder="Partner"></label>
+      </div>
+      <div class="note" style="margin-top:0">Who this phone is decides which of you the
+        names above belong to, and stamps who added each expense so you can tell that
+        apart from who actually paid. Names are for this phone only — change them here
+        and nothing changes on the other phone, and no past expense changes hands.</div>
     </div>
 
     <div class="card">
@@ -494,6 +496,13 @@ const CATS = [
 ];
 const catOf = id => CATS.find(c => c.id === id) || CATS[CATS.length-1];
 
+const MODE_LABEL = {
+  daily:   'Budget per day (NZD)',
+  weekly:  'Budget per week (NZD)',
+  monthly: 'Budget per month (NZD)',
+  total:   'Total budget for the whole trip (NZD)',
+};
+
 /* ============================================================
    STATE  (localStorage is the source of truth; Supabase mirrors it)
    ============================================================ */
@@ -517,7 +526,7 @@ const DEFAULTS = {
     start: todayISO(),
     end: (() => { const d = new Date(); d.setMonth(d.getMonth()+4); return d.toLocaleDateString('en-CA'); })(),
     preSpent: 0,
-    p1: 'Me', p2: 'Partner',
+    p1: 'Me', p2: 'Partner',  // what each of you is called here; never synced
     rate: 0.498, rateAt: 0,
     updated_at: new Date().toISOString(),
     dirty: false,
@@ -551,14 +560,21 @@ function load(){
   let out;
   try {
     const raw = JSON.parse(localStorage.getItem(LS) || '{}');
-    const st = Object.assign({}, DEFAULTS.settings, raw.settings || {});
-    migrate(st);
+    // Migrate what was actually saved, then fill the gaps with defaults —
+    // the other way round, an old budget looks like a value already set.
+    const st = Object.assign({}, raw.settings || {});
+    // Keep what's on the phone even if reshaping it trips over something:
+    // losing a setting beats starting the trip's expenses from scratch.
+    try { migrate(st); } catch(e){ console.warn('settings migration failed', e); }
     out = {
       expenses: raw.expenses || {},
-      settings: st,
+      settings: Object.assign({}, DEFAULTS.settings, st),
       sync:     Object.assign({}, DEFAULTS.sync, raw.sync || {}),
     };
-  } catch(e){ out = JSON.parse(JSON.stringify(DEFAULTS)); }
+  } catch(e){
+    console.warn('saved data unreadable — starting fresh', e);
+    out = JSON.parse(JSON.stringify(DEFAULTS));
+  }
   // Fall back to the standalone copy if the main blob lost them.
   const creds = loadSyncCreds();
   if (!out.sync.url && creds.url) out.sync.url = creds.url;
@@ -669,13 +685,6 @@ function spanMult(mode, totalDays){
   if (mode === 'monthly') return totalDays / DAYS_PER_MONTH;
   return 1;                        // 'total'
 }
-const MODE_LABEL = {
-  daily:   'Budget per day (NZD)',
-  weekly:  'Budget per week (NZD)',
-  monthly: 'Budget per month (NZD)',
-  total:   'Total budget for the whole trip (NZD)',
-};
-
 function stats(){
   const st = S.settings, t = todayISO();
   const totalDays = Math.max(1, dayDiff(st.start, st.end) + 1);
@@ -899,7 +908,9 @@ function renderTrend(){
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-const who = p => p === 'p1' ? S.settings.p1 : S.settings.p2;
+const who   = p => p === 'p1' ? S.settings.p1 : S.settings.p2;
+const meP   = () => S.settings.me === 'p2' ? 'p2' : 'p1';   // this phone
+const themP = () => meP() === 'p1' ? 'p2' : 'p1';           // the other phone
 
 function itemHTML(e){
   const c = catOf(e.category), st = S.settings;
@@ -1157,11 +1168,12 @@ function fillSettings(){
     b.classList.toggle('sel', b.dataset.me === st.me));
   document.querySelector('#s-me [data-me="p1"]').textContent = st.p1;
   document.querySelector('#s-me [data-me="p2"]').textContent = st.p2;
+  // The two name boxes follow the phone: "You" is always whoever is holding it.
+  $('s-you').value  = st[meP()];
+  $('s-them').value = st[themP()];
   $('s-start').value = st.start;
   $('s-end').value = st.end;
   $('s-pre').value = st.preSpent || '';
-  $('s-p1').value = st.p1;
-  $('s-p2').value = st.p2;
   $('s-rate').value = st.rate;
   $('s-url').value = S.sync.url;
   $('s-key').value = S.sync.key;
@@ -1190,8 +1202,8 @@ function commitSettings(){
   st.start    = $('s-start').value || st.start;
   st.end      = $('s-end').value || st.end;
   st.preSpent = num($('s-pre').value, 0);
-  st.p1       = $('s-p1').value.trim() || 'Me';
-  st.p2       = $('s-p2').value.trim() || 'Partner';
+  st[meP()]   = $('s-you').value.trim()  || (meP()   === 'p1' ? 'Me' : 'Partner');
+  st[themP()] = $('s-them').value.trim() || (themP() === 'p1' ? 'Me' : 'Partner');
   st.rate     = num($('s-rate').value, st.rate);
   st.updated_at = new Date().toISOString();
   st.dirty = true;
@@ -1226,6 +1238,8 @@ async function fetchRate(manual){
    SUPABASE SYNC  (REST / PostgREST — no SDK, works offline)
    ============================================================ */
 const TABLE = 'van_expenses', STABLE = 'van_settings';
+// Settings each phone keeps to itself — display choices and what you call each other.
+const LOCAL_SETTINGS = ['p1', 'p2', 'me', 'perPerson', 'lastAccount'];
 // columns added after the first release; absent on older tables
 const OPTIONAL_COLS = ['entered_by', 'account'];
 const syncOn = () => !!(S.sync.url && S.sync.key);
@@ -1299,12 +1313,12 @@ async function sync(silent){
       const r = await fetch(sbURL(STABLE), {
         method:'POST',
         headers: sbHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
-        // perPerson is deliberately not synced — it's a per-phone display choice
+        // LOCAL_SETTINGS are deliberately not synced — each phone picks its own
         body: JSON.stringify([{ id:'trip', data:{
           budgetValue:st.budgetValue, budgetMode:st.budgetMode, budgetFor:st.budgetFor,
           planned:st.planned || [], accounts:st.accounts || [],
           start:st.start, end:st.end, preSpent:st.preSpent,
-          p1:st.p1, p2:st.p2, rate:st.rate,
+          rate:st.rate,
         }, updated_at: st.updated_at }]),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -1333,7 +1347,10 @@ async function sync(silent){
     if (r3.ok){
       const srows = await r3.json();
       if (srows.length && !S.settings.dirty && srows[0].updated_at > S.settings.updated_at){
-        Object.assign(S.settings, srows[0].data, {updated_at: srows[0].updated_at, dirty:false});
+        // Older rows still carry names from before they went per-phone: ignore them.
+        const incoming = Object.assign({}, srows[0].data);
+        LOCAL_SETTINGS.forEach(k => delete incoming[k]);
+        Object.assign(S.settings, incoming, {updated_at: srows[0].updated_at, dirty:false});
         changed++;
       }
     }
@@ -1602,7 +1619,7 @@ document.getElementById('a-cats').closest('.card').addEventListener('click', e =
   f.dispatchEvent(new Event('input'));
 });
 
-['s-budget','s-start','s-end','s-pre','s-p1','s-p2','s-rate'].forEach(id =>
+['s-budget','s-start','s-end','s-pre','s-you','s-them','s-rate'].forEach(id =>
   document.getElementById(id).addEventListener('change', commitSettings));
 document.getElementById('s-rate-fetch').addEventListener('click', () => fetchRate(true));
 // Keep the connection details the moment they're entered — no need to remember

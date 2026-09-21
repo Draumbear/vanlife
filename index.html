@@ -498,6 +498,9 @@ const catOf = id => CATS.find(c => c.id === id) || CATS[CATS.length-1];
    STATE  (localStorage is the source of truth; Supabase mirrors it)
    ============================================================ */
 const LS = 'vanbudget.v1';
+// Connection details live in their own key as well as in the main blob, so a
+// corrupt or over-full main blob can't cost you the pairing between phones.
+const LS_SYNC = 'vanbudget.sync.v1';
 const todayISO = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
 
 const DEFAULTS = {
@@ -537,19 +540,60 @@ function migrate(st){
   return st;
 }
 
+function loadSyncCreds(){
+  try{
+    const c = JSON.parse(localStorage.getItem(LS_SYNC) || '{}');
+    return { url: typeof c.url === 'string' ? c.url : '', key: typeof c.key === 'string' ? c.key : '' };
+  } catch(e){ return { url:'', key:'' }; }
+}
+
 function load(){
+  let out;
   try {
     const raw = JSON.parse(localStorage.getItem(LS) || '{}');
     const st = Object.assign({}, DEFAULTS.settings, raw.settings || {});
     migrate(st);
-    return {
+    out = {
       expenses: raw.expenses || {},
       settings: st,
       sync:     Object.assign({}, DEFAULTS.sync, raw.sync || {}),
     };
-  } catch(e){ return JSON.parse(JSON.stringify(DEFAULTS)); }
+  } catch(e){ out = JSON.parse(JSON.stringify(DEFAULTS)); }
+  // Fall back to the standalone copy if the main blob lost them.
+  const creds = loadSyncCreds();
+  if (!out.sync.url && creds.url) out.sync.url = creds.url;
+  if (!out.sync.key && creds.key) out.sync.key = creds.key;
+  return out;
 }
-function save(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){ toast('Storage full'); } }
+function save(){
+  try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){ toast('Storage full'); }
+  saveSyncCreds();
+}
+function saveSyncCreds(){
+  try{ localStorage.setItem(LS_SYNC, JSON.stringify({url:S.sync.url || '', key:S.sync.key || ''})); }catch(e){}
+}
+
+/* Take whatever is in the two sync fields and keep it. Returns true if it
+   changed, so we only re-test the connection when it actually differs. */
+function captureSyncFields(){
+  const url = document.getElementById('s-url').value.trim();
+  const key = document.getElementById('s-key').value.trim();
+  if (url === S.sync.url && key === S.sync.key) return false;
+  S.sync.url = url;
+  S.sync.key = key;
+  S.sync.lastPull = '';
+  S.sync.skipCols = [];         // re-probe: columns may have been added since
+  save();
+  return true;
+}
+
+/* Ask the browser not to evict our data — without this, iOS Safari clears
+   localStorage for a site you haven't opened in a week. */
+function keepStorage(){
+  try{
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+  } catch(e){}
+}
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,9);
 
@@ -1121,6 +1165,7 @@ function fillSettings(){
   $('s-rate').value = st.rate;
   $('s-url').value = S.sync.url;
   $('s-key').value = S.sync.key;
+  showSyncSaved();
   renderPlanned();
   renderAccounts();
   $('s-rate-age').textContent = st.rateAt
@@ -1303,12 +1348,16 @@ async function sync(silent){
   } finally { syncing = false; }
 }
 
+function showSyncSaved(){
+  const msg = document.getElementById('s-sync-msg');
+  if (!msg) return;
+  msg.innerHTML = syncOn()
+    ? '<span class="ok">\u2713 Saved on this phone \u2014 it reconnects on its own next time.</span>'
+    : '<span class="warn">Sync off \u2014 this phone only.</span>';
+}
+
 async function testSync(){
-  S.sync.url = document.getElementById('s-url').value.trim();
-  S.sync.key = document.getElementById('s-key').value.trim();
-  S.sync.lastPull = '';
-  S.sync.skipCols = [];         // re-probe: columns may have been added since
-  save();
+  captureSyncFields();
   const msg = document.getElementById('s-sync-msg');
   if (!syncOn()){ msg.innerHTML = '<span class="warn">Sync off — this phone only.</span>'; chipIdle(); return; }
   msg.textContent = 'Testing…';
@@ -1556,21 +1605,33 @@ document.getElementById('a-cats').closest('.card').addEventListener('click', e =
 ['s-budget','s-start','s-end','s-pre','s-p1','s-p2','s-rate'].forEach(id =>
   document.getElementById(id).addEventListener('change', commitSettings));
 document.getElementById('s-rate-fetch').addEventListener('click', () => fetchRate(true));
+// Keep the connection details the moment they're entered — no need to remember
+// to press the button, and nothing is lost by switching tabs or closing the app.
+['s-url','s-key'].forEach(id => ['change','blur'].forEach(ev =>
+  document.getElementById(id).addEventListener(ev, () => {
+    if (captureSyncFields()){ showSyncSaved(); chipIdle(); if (syncOn()) sync(true); }
+  })));
 document.getElementById('s-test').addEventListener('click', testSync);
 document.getElementById('s-export').addEventListener('click', exportData);
 document.getElementById('s-import').addEventListener('click', () => document.getElementById('s-file').click());
 document.getElementById('s-file').addEventListener('change', e => { if (e.target.files[0]) importData(e.target.files[0]); });
 document.getElementById('s-wipe').addEventListener('click', () => {
   if (!confirm('Erase all expenses and settings on this phone? If sync is on, the data stays in Supabase.')) return;
-  localStorage.removeItem(LS); location.reload();
+  localStorage.removeItem(LS); localStorage.removeItem(LS_SYNC); location.reload();
 });
 document.getElementById('sync').addEventListener('click', () => syncOn() ? sync() : show('set'));
 
 window.addEventListener('online',  () => sync(true));
 window.addEventListener('offline', chipIdle);
-document.addEventListener('visibilitychange', () => { if (!document.hidden){ sync(true); fetchRate(false); } });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){ if (view === 'set') captureSyncFields(); return; }
+  sync(true); fetchRate(false);
+});
+// Backstop: a phone can close the app without ever firing 'change' on a field.
+window.addEventListener('pagehide', () => { if (view === 'set') captureSyncFields(); });
 
 /* ---- boot ---- */
+keepStorage();
 show('home');
 chipIdle();
 sync(true);

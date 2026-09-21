@@ -76,6 +76,12 @@ With sync on, you both see the same expenses within seconds.
    **Save & test connection**. You should get a green ✓.
 5. Do exactly the same on the second phone with the **same** URL and key.
 
+The URL and key are kept on the phone as soon as you type them — you enter them
+once, not every time you open the app. **Save & test connection** only confirms
+they work. Add the app to your home screen (Step 2): an installed app keeps its
+storage, while a page left in a browser tab can have it cleared after a week of
+not being opened, which would mean entering them again.
+
 ```sql
 create table if not exists van_expenses (
   id         text primary key,

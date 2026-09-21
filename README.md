@@ -149,10 +149,20 @@ If you'd already spent something before installing this, put the running total i
 - **Home** —
   - money left, days left, and a bar with a marker showing where you *should* be today
   - daily allowance = what's left ÷ days left (so it self-corrects as you go)
-  - this week and this month against their targets
+  - this week and this month against their targets, each clipped to the trip dates
+    so a part-week at either end isn't budgeted as a full one
   - who's paid more and what the settle-up is
 - **Expenses** — week / month / all time, category breakdown, tap any row to edit or
   delete it.
+- **Settle up** — when one of you has paid more, the Who paid panel offers a Settle
+  up button. It records the transfer between you, zeroes the balance, and is *not*
+  counted as trip spending. There's an undo if you press it by mistake.
+- **Planned big costs** (Settings) — ferry crossings, tours, anything booked ahead.
+  The money is held back from your daily allowance so paying it doesn't wreck a week.
+  Delete the entry once you've logged the real expense.
+- **Repeat a recent one** — the Add screen offers your last few distinct expenses as
+  one-tap prefills, so logging the same petrol station is amount-only.
+- **Last 8 weeks** — a bar per week against that week's target, red where you went over.
 - Every NZD figure has the euro equivalent under it.
 - The **Both of us / Per person** toggle at the top of Home halves every total,
   allowance and target so you can see your own share. Individual expenses always show

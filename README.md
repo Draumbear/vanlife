@@ -104,11 +104,15 @@ create policy van_settings_all on van_settings
 
 -- records which of you typed an expense in, as opposed to who paid for it
 alter table van_expenses add column if not exists entered_by text;
+
+-- which account the money came out of (BNZ, Revolut, cash...)
+alter table van_expenses add column if not exists account text;
 ```
 
 (The app no longer shows this SQL — it's only needed once, when setting up a
-project from scratch. If `entered_by` is missing the app still syncs; it just
-drops that one field.)
+project from scratch. Any of the optional columns can be missing: the app
+detects the rejection, drops that one field and syncs everything else. You lose
+only that field across phones, not the expense.)
 
 > **Worth knowing:** that policy lets anyone holding your project URL + anon key read
 > and write these two tables. The key is embedded in the app, so treat your app URL as
@@ -162,6 +166,13 @@ If you'd already spent something before installing this, put the running total i
   Delete the entry once you've logged the real expense.
 - **Repeat a recent one** — the Add screen offers your last few distinct expenses as
   one-tap prefills, so logging the same petrol station is amount-only.
+- **Paid from** — tag each expense with the account it came out of (BNZ, Revolut,
+  Cash by default). Tap **+ New** to add another; it's remembered from then on, and
+  the list is editable under Settings → Accounts. Expenses also break down **by
+  account**, which is what you want when reconciling against a statement.
+- **Note suggestions** — type two or more characters and past entries matching
+  anywhere in the note appear. Picking one fills the category, who paid and the
+  account as well, so most repeat expenses are three taps.
 - **Last 8 weeks** — a bar per week against that week's target, red where you went over.
 - Every NZD figure has the euro equivalent under it.
 - The **Both of us / Per person** toggle at the top of Home halves every total,

@@ -183,6 +183,15 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 .seg button.sel{background:var(--card2);color:var(--tx)}
 .seg.two{grid-template-columns:1fr 1fr}
 .seg.four{grid-template-columns:repeat(4,1fr)}
+.sugg{border:1px solid var(--line);border-radius:3px;margin:0 0 14px;overflow:hidden;
+  background:var(--card2)}
+.sugg button{display:block;width:100%;text-align:left;padding:10px 12px;font-size:14px;
+  border-bottom:1px solid var(--line)}
+.sugg button:last-child{border-bottom:none}
+.sugg button:active{background:var(--card)}
+.sugg b{color:var(--accent)}
+.sugg .meta{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;font-weight:500}
+
 .calc{display:flex;gap:7px;margin:-4px 0 14px}
 .calc button{flex:1;padding:9px;border-radius:3px;background:var(--card2);
   border:1px solid var(--line);font-size:13px;font-weight:650;color:var(--dim)}
@@ -305,12 +314,24 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       <div class="pills" id="a-cats" style="margin:-8px 0 15px"></div>
 
       <label class="f">
+        <span>Paid from</span>
+      </label>
+      <div class="pills" id="a-accounts" style="margin:-8px 0 8px"></div>
+      <div class="calc hide" id="a-acct-new" style="margin:0 0 15px">
+        <input id="a-acct-input" type="text" placeholder="e.g. ASB, Wise, Emma's card" autocomplete="off">
+        <button class="btn ghost" id="a-acct-save" style="width:auto;padding:9px 15px">Save</button>
+      </div>
+
+      <label class="f">
         <span>Paid by</span>
       </label>
       <div class="pills" id="a-payers" style="margin:-8px 0 15px"></div>
 
       <label class="f"><span>Date</span><input id="a-date" type="date"></label>
-      <label class="f"><span>Note (optional)</span><input id="a-note" type="text" placeholder="e.g. Z Station Taupo" autocomplete="off"></label>
+      <label class="f" style="margin-bottom:6px"><span>Note (optional)</span>
+        <input id="a-note" type="text" placeholder="e.g. Z Station Taupo"
+               autocomplete="off" autocorrect="off" spellcheck="false"></label>
+      <div id="a-sugg" class="sugg hide"></div>
 
       <button class="btn" id="a-save">Add expense</button>
       <button class="btn ghost hide" id="a-del" style="margin-top:9px">Delete this expense</button>
@@ -333,6 +354,10 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     <div class="card">
       <h2>By category <span style="text-transform:none;font-weight:500" id="l-tot"></span></h2>
       <div id="l-cats"></div>
+    </div>
+    <div class="card" id="l-acct-card">
+      <h2>By account</h2>
+      <div id="l-accts"></div>
     </div>
     <div class="card">
       <h2>Expenses</h2>
@@ -363,6 +388,14 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       <label class="f"><span>Starting balance already spent (optional, NZD)</span>
         <input id="s-pre" type="text" inputmode="decimal" placeholder="0"></label>
       <div class="note" id="s-derived"></div>
+    </div>
+
+    <div class="card">
+      <h2>Accounts</h2>
+      <div class="pills" id="s-accounts"></div>
+      <div class="note">Where the money comes from. These show as one-tap options when
+        you add an expense; adding a new one there remembers it here. Tap × to remove
+        one — expenses already logged against it keep their label.</div>
     </div>
 
     <div class="card">
@@ -476,6 +509,8 @@ const DEFAULTS = {
     perPerson: false,         // display only, never synced — each phone picks its own view
     me: 'p1',                 // which of you is on this phone; never synced
     planned: [],              // [{id,label,amount}] held back from the daily allowance
+    accounts: ['BNZ', 'Revolut', 'Cash'],   // remembered "paid from" options
+    lastAccount: 'BNZ',       // what to preselect next time; per phone, never synced
     start: todayISO(),
     end: (() => { const d = new Date(); d.setMonth(d.getMonth()+4); return d.toLocaleDateString('en-CA'); })(),
     preSpent: 0,
@@ -484,7 +519,7 @@ const DEFAULTS = {
     updated_at: new Date().toISOString(),
     dirty: false,
   },
-  sync: { url:'', key:'', lastPull:'', noEnteredBy:false },
+  sync: { url:'', key:'', lastPull:'', skipCols:[] },
 };
 
 let S = load();
@@ -496,6 +531,7 @@ function migrate(st){
   }
   if (st.budgetFor == null) st.budgetFor = 2;
   if (!Array.isArray(st.planned)) st.planned = [];
+  if (!Array.isArray(st.accounts) || !st.accounts.length) st.accounts = ['BNZ', 'Revolut', 'Cash'];
   if (!MODE_LABEL[st.budgetMode]) st.budgetMode = 'total';
   delete st.budget; delete st.dailyRate;
   return st;
@@ -825,6 +861,7 @@ function itemHTML(e){
   const c = catOf(e.category), st = S.settings;
   // who paid is the money fact; who added it is the audit trail, shown only when they differ
   let byline = esc(who(e.payer)) + ' paid';
+  if (e.account) byline += ' · ' + esc(e.account);
   if (e.entered_by && e.entered_by !== e.payer) byline += ' · added by ' + esc(who(e.entered_by));
   return '<div class="item" data-id="' + e.id + '">' +
     '<div class="ic" style="background:' + c.c + '22">' + c.icon + '</div>' +
@@ -863,6 +900,19 @@ function renderList(){
       '</div><div class="catbar"><i style="width:' + p + '%;background:' + c.c + '"></i></div></div>';
   }).join('') : '<div class="empty">Nothing ' + label + '.</div>';
 
+  // by account — handy when reconciling against a bank statement
+  const byA = {};
+  rows.forEach(e => { const k = e.account || 'Unspecified'; byA[k] = (byA[k] || 0) + e.amount; });
+  const aOrdered = Object.entries(byA).sort((a,b) => b[1]-a[1]);
+  document.getElementById('l-acct-card').classList.toggle('hide', aOrdered.length < 2);
+  document.getElementById('l-accts').innerHTML = aOrdered.map(([name,v]) => {
+    const p = total ? v/total*100 : 0;
+    return '<div class="catrow"><div class="row"><span>' + esc(name) + '</span>' +
+      '<span><b>' + nz(pp(v)) + '</b> <span class="dim" style="font-size:12px">' +
+      eur(pp(v)) + ' · ' + p.toFixed(0) + '%</span></span></div>' +
+      '<div class="catbar"><i style="width:' + p + '%;background:var(--accent)"></i></div></div>';
+  }).join('');
+
   // grouped list
   const groups = {};
   rows.forEach(e => (groups[e.spent_on] = groups[e.spent_on] || []).push(e));
@@ -876,7 +926,7 @@ function renderList(){
 /* ============================================================
    ADD / EDIT
    ============================================================ */
-let editing = null, aCat = 'grocery', aPayer = 'p1';
+let editing = null, aCat = 'grocery', aPayer = 'p1', aAccount = '';
 
 function buildAddPills(){
   document.getElementById('a-cats').innerHTML = CATS.map(c =>
@@ -885,6 +935,58 @@ function buildAddPills(){
   document.getElementById('a-payers').innerHTML =
     '<button class="pill pa' + (aPayer === 'p1' ? ' sel' : '') + '" data-payer="p1">' + esc(st.p1) + '</button>' +
     '<button class="pill pb' + (aPayer === 'p2' ? ' sel' : '') + '" data-payer="p2">' + esc(st.p2) + '</button>';
+
+  // remembered accounts, plus whatever this expense used even if since removed
+  const accts = st.accounts.slice();
+  if (aAccount && !accts.includes(aAccount)) accts.push(aAccount);
+  document.getElementById('a-accounts').innerHTML =
+    accts.map(a => '<button class="pill' + (a === aAccount ? ' sel' : '') +
+      '" data-acct="' + esc(a) + '">' + esc(a) + '</button>').join('') +
+    '<button class="pill" data-acct-new="1">+ New</button>';
+}
+
+/* Past notes, most recent first, one entry per distinct note. Typing "gro" should
+   surface "Groceries" whether it starts the word or sits inside it. */
+function noteIndex(){
+  const seen = new Map();
+  live().sort((a,b) => b.updated_at.localeCompare(a.updated_at)).forEach(e => {
+    const n = (e.note || '').trim();
+    if (!n) return;
+    const k = n.toLowerCase();
+    if (!seen.has(k)) seen.set(k, e);
+  });
+  return [...seen.values()];
+}
+
+function suggestNotes(q){
+  const box = document.getElementById('a-sugg');
+  const query = q.trim().toLowerCase();
+  if (query.length < 2){ box.classList.add('hide'); return; }
+
+  const hits = noteIndex()
+    .map(e => {
+      const n = e.note.toLowerCase();
+      const at = n.indexOf(query);
+      if (at < 0) return null;
+      return {e, at, rank: at === 0 ? 0 : 1};        // prefix matches first
+    })
+    .filter(Boolean)
+    .sort((a,b) => a.rank - b.rank)
+    .slice(0, 5)
+    .filter(h => h.e.note.toLowerCase() !== query);  // nothing to offer if already exact
+
+  if (!hits.length){ box.classList.add('hide'); return; }
+  window._sugg = hits.map(h => h.e);
+  box.classList.remove('hide');
+  box.innerHTML = hits.map((h, i) => {
+    const n = h.e.note, c = catOf(h.e.category);
+    const hl = esc(n.slice(0, h.at)) + '<b>' + esc(n.slice(h.at, h.at + query.length)) +
+               '</b>' + esc(n.slice(h.at + query.length));
+    const bits = [c.icon + ' ' + c.name, who(h.e.payer)];
+    if (h.e.account) bits.push(h.e.account);
+    return '<button data-sugg="' + i + '">' + hl +
+           '<span class="meta">' + esc(bits.join(' · ')) + ' · ' + nz2(h.e.amount) + ' last time</span></button>';
+  }).join('');
 }
 
 /* The same handful of things get bought over and over — fuel, the same
@@ -894,7 +996,7 @@ function buildRecent(){
   if (editing){ wrap.classList.add('hide'); return; }
   const seen = new Set(), out = [];
   live().sort((a,b) => b.updated_at.localeCompare(a.updated_at)).forEach(e => {
-    const k = e.category + '|' + (e.note || '') + '|' + e.payer;
+    const k = e.category + '|' + (e.note || '') + '|' + e.payer + '|' + (e.account || '');
     if (seen.has(k) || out.length >= 4) return;
     seen.add(k); out.push(e);
   });
@@ -913,12 +1015,16 @@ function openAdd(id){
   const e = id ? S.expenses[id] : null;
   aCat = e ? e.category : aCat;
   aPayer = e ? e.payer : aPayer;
+  aAccount = e ? (e.account || '') : (S.settings.lastAccount || S.settings.accounts[0] || '');
   document.getElementById('a-amt').value  = e ? String(e.amount) : '';
   document.getElementById('a-date').value = e ? e.spent_on : todayISO();
   document.getElementById('a-note').value = e ? (e.note || '') : '';
   document.getElementById('a-save').textContent = e ? 'Save changes' : 'Add expense';
   document.getElementById('a-del').classList.toggle('hide', !e);
   document.getElementById('a-eur').textContent = '';
+  document.getElementById('a-acct-new').classList.add('hide');
+  document.getElementById('a-acct-input').value = '';
+  document.getElementById('a-sugg').classList.add('hide');
   buildAddPills();
   buildRecent();
   show('add');
@@ -935,6 +1041,7 @@ function saveExpense(){
     category: aCat,
     spent_on: document.getElementById('a-date').value || todayISO(),
     payer: aPayer,
+    account: aAccount,
     entered_by: S.settings.me || aPayer,
     note: document.getElementById('a-note').value.trim(),
     deleted: false,
@@ -942,6 +1049,7 @@ function saveExpense(){
     dirty: true,
   };
   S.expenses[rec.id] = rec;
+  if (aAccount) S.settings.lastAccount = aAccount;   // preselect it next time
   save();
   toast(editing ? 'Saved' : 'Added ' + nz2(rec.amount));
   editing = null;
@@ -960,6 +1068,26 @@ function deleteExpense(){
 /* ============================================================
    SETTINGS
    ============================================================ */
+function renderAccounts(){
+  document.getElementById('s-accounts').innerHTML =
+    S.settings.accounts.map(a =>
+      '<span class="pill">' + esc(a) +
+      '<button data-rma="' + esc(a) + '" style="color:var(--bad);margin-left:3px;font-size:16px">×</button></span>').join('')
+    || '<span class="note" style="margin:0">None yet — add one when logging an expense.</span>';
+}
+
+function addAccount(name){
+  const n = String(name || '').trim().slice(0, 24);
+  if (!n) return null;
+  if (!S.settings.accounts.some(a => a.toLowerCase() === n.toLowerCase())){
+    S.settings.accounts = S.settings.accounts.concat([n]);
+    S.settings.updated_at = new Date().toISOString();
+    S.settings.dirty = true;
+    save(); push();
+  }
+  return n;
+}
+
 function renderPlanned(){
   const list = S.settings.planned || [];
   document.getElementById('p-list').innerHTML = list.length
@@ -994,6 +1122,7 @@ function fillSettings(){
   $('s-url').value = S.sync.url;
   $('s-key').value = S.sync.key;
   renderPlanned();
+  renderAccounts();
   $('s-rate-age').textContent = st.rateAt
     ? 'Updated ' + new Date(st.rateAt).toLocaleDateString('en-NZ',{day:'numeric',month:'short'})
     : 'Never updated — using default';
@@ -1052,6 +1181,8 @@ async function fetchRate(manual){
    SUPABASE SYNC  (REST / PostgREST — no SDK, works offline)
    ============================================================ */
 const TABLE = 'van_expenses', STABLE = 'van_settings';
+// columns added after the first release; absent on older tables
+const OPTIONAL_COLS = ['entered_by', 'account'];
 const syncOn = () => !!(S.sync.url && S.sync.key);
 
 function sbHeaders(extra){
@@ -1087,12 +1218,13 @@ async function sync(silent){
     // 1. push dirty expenses
     const dirty = Object.values(S.expenses).filter(e => e.dirty);
     if (dirty.length){
-      const rows = keep => dirty.map(e => {
+      const rows = skip => dirty.map(e => {
         const o = {
           id:e.id, amount:e.amount, category:e.category, spent_on:e.spent_on,
           payer:e.payer, note:e.note || '', deleted:!!e.deleted, updated_at:e.updated_at,
         };
-        if (keep) o.entered_by = e.entered_by || e.payer;
+        if (!skip.includes('entered_by')) o.entered_by = e.entered_by || e.payer;
+        if (!skip.includes('account'))    o.account    = e.account || '';
         return o;
       });
       const post = body => fetch(sbURL(TABLE), {
@@ -1100,16 +1232,20 @@ async function sync(silent){
         headers: sbHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
         body: JSON.stringify(body),
       });
-      let r = await post(rows(!S.sync.noEnteredBy));
-      if (!r.ok){
+      // Tables made before a field existed simply reject it. Drop that one column
+      // and carry on rather than failing the whole sync.
+      let skip = (S.sync.skipCols || []).slice();
+      let r = await post(rows(skip));
+      for (let guard = 0; !r.ok && guard < OPTIONAL_COLS.length; guard++){
         const txt = await r.text();
-        // older tables have no entered_by column — drop it and never try again
-        if (!S.sync.noEnteredBy && /entered_by/.test(txt)){
-          S.sync.noEnteredBy = true;
-          r = await post(rows(false));
-          if (!r.ok) throw new Error(await r.text());
+        const m = txt.match(/'([A-Za-z_]+)' column/);
+        if (m && OPTIONAL_COLS.includes(m[1]) && !skip.includes(m[1])){
+          skip.push(m[1]);
+          S.sync.skipCols = skip; save();
+          r = await post(rows(skip));
         } else throw new Error(txt);
       }
+      if (!r.ok) throw new Error(await r.text());
       dirty.forEach(e => e.dirty = false);
     }
     // 2. push dirty settings
@@ -1121,7 +1257,7 @@ async function sync(silent){
         // perPerson is deliberately not synced — it's a per-phone display choice
         body: JSON.stringify([{ id:'trip', data:{
           budgetValue:st.budgetValue, budgetMode:st.budgetMode, budgetFor:st.budgetFor,
-          planned:st.planned || [],
+          planned:st.planned || [], accounts:st.accounts || [],
           start:st.start, end:st.end, preSpent:st.preSpent,
           p1:st.p1, p2:st.p2, rate:st.rate,
         }, updated_at: st.updated_at }]),
@@ -1141,7 +1277,7 @@ async function sync(silent){
         S.expenses[r.id] = {
           id:r.id, amount:Number(r.amount), category:r.category, spent_on:r.spent_on,
           payer:r.payer, entered_by:r.entered_by || r.payer,
-          note:r.note || '', deleted:!!r.deleted,
+          account:r.account || '', note:r.note || '', deleted:!!r.deleted,
           updated_at:r.updated_at, dirty:false,
         };
         changed++;
@@ -1171,7 +1307,7 @@ async function testSync(){
   S.sync.url = document.getElementById('s-url').value.trim();
   S.sync.key = document.getElementById('s-key').value.trim();
   S.sync.lastPull = '';
-  S.sync.noEnteredBy = false;   // re-probe: the column may have been added since
+  S.sync.skipCols = [];         // re-probe: columns may have been added since
   save();
   const msg = document.getElementById('s-sync-msg');
   if (!syncOn()){ msg.innerHTML = '<span class="warn">Sync off — this phone only.</span>'; chipIdle(); return; }
@@ -1255,6 +1391,43 @@ document.getElementById('a-cats').addEventListener('click', e => {
   const b = e.target.closest('[data-cat]'); if (!b) return;
   aCat = b.dataset.cat; buildAddPills();
 });
+document.getElementById('a-accounts').addEventListener('click', e => {
+  const nw = e.target.closest('[data-acct-new]');
+  if (nw){
+    const box = document.getElementById('a-acct-new');
+    box.classList.remove('hide');
+    document.getElementById('a-acct-input').focus();
+    return;
+  }
+  const b = e.target.closest('[data-acct]'); if (!b) return;
+  aAccount = b.dataset.acct;
+  document.getElementById('a-acct-new').classList.add('hide');
+  buildAddPills();
+});
+
+function commitNewAccount(){
+  const inp = document.getElementById('a-acct-input');
+  const n = addAccount(inp.value);
+  if (!n) return toast('Give it a name');
+  aAccount = n;
+  inp.value = '';
+  document.getElementById('a-acct-new').classList.add('hide');
+  buildAddPills();
+  toast('Saved — it’ll be there next time');
+}
+document.getElementById('a-acct-save').addEventListener('click', commitNewAccount);
+document.getElementById('a-acct-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); commitNewAccount(); }
+});
+
+document.getElementById('s-accounts').addEventListener('click', e => {
+  const b = e.target.closest('[data-rma]'); if (!b) return;
+  S.settings.accounts = S.settings.accounts.filter(a => a !== b.dataset.rma);
+  S.settings.updated_at = new Date().toISOString();
+  S.settings.dirty = true;
+  save(); renderAccounts(); push();
+});
+
 document.getElementById('a-payers').addEventListener('click', e => {
   const b = e.target.closest('[data-payer]'); if (!b) return;
   aPayer = b.dataset.payer; buildAddPills();
@@ -1308,10 +1481,25 @@ document.getElementById('s-mode').addEventListener('click', e => {
   const b = e.target.closest('[data-mode]'); if (!b) return;
   reexpress(b.dataset.mode, +S.settings.budgetFor);
 });
+document.getElementById('a-note').addEventListener('input', e => suggestNotes(e.target.value));
+document.getElementById('a-note').addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('a-sugg').classList.add('hide');
+});
+document.getElementById('a-sugg').addEventListener('click', e => {
+  const b = e.target.closest('[data-sugg]'); if (!b) return;
+  const src = (window._sugg || [])[+b.dataset.sugg]; if (!src) return;
+  document.getElementById('a-note').value = src.note;
+  aCat = src.category; aPayer = src.payer; aAccount = src.account || aAccount;
+  document.getElementById('a-sugg').classList.add('hide');
+  buildAddPills();
+  const f = document.getElementById('a-amt');
+  if (!f.value) f.focus();
+});
+
 document.getElementById('a-recent').addEventListener('click', e => {
   const b = e.target.closest('[data-rep]'); if (!b) return;
   const src = (window._recent || [])[+b.dataset.rep]; if (!src) return;
-  aCat = src.category; aPayer = src.payer;
+  aCat = src.category; aPayer = src.payer; aAccount = src.account || aAccount;
   document.getElementById('a-note').value = src.note || '';
   buildAddPills();
   const f = document.getElementById('a-amt');

@@ -101,9 +101,14 @@ create policy van_expenses_all on van_expenses
   for all to anon using (true) with check (true);
 create policy van_settings_all on van_settings
   for all to anon using (true) with check (true);
+
+-- records which of you typed an expense in, as opposed to who paid for it
+alter table van_expenses add column if not exists entered_by text;
 ```
 
-The same SQL is inside the app under **Settings → Show the SQL to set up the tables**.
+(The app no longer shows this SQL — it's only needed once, when setting up a
+project from scratch. If `entered_by` is missing the app still syncs; it just
+drops that one field.)
 
 > **Worth knowing:** that policy lets anyone holding your project URL + anon key read
 > and write these two tables. The key is embedded in the app, so treat your app URL as

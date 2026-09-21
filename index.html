@@ -360,6 +360,13 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <label class="f"><span>You</span><input id="s-p1" type="text" placeholder="Me"></label>
         <label class="f"><span>Partner</span><input id="s-p2" type="text" placeholder="Partner"></label>
       </div>
+      <span class="lbl" style="display:block;margin-bottom:7px">Who is holding this phone?</span>
+      <div class="seg two" id="s-me">
+        <button data-me="p1" class="sel">Me</button>
+        <button data-me="p2">Partner</button>
+      </div>
+      <div class="note" style="margin-top:0">Used to stamp who added each expense, so you
+        can tell an entry apart from who actually paid for it.</div>
     </div>
 
     <div class="card">
@@ -381,10 +388,6 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       <button class="btn ghost" id="s-test">Save &amp; test connection</button>
       <div class="note" id="s-sync-msg"></div>
       <div class="note" style="margin-top:12px">Put the <b>same</b> URL and key on both phones and you'll both see the same expenses. Leave blank to keep everything on this phone only.</div>
-      <details style="margin-top:12px">
-        <summary class="lbl" style="cursor:pointer">Show the SQL to set up the tables</summary>
-        <pre id="s-sql"></pre>
-      </details>
     </div>
 
     <div class="card">
@@ -446,6 +449,7 @@ const DEFAULTS = {
     budgetMode: 'total',      // …and what it means: daily | weekly | monthly | total
     budgetFor: 2,             // is that figure for 1 person or for both of you?
     perPerson: false,         // display only, never synced — each phone picks its own view
+    me: 'p1',                 // which of you is on this phone; never synced
     start: todayISO(),
     end: (() => { const d = new Date(); d.setMonth(d.getMonth()+4); return d.toLocaleDateString('en-CA'); })(),
     preSpent: 0,
@@ -454,7 +458,7 @@ const DEFAULTS = {
     updated_at: new Date().toISOString(),
     dirty: false,
   },
-  sync: { url:'', key:'', lastPull:'' },
+  sync: { url:'', key:'', lastPull:'', noEnteredBy:false },
 };
 
 let S = load();
@@ -674,13 +678,18 @@ function renderSplit(){
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+const who = p => p === 'p1' ? S.settings.p1 : S.settings.p2;
+
 function itemHTML(e){
   const c = catOf(e.category), st = S.settings;
+  // who paid is the money fact; who added it is the audit trail, shown only when they differ
+  let byline = esc(who(e.payer)) + ' paid';
+  if (e.entered_by && e.entered_by !== e.payer) byline += ' · added by ' + esc(who(e.entered_by));
   return '<div class="item" data-id="' + e.id + '">' +
     '<div class="ic" style="background:' + c.c + '22">' + c.icon + '</div>' +
     '<div class="m"><div class="t">' + esc(e.note || c.name) + '</div>' +
       '<div class="s">' + (e.note ? c.name + ' · ' : '') + fmtShort(e.spent_on) +
-      ' · ' + esc(e.payer === 'p1' ? st.p1 : st.p2) + '</div></div>' +
+      ' · ' + byline + '</div></div>' +
     '<div class="v"><b>' + nz2(e.amount) + '</b><small>' + eur2(e.amount) + '</small></div></div>';
 }
 
@@ -763,6 +772,7 @@ function saveExpense(){
     category: aCat,
     spent_on: document.getElementById('a-date').value || todayISO(),
     payer: aPayer,
+    entered_by: S.settings.me || aPayer,
     note: document.getElementById('a-note').value.trim(),
     deleted: false,
     updated_at: new Date().toISOString(),
@@ -795,6 +805,10 @@ function fillSettings(){
     b.classList.toggle('sel', b.dataset.mode === st.budgetMode));
   document.querySelectorAll('#s-for button').forEach(b =>
     b.classList.toggle('sel', +b.dataset.for === +st.budgetFor));
+  document.querySelectorAll('#s-me button').forEach(b =>
+    b.classList.toggle('sel', b.dataset.me === st.me));
+  document.querySelector('#s-me [data-me="p1"]').textContent = st.p1;
+  document.querySelector('#s-me [data-me="p2"]').textContent = st.p2;
   $('s-start').value = st.start;
   $('s-end').value = st.end;
   $('s-pre').value = st.preSpent || '';
@@ -896,16 +910,29 @@ async function sync(silent){
     // 1. push dirty expenses
     const dirty = Object.values(S.expenses).filter(e => e.dirty);
     if (dirty.length){
-      const body = dirty.map(e => ({
-        id:e.id, amount:e.amount, category:e.category, spent_on:e.spent_on,
-        payer:e.payer, note:e.note || '', deleted:!!e.deleted, updated_at:e.updated_at,
-      }));
-      const r = await fetch(sbURL(TABLE), {
+      const rows = keep => dirty.map(e => {
+        const o = {
+          id:e.id, amount:e.amount, category:e.category, spent_on:e.spent_on,
+          payer:e.payer, note:e.note || '', deleted:!!e.deleted, updated_at:e.updated_at,
+        };
+        if (keep) o.entered_by = e.entered_by || e.payer;
+        return o;
+      });
+      const post = body => fetch(sbURL(TABLE), {
         method:'POST',
         headers: sbHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
         body: JSON.stringify(body),
       });
-      if (!r.ok) throw new Error(await r.text());
+      let r = await post(rows(!S.sync.noEnteredBy));
+      if (!r.ok){
+        const txt = await r.text();
+        // older tables have no entered_by column — drop it and never try again
+        if (!S.sync.noEnteredBy && /entered_by/.test(txt)){
+          S.sync.noEnteredBy = true;
+          r = await post(rows(false));
+          if (!r.ok) throw new Error(await r.text());
+        } else throw new Error(txt);
+      }
       dirty.forEach(e => e.dirty = false);
     }
     // 2. push dirty settings
@@ -935,7 +962,8 @@ async function sync(silent){
       if (!l || (!l.dirty && r.updated_at > l.updated_at)){
         S.expenses[r.id] = {
           id:r.id, amount:Number(r.amount), category:r.category, spent_on:r.spent_on,
-          payer:r.payer, note:r.note || '', deleted:!!r.deleted,
+          payer:r.payer, entered_by:r.entered_by || r.payer,
+          note:r.note || '', deleted:!!r.deleted,
           updated_at:r.updated_at, dirty:false,
         };
         changed++;
@@ -984,32 +1012,6 @@ async function testSync(){
   }
 }
 
-const SQL = `-- Run this once in Supabase → SQL Editor → New query → Run
-
-create table if not exists van_expenses (
-  id         text primary key,
-  amount     numeric      not null,
-  category   text         not null,
-  spent_on   date         not null,
-  payer      text         not null,
-  note       text         default '',
-  deleted    boolean      default false,
-  updated_at timestamptz  default now()
-);
-
-create table if not exists van_settings (
-  id         text primary key,
-  data       jsonb        not null,
-  updated_at timestamptz  default now()
-);
-
-alter table van_expenses enable row level security;
-alter table van_settings enable row level security;
-
-create policy van_expenses_all on van_expenses
-  for all to anon using (true) with check (true);
-create policy van_settings_all on van_settings
-  for all to anon using (true) with check (true);`;
 
 /* ============================================================
    BACKUP
@@ -1126,6 +1128,11 @@ document.getElementById('s-mode').addEventListener('click', e => {
   const b = e.target.closest('[data-mode]'); if (!b) return;
   reexpress(b.dataset.mode, +S.settings.budgetFor);
 });
+document.getElementById('s-me').addEventListener('click', e => {
+  const b = e.target.closest('[data-me]'); if (!b) return;
+  S.settings.me = b.dataset.me;          // local only, not pushed
+  save(); fillSettings();
+});
 document.getElementById('s-for').addEventListener('click', e => {
   const b = e.target.closest('[data-for]'); if (!b) return;
   reexpress(S.settings.budgetMode, +b.dataset.for);
@@ -1144,7 +1151,6 @@ document.getElementById('a-cats').closest('.card').addEventListener('click', e =
   document.getElementById(id).addEventListener('change', commitSettings));
 document.getElementById('s-rate-fetch').addEventListener('click', () => fetchRate(true));
 document.getElementById('s-test').addEventListener('click', testSync);
-document.getElementById('s-sql').textContent = SQL;
 document.getElementById('s-export').addEventListener('click', exportData);
 document.getElementById('s-import').addEventListener('click', () => document.getElementById('s-file').click());
 document.getElementById('s-file').addEventListener('change', e => { if (e.target.files[0]) importData(e.target.files[0]); });

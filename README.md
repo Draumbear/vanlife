@@ -1,6 +1,8 @@
-# Van Budget NZ
+# Kea
 
-A small, ad-free expense tracker for two people on a 4-month van trip in New Zealand.
+An ad-free expense tracker for two people living in a van in New Zealand — named
+after the parrot that raids campervans in the Southern Alps.
+
 Everything in NZD with a live EUR conversion beside it. Works offline; syncs both
 phones through your own free Supabase project.
 
@@ -40,7 +42,7 @@ git push
 ```
 
 Pages redeploys on its own in about a minute. Bump `CACHE` in `sw.js` (e.g.
-`vanlife-v2`) whenever you change `index.html`, otherwise the phones will keep
+`kea-v3`) whenever you change `index.html`, otherwise the phones will keep
 serving the old version out of their cache.
 
 > Your Supabase keys are **not** in this repo — you type them into the app on each
@@ -55,8 +57,14 @@ serving the old version out of their cache.
 
 ## Step 3 — Sync the two phones (optional but you want it)
 
-Without this, each phone keeps its own separate list. With it, you both see the same
-expenses within seconds.
+**Why this needs Supabase and not just GitHub:** GitHub Pages only *serves files* —
+it has nowhere to put data that arrives from a phone, so without a database each
+phone keeps its own separate list. Supabase is the free bit that stores the shared
+data. You could in principle make the app commit to the repo through the GitHub API,
+but that means putting a token with write access to your repo inside a page anyone
+can view the source of — worse in every way than the anon key below.
+
+With sync on, you both see the same expenses within seconds.
 
 1. Create a free project at **https://supabase.com** (free tier is plenty — this app
    will use a fraction of a percent of it).
@@ -105,9 +113,22 @@ The same SQL is inside the app under **Settings → Show the SQL to set up the t
 
 ## Step 4 — Set your budget
 
-**Settings → Trip & budget**: total pot, start and end date, and your two names.
-The app derives the per-day / per-week / per-month targets from those, so you only
-ever enter one number.
+**Settings → Trip & budget.** Enter your budget in whichever unit you actually think
+in — **Day**, **Week**, **Month** or **Total** — then say whether that figure is for
+both of you or per person. Everything else is worked out from there, and the panel
+underneath shows the same budget expressed every other way.
+
+So all four of these are the same budget over a 123-day trip:
+
+| You enter | For | Comes to |
+|---|---|---|
+| 130 | both of us | $15,990 total |
+| 65 | per person | $15,990 total |
+| 910 | both of us, per week | $15,990 total |
+| 15990 | both of us, total | $15,990 total |
+
+Switching unit or headcount never changes what you can spend — it just re-expresses
+the same pot, so you can flip between them freely.
 
 If you'd already spent something before installing this, put the running total in
 **Starting balance already spent** rather than back-filling every receipt.
@@ -116,7 +137,10 @@ If you'd already spent something before installing this, put the running total i
 
 ## How it works day to day
 
-- **Add** — amount, category, who paid, date, optional note. Four taps.
+- **Add** — amount, category, who paid, date, optional note. Four taps. The **×2**
+  and **÷2** buttons under the amount are for when the price you're looking at isn't
+  the number you want to log: ×2 for "we each paid $20", ÷2 for "that $60 covers us
+  both and I only want my half".
 - **Home** —
   - money left, days left, and a bar with a marker showing where you *should* be today
   - daily allowance = what's left ÷ days left (so it self-corrects as you go)
@@ -125,6 +149,9 @@ If you'd already spent something before installing this, put the running total i
 - **Expenses** — week / month / all time, category breakdown, tap any row to edit or
   delete it.
 - Every NZD figure has the euro equivalent under it.
+- The **Both of us / Per person** toggle at the top of Home halves every total,
+  allowance and target so you can see your own share. Individual expenses always show
+  what was actually paid. The choice is per phone — it isn't synced.
 
 ## Euro rate
 

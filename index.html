@@ -3,17 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0e1622">
-<title>Van Budget NZ</title>
+<meta name="theme-color" content="#0f1511">
+<title>Kea — trip kitty</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{
-  --bg:#0e1622; --card:#17222f; --card2:#1e2b3a; --line:#26374a;
-  --tx:#e8eef5; --dim:#8ba0b6;
-  --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --accent:#38bdf8;
-  --pa:#a78bfa; --pb:#f472b6;
+  /* Native bush at dusk: kea olive + the orange under its wing */
+  --bg:#0f1511; --card:#18211a; --card2:#212c23; --line:#2f3d32;
+  --tx:#e9efe4; --dim:#92a793;
+  --ok:#8cc07a;            /* new growth */
+  --warn:#e3b13c;          /* kōwhai */
+  --bad:#dd6a5f;           /* rātā */
+  --accent:#e8833a;        /* kea underwing */
+  --pa:#3fa89b;            /* tūī */
+  --pb:#c9705f;            /* kākā */
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -30,24 +35,25 @@ button{background:none;border:none;padding:0;cursor:pointer}
 
 /* ---------- chrome ---------- */
 header{
-  position:sticky;top:0;z-index:20;background:rgba(14,22,34,.92);
+  position:sticky;top:0;z-index:20;background:rgba(15,21,17,.93);
   backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
   padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;
   display:flex;align-items:center;gap:10px;
 }
+header .mark{width:30px;height:30px;flex:none}
 header h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.2px;flex:1}
 .chip{
   font-size:11px;font-weight:600;padding:4px 9px;border-radius:99px;
   border:1px solid var(--line);color:var(--dim);white-space:nowrap;
 }
-.chip.on{color:var(--ok);border-color:#1d4d3d;background:#112a23}
-.chip.off{color:var(--warn);border-color:#4d411d;background:#2a2411}
-.chip.err{color:var(--bad);border-color:#4d1d1d;background:#2a1111}
+.chip.on{color:var(--ok);border-color:#2f5c35;background:#16291a}
+.chip.off{color:var(--warn);border-color:#574a1f;background:#2c2611}
+.chip.err{color:var(--bad);border-color:#56241f;background:#2c1613}
 main{padding:14px 16px 20px;max-width:620px;margin:0 auto}
 
 nav{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(14,22,34,.96);backdrop-filter:blur(12px);
+  background:rgba(15,21,17,.96);backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
   padding:8px 6px calc(8px + var(--safe-b));
   display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
@@ -90,28 +96,28 @@ input,select,textarea{
   padding:11px 12px;outline:none;
 }
 input:focus,select,textarea:focus{border-color:var(--accent)}
-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%238ba0b6' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2392a793' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 11px center;background-size:14px;padding-right:32px}
 .amt input{font-size:30px;font-weight:700;padding:12px 12px 12px 42px;letter-spacing:-.5px}
 .amt{position:relative}
 .amt .cur{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:19px;color:var(--dim);font-weight:600;pointer-events:none}
 
 .btn{
-  display:block;width:100%;text-align:center;background:var(--accent);color:#06222e;
+  display:block;width:100%;text-align:center;background:var(--accent);color:#1c1206;
   font-weight:700;padding:14px;border-radius:13px;font-size:16px;
 }
 .btn:active{opacity:.75}
 .btn.ghost{background:var(--card2);color:var(--tx);border:1px solid var(--line);font-size:15px;padding:12px}
-.btn.danger{background:#3a1616;color:var(--bad);border:1px solid #582020}
+.btn.danger{background:#3a1c18;color:var(--bad);border:1px solid #5a2c25}
 
 .pills{display:flex;flex-wrap:wrap;gap:7px}
 .pill{
   padding:9px 13px;border-radius:11px;background:var(--card2);border:1px solid var(--line);
   font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:6px;
 }
-.pill.sel{background:#0d3a4d;border-color:var(--accent);color:#bde9fb}
-.pill.pa.sel{background:#2e2350;border-color:var(--pa);color:#ded1ff}
-.pill.pb.sel{background:#4a1f38;border-color:var(--pb);color:#ffd4ea}
+.pill.sel{background:#4a3016;border-color:var(--accent);color:#f6cfa8}
+.pill.pa.sel{background:#123a36;border-color:var(--pa);color:#b5e6df}
+.pill.pb.sel{background:#452019;border-color:var(--pb);color:#f2c4ba}
 
 /* ---------- list ---------- */
 .item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}
@@ -135,11 +141,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:8px}
 code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px;
   font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
-pre{background:#0a1119;border:1px solid var(--line);border-radius:11px;padding:12px;overflow-x:auto;
-  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#b8cde0}
+pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:12px;overflow-x:auto;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#c2d4bd}
 .toast{
   position:fixed;left:50%;bottom:calc(88px + var(--safe-b));transform:translateX(-50%) translateY(14px);
-  background:#f0f6fb;color:#0e1622;padding:11px 18px;border-radius:99px;font-weight:650;font-size:14px;
+  background:#f2f5ee;color:#0f1511;padding:11px 18px;border-radius:99px;font-weight:650;font-size:14px;
   opacity:0;pointer-events:none;transition:.22s;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.4);white-space:nowrap
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -147,22 +153,41 @@ pre{background:#0a1119;border:1px solid var(--line);border-radius:11px;padding:1
   padding:4px;border-radius:12px;margin-bottom:12px}
 .seg button{padding:8px;border-radius:9px;font-size:13px;font-weight:650;color:var(--dim)}
 .seg button.sel{background:var(--card);color:var(--tx)}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg.four{grid-template-columns:repeat(4,1fr)}
+.calc{display:flex;gap:7px;margin:-4px 0 14px}
+.calc button{flex:1;padding:9px;border-radius:10px;background:var(--card2);
+  border:1px solid var(--line);font-size:13px;font-weight:650;color:var(--dim)}
+.calc button:active{border-color:var(--accent);color:var(--tx)}
 </style>
 </head>
 <body>
 
 <header>
-  <h1 id="ttl">Van Budget</h1>
+  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+    <!-- kea in profile — the hooked beak is the whole point -->
+    <g fill="var(--accent)">
+      <circle cx="42" cy="52" r="26"/>
+      <path d="M56 32 C79 34, 94 44, 98 56 C100 64, 95 71, 89 69
+               C86 65, 86 60, 85 56 C79 49, 69 47, 57 51 Z"/>
+    </g>
+    <circle cx="52" cy="43" r="4" fill="var(--bg)"/>
+  </svg>
+  <h1 id="ttl">Kea</h1>
   <button class="chip" id="sync">local</button>
 </header>
 
 <main>
   <!-- ============ HOME ============ -->
   <section id="v-home">
+    <div class="seg two" id="pp-toggle">
+      <button data-pp="0" class="sel">Both of us</button>
+      <button data-pp="1">Per person</button>
+    </div>
     <div class="card">
       <div class="row">
         <div>
-          <div class="lbl">Left to spend</div>
+          <div class="lbl" id="h-left-lbl">Left to spend</div>
           <div class="big" id="h-left">—</div>
           <div class="eur" id="h-left-e"></div>
         </div>
@@ -229,7 +254,11 @@ pre{background:#0a1119;border:1px solid var(--line);border-radius:11px;padding:1
         <em class="cur" style="font-style:normal">$</em>
         <input id="a-amt" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
       </label>
-      <div class="eur" id="a-eur" style="margin:-6px 0 14px"></div>
+      <div class="eur" id="a-eur" style="margin:-6px 0 10px"></div>
+      <div class="calc">
+        <button data-calc="x2">×2 <span style="font-weight:500;opacity:.7">both</span></button>
+        <button data-calc="d2">÷2 <span style="font-weight:500;opacity:.7">my half</span></button>
+      </div>
 
       <label class="f">
         <span>Category</span>
@@ -276,8 +305,18 @@ pre{background:#0a1119;border:1px solid var(--line);border-radius:11px;padding:1
   <section id="v-set" class="hide">
     <div class="card">
       <h2>Trip &amp; budget</h2>
-      <label class="f"><span>Total budget for the whole trip (NZD)</span>
+      <div class="seg four" id="s-mode">
+        <button data-mode="daily">Day</button>
+        <button data-mode="weekly">Week</button>
+        <button data-mode="monthly">Month</button>
+        <button data-mode="total" class="sel">Total</button>
+      </div>
+      <label class="f"><span id="s-budget-lbl">Total budget for the whole trip (NZD)</span>
         <input id="s-budget" type="text" inputmode="decimal" placeholder="16000"></label>
+      <div class="seg two" id="s-for">
+        <button data-for="2" class="sel">That's for both of us</button>
+        <button data-for="1">That's per person</button>
+      </div>
       <div class="grid2">
         <label class="f"><span>Start date</span><input id="s-start" type="date"></label>
         <label class="f"><span>End date</span><input id="s-end" type="date"></label>
@@ -328,7 +367,7 @@ pre{background:#0a1119;border:1px solid var(--line);border-radius:11px;padding:1
       <button class="btn danger" id="s-wipe" style="margin-top:18px">Erase everything on this phone</button>
     </div>
 
-    <div class="note" style="text-align:center;padding-bottom:10px">Van Budget NZ · v1</div>
+    <div class="note" style="text-align:center;padding-bottom:10px">Kea · trip kitty for two</div>
   </section>
 </main>
 
@@ -348,21 +387,21 @@ pre{background:#0a1119;border:1px solid var(--line);border-radius:11px;padding:1
    CATEGORIES
    ============================================================ */
 const CATS = [
-  {id:'fuel',     name:'Fuel',          icon:'⛽', c:'#f59e0b'},
-  {id:'grocery',  name:'Groceries',     icon:'🛒', c:'#34d399'},
-  {id:'eatout',   name:'Eating out',    icon:'🍔', c:'#fb923c'},
-  {id:'camp',     name:'Campsites',     icon:'🏕️', c:'#38bdf8'},
-  {id:'stay',     name:'Hostel/Hotel',  icon:'🛏️', c:'#818cf8'},
-  {id:'activity', name:'Activities',    icon:'🪂', c:'#f472b6'},
-  {id:'van',      name:'Van & repairs', icon:'🔧', c:'#94a3b8'},
-  {id:'transport',name:'Ferry/Transport',icon:'⛴️', c:'#22d3ee'},
-  {id:'utility',  name:'Showers/Laundry',icon:'🚿', c:'#5eead4'},
-  {id:'phone',    name:'Phone & data',  icon:'📱', c:'#a78bfa'},
-  {id:'gear',     name:'Gear',          icon:'🎒', c:'#84cc16'},
-  {id:'health',   name:'Health',        icon:'💊', c:'#fb7185'},
-  {id:'gift',     name:'Gifts/Souvenirs',icon:'🎁', c:'#e879f9'},
-  {id:'drinks',   name:'Drinks',        icon:'🍻', c:'#fcd34d'},
-  {id:'other',    name:'Other',         icon:'✨', c:'#cbd5e1'},
+  {id:'fuel',     name:'Fuel',          icon:'⛽', c:'#e8833a'},  // kea
+  {id:'grocery',  name:'Groceries',     icon:'🛒', c:'#8cc07a'},  // new growth
+  {id:'eatout',   name:'Eating out',    icon:'🍔', c:'#d98e4a'},
+  {id:'camp',     name:'Campsites',     icon:'🏕️', c:'#5b9e6f'},  // bush
+  {id:'stay',     name:'Hostel/Hotel',  icon:'🛏️', c:'#7f9ec4'},
+  {id:'activity', name:'Activities',    icon:'🪂', c:'#c9705f'},  // kākā
+  {id:'van',      name:'Van & repairs', icon:'🔧', c:'#9aa79b'},
+  {id:'transport',name:'Ferry/Transport',icon:'⛴️', c:'#4aa6bd'}, // Cook Strait
+  {id:'utility',  name:'Showers/Laundry',icon:'🚿', c:'#6fc3b4'},
+  {id:'phone',    name:'Phone & data',  icon:'📱', c:'#8f8fc4'},
+  {id:'gear',     name:'Gear',          icon:'🎒', c:'#a3b551'},
+  {id:'health',   name:'Health',        icon:'💊', c:'#dd6a5f'},  // rātā
+  {id:'gift',     name:'Gifts/Souvenirs',icon:'🎁', c:'#b97fb5'},
+  {id:'drinks',   name:'Drinks',        icon:'🍻', c:'#e3b13c'},  // kōwhai
+  {id:'other',    name:'Other',         icon:'✨', c:'#b9c4b6'},
 ];
 const catOf = id => CATS.find(c => c.id === id) || CATS[CATS.length-1];
 
@@ -375,7 +414,10 @@ const todayISO = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-
 const DEFAULTS = {
   expenses: {},              // id -> {id,amount,category,spent_on,payer,note,deleted,updated_at,dirty}
   settings: {
-    budget: 16000,
+    budgetValue: 16000,       // the number you typed…
+    budgetMode: 'total',      // …and what it means: daily | weekly | monthly | total
+    budgetFor: 2,             // is that figure for 1 person or for both of you?
+    perPerson: false,         // display only, never synced — each phone picks its own view
     start: todayISO(),
     end: (() => { const d = new Date(); d.setMonth(d.getMonth()+4); return d.toLocaleDateString('en-CA'); })(),
     preSpent: 0,
@@ -389,13 +431,26 @@ const DEFAULTS = {
 
 let S = load();
 
+/* Carry settings saved by an earlier version over to the current shape. */
+function migrate(st){
+  if (st.budgetValue == null){
+    st.budgetValue = st.budgetMode === 'daily' ? (+st.dailyRate || 130) : (+st.budget || 16000);
+  }
+  if (st.budgetFor == null) st.budgetFor = 2;
+  if (!MODE_LABEL[st.budgetMode]) st.budgetMode = 'total';
+  delete st.budget; delete st.dailyRate;
+  return st;
+}
+
 function load(){
   try {
     const raw = JSON.parse(localStorage.getItem(LS) || '{}');
+    const st = Object.assign({}, DEFAULTS.settings, raw.settings || {});
+    migrate(st);
     return {
       expenses: raw.expenses || {},
-      settings: Object.assign({}, DEFAULTS.settings, raw.settings || {}),
-      sync:     Object.assign({}, DEFAULTS.sync,     raw.sync || {}),
+      settings: st,
+      sync:     Object.assign({}, DEFAULTS.sync, raw.sync || {}),
     };
   } catch(e){ return JSON.parse(JSON.stringify(DEFAULTS)); }
 }
@@ -442,25 +497,50 @@ const live = () => Object.values(S.expenses).filter(e => !e.deleted);
 const sum  = arr => arr.reduce((t,e) => t + e.amount, 0);
 const between = (a,b) => live().filter(e => e.spent_on >= a && e.spent_on <= b);
 
+const DAYS_PER_MONTH = 30.4375;   // 365.25 / 12
+
+/* How many of `mode` fit in the trip — i.e. what to multiply the entered figure by. */
+function spanMult(mode, totalDays){
+  if (mode === 'daily')   return totalDays;
+  if (mode === 'weekly')  return totalDays / 7;
+  if (mode === 'monthly') return totalDays / DAYS_PER_MONTH;
+  return 1;                        // 'total'
+}
+const MODE_LABEL = {
+  daily:   'Budget per day (NZD)',
+  weekly:  'Budget per week (NZD)',
+  monthly: 'Budget per month (NZD)',
+  total:   'Total budget for the whole trip (NZD)',
+};
+
 function stats(){
   const st = S.settings, t = todayISO();
   const totalDays = Math.max(1, dayDiff(st.start, st.end) + 1);
   const elapsed   = Math.min(totalDays, Math.max(0, dayDiff(st.start, t) + 1));
   const daysLeft  = Math.max(0, dayDiff(t, st.end) + (t <= st.end ? 1 : 0));
 
+  // One figure in whatever unit suits you, scaled up to the whole-trip pot.
+  const budget = (+st.budgetValue || 0) * spanMult(st.budgetMode, totalDays)
+                 * (+st.budgetFor === 1 ? 2 : 1);
+
   const spent = sum(live()) + (+st.preSpent || 0);
-  const left  = st.budget - spent;
+  const left  = budget - spent;
 
   return {
-    totalDays, elapsed, daysLeft, spent, left,
-    budget: st.budget,
-    perDay:   st.budget / totalDays,
+    totalDays, elapsed, daysLeft, spent, left, budget,
+    perDay:   budget / totalDays,
     daily:    daysLeft > 0 ? left / daysLeft : left,
     avg:      elapsed > 0 ? spent / elapsed : 0,
-    onPace:   st.budget * (elapsed / totalDays),
-    pct:      st.budget > 0 ? spent / st.budget : 0,
+    onPace:   budget * (elapsed / totalDays),
+    pct:      budget > 0 ? spent / budget : 0,
   };
 }
+
+/* Per-person view: halves every *aggregate* figure (budget, totals, allowances).
+   Individual expense rows always show what was actually paid. */
+const DIV = () => S.settings.perPerson ? 2 : 1;
+const pp  = n => n / DIV();
+const each = () => S.settings.perPerson ? ' each' : '';
 const tone = r => r > 1 ? 'bad' : r > .9 ? 'warn' : 'ok';
 const toneC = r => r > 1 ? 'var(--bad)' : r > .9 ? 'var(--warn)' : 'var(--ok)';
 
@@ -471,9 +551,12 @@ function renderHome(){
   const s = stats(), st = S.settings, t = todayISO();
   const $ = id => document.getElementById(id);
 
-  $('h-left').textContent = nz(s.left);
+  document.querySelectorAll('#pp-toggle button').forEach(x =>
+    x.classList.toggle('sel', (x.dataset.pp === '1') === !!st.perPerson));
+  $('h-left-lbl').textContent = 'Left to spend' + (st.perPerson ? ' each' : '');
+  $('h-left').textContent = nz(pp(s.left));
   $('h-left').className = 'big ' + (s.left < 0 ? 'bad' : '');
-  $('h-left-e').textContent = eur(s.left) + ' left';
+  $('h-left-e').textContent = eur(pp(s.left)) + ' left';
   $('h-days').textContent = s.daysLeft;
   $('h-end').textContent = 'until ' + fmtShort(st.end);
 
@@ -482,56 +565,57 @@ function renderHome(){
   $('h-bar').style.background = toneC(s.spent / Math.max(1, s.onPace));
   const pacePct = Math.min(100, (s.elapsed / s.totalDays) * 100);
   $('h-pace').style.left = pacePct + '%';
-  $('h-spent').textContent = nz(s.spent) + ' spent';
-  $('h-total').textContent = 'of ' + nz(s.budget);
+  $('h-spent').textContent = nz(pp(s.spent)) + ' spent' + each();
+  $('h-total').textContent = 'of ' + nz(pp(s.budget));
 
-  $('h-daily').textContent = nz(s.daily);
+  $('h-daily').textContent = nz(pp(s.daily));
   $('h-daily').className = 'n ' + (s.daily < 0 ? 'bad' : '');
-  $('h-daily-e').textContent = eur(s.daily) + ' / day';
-  $('h-avg').textContent = nz(s.avg);
+  $('h-daily-e').textContent = eur(pp(s.daily)) + ' / day' + each();
+  $('h-avg').textContent = nz(pp(s.avg));
   $('h-avg').className = 'n ' + tone(s.avg / Math.max(0.01, s.perDay));
-  $('h-avg-e').textContent = 'budget is ' + nz(s.perDay) + '/day';
+  $('h-avg-e').textContent = 'budget is ' + nz(pp(s.perDay)) + '/day' + each();
 
   const diff = s.onPace - s.spent;
   const v = $('h-verdict');
   if (s.daysLeft === 0 && t > st.end) {
     v.innerHTML = 'Trip finished. Final spend <b>' + nz(s.spent) + '</b> (' + eur(s.spent) + ').';
   } else if (s.spent === 0) {
-    v.innerHTML = 'Nothing logged yet — you have <b>' + nz(s.perDay) + '</b> a day (' +
-      eur(s.perDay) + ') to play with over ' + s.totalDays + ' days.';
+    v.innerHTML = 'Nothing logged yet — you have <b>' + nz(pp(s.perDay)) + '</b> a day' + each() +
+      ' (' + eur(pp(s.perDay)) + ') to play with over ' + s.totalDays + ' days.';
   } else if (diff >= 0) {
-    v.innerHTML = '<span class="ok">✓ ' + nz(diff) + ' under pace</span> — keep this up and you finish with about <b>' +
-      nz(Math.max(0, s.budget - s.avg * s.totalDays)) + '</b> spare.';
+    v.innerHTML = '<span class="ok">✓ ' + nz(pp(diff)) + ' under pace</span> — keep this up and you finish with about <b>' +
+      nz(pp(Math.max(0, s.budget - s.avg * s.totalDays))) + '</b> spare.';
   } else {
     const burn = s.avg * s.totalDays;
-    v.innerHTML = '<span class="bad">⚠ ' + nz(-diff) + ' over pace</span> — at ' + nz(s.avg) +
-      '/day you’d finish at <b>' + nz(burn) + '</b>, i.e. ' + nz(burn - s.budget) + ' over budget.';
+    v.innerHTML = '<span class="bad">⚠ ' + nz(pp(-diff)) + ' over pace</span> — at ' + nz(pp(s.avg)) +
+      '/day' + each() + ' you’d finish at <b>' + nz(pp(burn)) + '</b>, i.e. ' +
+      nz(pp(burn - s.budget)) + ' over budget.';
   }
 
   // week
   const ws = weekStart(t), we = weekEnd(t);
   const wSpent = sum(between(ws, we)), wTarget = s.perDay * 7;
   $('w-range').textContent = fmtShort(ws) + ' – ' + fmtShort(we);
-  $('w-spent').textContent = nz2(wSpent);
+  $('w-spent').textContent = nz2(pp(wSpent));
   $('w-spent').className = 'big ' + tone(wSpent/wTarget);
-  $('w-target').textContent = 'of ' + nz(wTarget);
+  $('w-target').textContent = 'of ' + nz(pp(wTarget)) + each();
   $('w-bar').style.width = Math.min(100, wSpent/wTarget*100) + '%';
   $('w-bar').style.background = toneC(wSpent/wTarget);
-  $('w-eur').textContent = eur2(wSpent);
-  $('w-diff').textContent = wSpent <= wTarget ? nz(wTarget-wSpent) + ' left this week' : nz(wSpent-wTarget) + ' over';
+  $('w-eur').textContent = eur2(pp(wSpent));
+  $('w-diff').textContent = wSpent <= wTarget ? nz(pp(wTarget-wSpent)) + ' left this week' : nz(pp(wSpent-wTarget)) + ' over';
 
   // month
   const ms = monthStart(t), me = monthEnd(t);
   const mSpent = sum(between(ms, me));
   const mDays = dayDiff(ms, me) + 1, mTarget = s.perDay * mDays;
   $('m-range').textContent = dparse(t).toLocaleDateString('en-NZ',{month:'long'});
-  $('m-spent').textContent = nz2(mSpent);
+  $('m-spent').textContent = nz2(pp(mSpent));
   $('m-spent').className = 'big ' + tone(mSpent/mTarget);
-  $('m-target').textContent = 'of ' + nz(mTarget);
+  $('m-target').textContent = 'of ' + nz(pp(mTarget)) + each();
   $('m-bar').style.width = Math.min(100, mSpent/mTarget*100) + '%';
   $('m-bar').style.background = toneC(mSpent/mTarget);
-  $('m-eur').textContent = eur2(mSpent);
-  $('m-diff').textContent = mSpent <= mTarget ? nz(mTarget-mSpent) + ' left this month' : nz(mSpent-mTarget) + ' over';
+  $('m-eur').textContent = eur2(pp(mSpent));
+  $('m-diff').textContent = mSpent <= mTarget ? nz(pp(mTarget-mSpent)) + ' left this month' : nz(pp(mSpent-mTarget)) + ' over';
 
   renderSplit();
   document.getElementById('h-recent').innerHTML =
@@ -587,7 +671,7 @@ function renderList(){
   let rows = between(from, to);
   if (filterCat) rows = rows.filter(e => e.category === filterCat);
   const total = sum(rows);
-  document.getElementById('l-tot').textContent = nz2(total) + ' · ' + eur2(total);
+  document.getElementById('l-tot').textContent = nz2(pp(total)) + ' · ' + eur2(pp(total)) + each();
 
   // category breakdown
   const by = {};
@@ -597,7 +681,7 @@ function renderList(){
     const c = catOf(id), p = total ? v/total*100 : 0;
     return '<div class="catrow"><div class="row">' +
       '<span>' + c.icon + ' ' + c.name + '</span>' +
-      '<span><b>' + nz(v) + '</b> <span class="dim" style="font-size:12px">' + eur(v) + ' · ' + p.toFixed(0) + '%</span></span>' +
+      '<span><b>' + nz(pp(v)) + '</b> <span class="dim" style="font-size:12px">' + eur(pp(v)) + ' · ' + p.toFixed(0) + '%</span></span>' +
       '</div><div class="catbar"><i style="width:' + p + '%;background:' + c.c + '"></i></div></div>';
   }).join('') : '<div class="empty">Nothing ' + label + '.</div>';
 
@@ -677,7 +761,12 @@ function deleteExpense(){
    ============================================================ */
 function fillSettings(){
   const st = S.settings, $ = id => document.getElementById(id);
-  $('s-budget').value = st.budget;
+  $('s-budget').value = st.budgetValue;
+  $('s-budget-lbl').textContent = MODE_LABEL[st.budgetMode] || MODE_LABEL.total;
+  document.querySelectorAll('#s-mode button').forEach(b =>
+    b.classList.toggle('sel', b.dataset.mode === st.budgetMode));
+  document.querySelectorAll('#s-for button').forEach(b =>
+    b.classList.toggle('sel', +b.dataset.for === +st.budgetFor));
   $('s-start').value = st.start;
   $('s-end').value = st.end;
   $('s-pre').value = st.preSpent || '';
@@ -694,14 +783,17 @@ function fillSettings(){
 function derived(){
   const s = stats();
   document.getElementById('s-derived').innerHTML =
-    '<b>' + s.totalDays + ' days</b> total → ' + nz(s.perDay) + '/day · ' +
-    nz(s.perDay*7) + '/week · ' + nz(s.perDay*30.44) + '/month<br>' +
-    '<span class="dim">' + eur(s.perDay) + '/day · ' + eur(s.perDay*7) + '/week</span>';
+    'Over <b>' + s.totalDays + ' days</b> that works out as:<br>' +
+    '<b>' + nz(s.perDay) + '</b>/day · <b>' + nz(s.perDay*7) + '</b>/week · <b>' +
+    nz(s.perDay*DAYS_PER_MONTH) + '</b>/month · <b>' + nz(s.budget) + '</b> total' +
+    ' <span class="dim">(both of you)</span><br>' +
+    '<span class="dim">Each: ' + nz(s.perDay/2) + '/day · ' + nz(s.perDay*7/2) + '/week · ' +
+    nz(s.budget/2) + ' total — ' + eur(s.perDay/2) + '/day</span>';
 }
 function commitSettings(){
   const st = S.settings, $ = id => document.getElementById(id);
   const num = (v,d) => { const n = parseFloat(String(v).replace(',','.')); return isFinite(n) ? n : d; };
-  st.budget   = num($('s-budget').value, st.budget);
+  st.budgetValue = num($('s-budget').value, st.budgetValue);
   st.start    = $('s-start').value || st.start;
   st.end      = $('s-end').value || st.end;
   st.preSpent = num($('s-pre').value, 0);
@@ -794,8 +886,10 @@ async function sync(silent){
       const r = await fetch(sbURL(STABLE), {
         method:'POST',
         headers: sbHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
+        // perPerson is deliberately not synced — it's a per-phone display choice
         body: JSON.stringify([{ id:'trip', data:{
-          budget:st.budget, start:st.start, end:st.end, preSpent:st.preSpent,
+          budgetValue:st.budgetValue, budgetMode:st.budgetMode, budgetFor:st.budgetFor,
+          start:st.start, end:st.end, preSpent:st.preSpent,
           p1:st.p1, p2:st.p2, rate:st.rate,
         }, updated_at: st.updated_at }]),
       });
@@ -918,7 +1012,7 @@ function importData(file){
    NAV / GLUE
    ============================================================ */
 let view = 'home';
-const TITLES = {home:'Van Budget', add:'Add expense', list:'Expenses', set:'Settings'};
+const TITLES = {home:'Kea', add:'Add expense', list:'Expenses', set:'Settings'};
 
 function show(v){
   view = v;
@@ -978,6 +1072,45 @@ document.querySelectorAll('.seg button').forEach(b =>
 document.getElementById('l-cat').innerHTML =
   '<option value="">All categories</option>' + CATS.map(c => '<option value="' + c.id + '">' + c.icon + ' ' + c.name + '</option>').join('');
 document.getElementById('l-cat').addEventListener('change', e => { filterCat = e.target.value; renderList(); });
+
+document.getElementById('pp-toggle').addEventListener('click', e => {
+  const b = e.target.closest('[data-pp]'); if (!b) return;
+  S.settings.perPerson = b.dataset.pp === '1';
+  document.querySelectorAll('#pp-toggle button').forEach(x => x.classList.toggle('sel', x === b));
+  save(); renderHome();
+});
+
+/* Switching unit or headcount re-expresses the SAME pot in the new terms,
+   so nothing silently changes what you can actually spend. */
+function reexpress(mode, forN){
+  const s = stats();                                   // current pot, before the change
+  const st = S.settings;
+  st.budgetMode = mode;
+  st.budgetFor  = forN;
+  const per = forN === 1 ? 2 : 1;                      // entering one person's share
+  const v = s.budget / spanMult(mode, s.totalDays) / per;
+  st.budgetValue = Math.round(v * 100) / 100;
+  st.updated_at = new Date().toISOString();
+  st.dirty = true;
+  save(); fillSettings(); push();
+}
+document.getElementById('s-mode').addEventListener('click', e => {
+  const b = e.target.closest('[data-mode]'); if (!b) return;
+  reexpress(b.dataset.mode, +S.settings.budgetFor);
+});
+document.getElementById('s-for').addEventListener('click', e => {
+  const b = e.target.closest('[data-for]'); if (!b) return;
+  reexpress(S.settings.budgetMode, +b.dataset.for);
+});
+
+document.getElementById('a-cats').closest('.card').addEventListener('click', e => {
+  const b = e.target.closest('[data-calc]'); if (!b) return;
+  const f = document.getElementById('a-amt');
+  const n = parseFloat(f.value.replace(',','.'));
+  if (!isFinite(n) || n <= 0){ toast('Enter an amount first'); return; }
+  f.value = String(Math.round((b.dataset.calc === 'x2' ? n*2 : n/2) * 100) / 100);
+  f.dispatchEvent(new Event('input'));
+});
 
 ['s-budget','s-start','s-end','s-pre','s-p1','s-p2','s-rate'].forEach(id =>
   document.getElementById(id).addEventListener('change', commitSettings));

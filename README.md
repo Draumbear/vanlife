@@ -154,10 +154,7 @@ If you'd already spent something before installing this, put the running total i
 
 ## How it works day to day
 
-- **Add** — amount, category, who paid, date, optional note. Four taps. The **×2**
-  and **÷2** buttons under the amount are for when the price you're looking at isn't
-  the number you want to log: ×2 for "we each paid $20", ÷2 for "that $60 covers us
-  both and I only want my half".
+- **Add** — amount, category, who paid, date, optional note. Four taps.
 - **Home** —
   - money left, days left, and a bar with a marker showing where you *should* be today
   - daily allowance = what's left ÷ days left (so it self-corrects as you go)
@@ -191,6 +188,13 @@ If you'd already spent something before installing this, put the running total i
 - The **Both of us / Per person** toggle at the top of Home halves every total,
   allowance and target so you can see your own share. Individual expenses always show
   what was actually paid. The choice is per phone — it isn't synced.
+
+## Settings
+
+Two groups, in the order you'd fill them in. **Shared with the other phone** — the
+trip dates, then the budget, then planned big costs, accounts and the euro rate.
+**This phone only** — whose phone it is, the sync details, and backup/erase. Anything
+under the second heading stays put when the two phones sync.
 
 ## Euro rate
 

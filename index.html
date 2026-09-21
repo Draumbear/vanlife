@@ -100,6 +100,14 @@ nav button.sel{color:var(--accent)}
 .eur{font-size:12.5px;color:var(--dim);font-weight:500;margin-top:4px}
 .lbl{font-size:11px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:1.4px}
 
+/* Settings splits in two: what both phones share, and what this one keeps. */
+.group{display:flex;align-items:center;gap:10px;margin:0 0 15px;font-size:11px;
+  font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--accent)}
+.group::after{content:'';flex:1;height:1px;background:var(--line)}
+.group.mid{margin-top:8px}
+/* a quiet caption above a choice, so it doesn't shout like a heading */
+.cap{display:block;font-size:12.5px;color:var(--dim);margin:0 0 7px}
+
 .bar{height:5px;border-radius:0;background:var(--card2);overflow:hidden;margin:12px 0 8px;position:relative}
 .bar i{display:block;height:100%;transition:width .35s ease}
 .bar .pace{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--tx);opacity:.55;border-radius:2px}
@@ -298,11 +306,6 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <input id="a-amt" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
       </label>
       <div class="eur" id="a-eur" style="margin:-6px 0 10px"></div>
-      <div class="calc">
-        <button data-calc="x2">×2 <span style="font-weight:500;opacity:.7">both</span></button>
-        <button data-calc="d2">÷2 <span style="font-weight:500;opacity:.7">my half</span></button>
-      </div>
-
       <div id="a-recent-wrap" class="hide">
         <span class="lbl" style="display:block;margin-bottom:7px">Repeat a recent one</span>
         <div class="pills" id="a-recent" style="margin-bottom:15px"></div>
@@ -367,8 +370,20 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 
   <!-- ============ SETTINGS ============ -->
   <section id="v-set" class="hide">
+    <div class="group">Shared with the other phone</div>
     <div class="card">
-      <h2>Trip &amp; budget</h2>
+      <h2>The trip</h2>
+      <div class="grid2">
+        <label class="f"><span>First day</span><input id="s-start" type="date"></label>
+        <label class="f"><span>Last day</span><input id="s-end" type="date"></label>
+      </div>
+      <div class="note" style="margin-top:0">Every daily allowance is worked out between
+        these two dates.</div>
+    </div>
+
+    <div class="card">
+      <h2>The budget</h2>
+      <span class="cap">Give the figure the way you think about it</span>
       <div class="seg four" id="s-mode">
         <button data-mode="daily">Day</button>
         <button data-mode="weekly">Week</button>
@@ -377,25 +392,14 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       </div>
       <label class="f"><span id="s-budget-lbl">Total budget for the whole trip (NZD)</span>
         <input id="s-budget" type="text" inputmode="decimal" placeholder="16000"></label>
+      <span class="cap">And that figure is…</span>
       <div class="seg two" id="s-for">
-        <button data-for="2" class="sel">That's for both of us</button>
-        <button data-for="1">That's per person</button>
+        <button data-for="2" class="sel">For both of us</button>
+        <button data-for="1">Per person</button>
       </div>
-      <div class="grid2">
-        <label class="f"><span>Start date</span><input id="s-start" type="date"></label>
-        <label class="f"><span>End date</span><input id="s-end" type="date"></label>
-      </div>
-      <label class="f"><span>Starting balance already spent (optional, NZD)</span>
+      <label class="f"><span>Already spent, but not logged here (optional, NZD)</span>
         <input id="s-pre" type="text" inputmode="decimal" placeholder="0"></label>
       <div class="note" id="s-derived"></div>
-    </div>
-
-    <div class="card">
-      <h2>Accounts</h2>
-      <div class="pills" id="s-accounts"></div>
-      <div class="note">Where the money comes from. These show as one-tap options when
-        you add an expense; adding a new one there remembers it here. Tap × to remove
-        one — expenses already logged against it keep their label.</div>
     </div>
 
     <div class="card">
@@ -413,14 +417,11 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     </div>
 
     <div class="card">
-      <h2>Whose phone is this?</h2>
-      <div class="seg two" id="s-me">
-        <button data-me="p1" class="sel">Tanguy</button>
-        <button data-me="p2">Zita</button>
-      </div>
-      <div class="note" style="margin-top:0">Stamps who added each expense, so you can
-        tell that apart from who actually paid. This is per phone — picking one here
-        changes nothing on the other phone and nothing about past expenses.</div>
+      <h2>Accounts</h2>
+      <div class="pills" id="s-accounts"></div>
+      <div class="note">Where the money comes from. These show as one-tap options when
+        you add an expense; adding a new one there remembers it here. Tap × to remove
+        one — expenses already logged against it keep their label.</div>
     </div>
 
     <div class="card">
@@ -433,8 +434,20 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       <div class="note">Rate updates automatically when you're online. Edit it by hand if you want to use the rate your card actually gives you.</div>
     </div>
 
+    <div class="group mid">This phone only</div>
     <div class="card">
-      <h2>Sync between phones</h2>
+      <h2>Whose phone is this?</h2>
+      <div class="seg two" id="s-me">
+        <button data-me="p1" class="sel">Tanguy</button>
+        <button data-me="p2">Zita</button>
+      </div>
+      <div class="note" style="margin-top:0">Stamps who added each expense, so you can
+        tell that apart from who actually paid. This is per phone — picking one here
+        changes nothing on the other phone and nothing about past expenses.</div>
+    </div>
+
+    <div class="card">
+      <h2>Sync with the other phone</h2>
       <label class="f"><span>Supabase project URL</span>
         <input id="s-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
       <label class="f"><span>Supabase anon (publishable) key</span>
@@ -445,7 +458,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     </div>
 
     <div class="card">
-      <h2>Backup</h2>
+      <h2>Backup &amp; reset</h2>
       <button class="btn ghost" id="s-export">Export all data (.json)</button>
       <button class="btn ghost" id="s-import" style="margin-top:9px">Import from file</button>
       <input type="file" id="s-file" accept=".json,application/json" class="hide">
@@ -1597,15 +1610,6 @@ document.getElementById('s-me').addEventListener('click', e => {
 document.getElementById('s-for').addEventListener('click', e => {
   const b = e.target.closest('[data-for]'); if (!b) return;
   reexpress(S.settings.budgetMode, +b.dataset.for);
-});
-
-document.getElementById('a-cats').closest('.card').addEventListener('click', e => {
-  const b = e.target.closest('[data-calc]'); if (!b) return;
-  const f = document.getElementById('a-amt');
-  const n = parseFloat(f.value.replace(',','.'));
-  if (!isFinite(n) || n <= 0){ toast('Enter an amount first'); return; }
-  f.value = String(Math.round((b.dataset.calc === 'x2' ? n*2 : n/2) * 100) / 100);
-  f.dispatchEvent(new Event('input'));
 });
 
 ['s-budget','s-start','s-end','s-pre','s-rate'].forEach(id =>

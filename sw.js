@@ -1,6 +1,6 @@
 /* Van Budget NZ — offline shell.
    Bump CACHE when you change index.html so phones pick up the new version. */
-const CACHE = 'kea-v2';
+const CACHE = 'kea-v3';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

@@ -993,6 +993,7 @@ async function testSync(){
   S.sync.url = document.getElementById('s-url').value.trim();
   S.sync.key = document.getElementById('s-key').value.trim();
   S.sync.lastPull = '';
+  S.sync.noEnteredBy = false;   // re-probe: the column may have been added since
   save();
   const msg = document.getElementById('s-sync-msg');
   if (!syncOn()){ msg.innerHTML = '<span class="warn">Sync off — this phone only.</span>'; chipIdle(); return; }

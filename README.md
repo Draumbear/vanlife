@@ -115,6 +115,9 @@ alter table van_expenses add column if not exists entered_by text;
 
 -- which account the money came out of (BNZ, Revolut, cash...)
 alter table van_expenses add column if not exists account text;
+
+-- whose personal spending it is ('p1'/'p2'), or empty when it's shared
+alter table van_expenses add column if not exists personal text;
 ```
 
 (The app no longer shows this SQL — it's only needed once, when setting up a
@@ -183,6 +186,12 @@ If you'd already spent something before installing this, put the running total i
   added each expense; that choice is per phone and changes nothing on the other one.
   Entries record *which* of you paid (`p1`/`p2`), never the name, so nothing ever
   changes hands. To rename the pair, edit `PEOPLE` at the top of the script.
+- **Personal spending** — on the Add screen, **Whose spending** defaults to *Both of
+  us*. Pick *Just Zita* for Zita's souvenir T-shirt and it still counts against the
+  combined budget, but it comes out of Zita's half only. Once that makes your halves
+  differ, Home shows an **Each of you** card with what each of you has left and your
+  own daily allowance. In **Who paid**, a personal buy isn't split: if Tanguy paid
+  for Zita's T-shirt, Zita owes him all of it.
 - **Last 8 weeks** — a bar per week against that week's target, red where you went over.
 - Every NZD figure has the euro equivalent under it.
 - The **Both of us / Per person** toggle at the top of Home halves every total,

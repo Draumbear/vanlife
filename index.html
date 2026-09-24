@@ -261,6 +261,12 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       </div>
     </div>
 
+    <div class="card hide" id="each-card">
+      <h2>Each of you</h2>
+      <div class="grid2" id="each-body" style="margin-bottom:0"></div>
+      <div class="note" id="each-note"></div>
+    </div>
+
     <div class="card">
       <h2>This week <span style="text-transform:none;font-weight:500" id="w-range"></span></h2>
       <div class="row">
@@ -329,6 +335,12 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <span>Paid by</span>
       </label>
       <div class="pills" id="a-payers" style="margin:-8px 0 15px"></div>
+
+      <label class="f">
+        <span>Whose spending</span>
+      </label>
+      <div class="pills" id="a-pers" style="margin:-8px 0 8px"></div>
+      <div class="note" id="a-pers-note" style="margin:0 0 15px"></div>
 
       <label class="f"><span>Date</span><input id="a-date" type="date"></label>
       <label class="f" style="margin-bottom:6px"><span>Note (optional)</span>
@@ -676,14 +688,22 @@ function tripDays(a, b){
   return Math.max(0, dayDiff(from, to) + 1);
 }
 
+/* A personal expense ('p1'/'p2') is one of you buying something just for
+   yourself — a souvenir T-shirt. It still comes out of the trip pot, but only
+   out of that person's half of it. Anything else is shared down the middle. */
+const shareOf = (e, p) => !e.personal ? e.amount / 2 : e.personal === p ? e.amount : 0;
+
 /* Who owes whom, after accounting for any settling up already done. */
 function splitInfo(){
   const all = live();
   const a = sum(all.filter(e => e.payer === 'p1'));
   const b = sum(all.filter(e => e.payer === 'p2'));
+  // what each paid on the other's behalf: half of shared, all of their personal
+  const forOther = (payer, other) => all.filter(e => e.payer === payer)
+    .reduce((t, e) => t + shareOf(e, other), 0);
   const st = settlements();
   const adj = sum(st.filter(e => e.payer === 'p2')) - sum(st.filter(e => e.payer === 'p1'));
-  const owed = (a - b) / 2 - adj;          // positive: p2 owes p1
+  const owed = forOther('p1', 'p2') - forOther('p2', 'p1') - adj;   // positive: p2 owes p1
   return {a, b, owed, from: owed > 0 ? 'p2' : 'p1', to: owed > 0 ? 'p1' : 'p2'};
 }
 
@@ -720,6 +740,20 @@ function stats(){
     onPace:   budget * (elapsed / totalDays),
     pct:      budget > 0 ? spent / budget : 0,
   };
+}
+
+/* Each person's half of the pot, less their half of shared spending and all of
+   their own personal spending. Planned costs and the starting balance are shared. */
+function shares(s){
+  const all = live(), pre = +S.settings.preSpent || 0, out = {};
+  ['p1', 'p2'].forEach(p => {
+    const own   = sum(all.filter(e => e.personal === p));
+    const spent = all.reduce((t, e) => t + shareOf(e, p), 0) + pre / 2;
+    const left  = s.budget / 2 - spent;
+    const avail = left - s.planned / 2;
+    out[p] = {own, spent, left, daily: s.daysLeft > 0 ? avail / s.daysLeft : avail};
+  });
+  return out;
 }
 
 /* Per-person view: halves every *aggregate* figure (budget, totals, allowances).
@@ -820,11 +854,31 @@ function renderHome(){
       ' — <b>' + nz(s.avail) + '</b> left for everyday spending.';
   } else pl.classList.add('hide');
 
+  renderEach(s);
   renderSplit();
   renderTrend();
   document.getElementById('h-recent').innerHTML =
     live().sort((a,b) => b.spent_on.localeCompare(a.spent_on) || b.updated_at.localeCompare(a.updated_at))
           .slice(0,6).map(itemHTML).join('') || '<div class="empty">No expenses yet.<br>Tap <b>Add</b> to log your first one.</div>';
+}
+
+/* Only worth showing once personal spending has pulled your two halves apart. */
+function renderEach(s){
+  const card = document.getElementById('each-card');
+  const sh = shares(s);
+  if (Math.abs(sh.p1.spent - sh.p2.spent) < 0.5){ card.classList.add('hide'); return; }
+  card.classList.remove('hide');
+  document.getElementById('each-body').innerHTML = ['p1', 'p2'].map(p => {
+    const x = sh[p];
+    return '<div class="mini">' +
+      '<div class="lbl" style="color:var(--' + (p === 'p1' ? 'pa' : 'pb') + ')">' + esc(who(p)) +
+        (p === S.settings.me ? ' · you' : '') + '</div>' +
+      '<div class="n' + (x.left < 0 ? ' bad' : '') + '">' + nz(x.left) + '</div>' +
+      '<div class="e">left · ' + nz(x.daily) + '/day</div>' +
+      '<div class="e">' + (x.own > 0 ? nz2(x.own) + ' personal' : 'nothing personal yet') + '</div></div>';
+  }).join('');
+  document.getElementById('each-note').textContent =
+    'Personal buys come out of that person’s half only. The figures above still count everything.';
 }
 
 function renderSplit(){
@@ -925,6 +979,7 @@ function itemHTML(e){
   const c = catOf(e.category), st = S.settings;
   // who paid is the money fact; who added it is the audit trail, shown only when they differ
   let byline = esc(who(e.payer)) + ' paid';
+  if (e.personal) byline += ' · just ' + esc(who(e.personal));
   if (e.account) byline += ' · ' + esc(e.account);
   if (e.entered_by && e.entered_by !== e.payer) byline += ' · added by ' + esc(who(e.entered_by));
   return '<div class="item" data-id="' + e.id + '">' +
@@ -990,7 +1045,7 @@ function renderList(){
 /* ============================================================
    ADD / EDIT
    ============================================================ */
-let editing = null, aCat = 'grocery', aPayer = 'p1', aAccount = '';
+let editing = null, aCat = 'grocery', aPayer = 'p1', aAccount = '', aPers = '';
 
 function buildAddPills(){
   document.getElementById('a-cats').innerHTML = CATS.map(c =>
@@ -999,6 +1054,14 @@ function buildAddPills(){
   document.getElementById('a-payers').innerHTML =
     '<button class="pill pa' + (aPayer === 'p1' ? ' sel' : '') + '" data-payer="p1">' + esc(PEOPLE.p1) + '</button>' +
     '<button class="pill pb' + (aPayer === 'p2' ? ' sel' : '') + '" data-payer="p2">' + esc(PEOPLE.p2) + '</button>';
+
+  document.getElementById('a-pers').innerHTML =
+    '<button class="pill' + (!aPers ? ' sel' : '') + '" data-pers="">Both of us</button>' +
+    '<button class="pill pa' + (aPers === 'p1' ? ' sel' : '') + '" data-pers="p1">Just ' + esc(PEOPLE.p1) + '</button>' +
+    '<button class="pill pb' + (aPers === 'p2' ? ' sel' : '') + '" data-pers="p2">Just ' + esc(PEOPLE.p2) + '</button>';
+  document.getElementById('a-pers-note').textContent = !aPers ? ''
+    : 'Comes out of ' + who(aPers) + '’s half of the budget only' +
+      (aPayer !== aPers ? ' — and ' + who(aPers) + ' owes ' + who(aPayer) + ' all of it.' : '.');
 
   // remembered accounts, plus whatever this expense used even if since removed
   const accts = st.accounts.slice();
@@ -1060,7 +1123,7 @@ function buildRecent(){
   if (editing){ wrap.classList.add('hide'); return; }
   const seen = new Set(), out = [];
   live().sort((a,b) => b.updated_at.localeCompare(a.updated_at)).forEach(e => {
-    const k = e.category + '|' + (e.note || '') + '|' + e.payer + '|' + (e.account || '');
+    const k = e.category + '|' + (e.note || '') + '|' + e.payer + '|' + (e.account || '') + '|' + (e.personal || '');
     if (seen.has(k) || out.length >= 4) return;
     seen.add(k); out.push(e);
   });
@@ -1079,6 +1142,7 @@ function openAdd(id){
   const e = id ? S.expenses[id] : null;
   aCat = e ? e.category : aCat;
   aPayer = e ? e.payer : aPayer;
+  aPers = e ? (e.personal || '') : '';        // personal buys are the exception, so never carry one over
   aAccount = e ? (e.account || '') : (S.settings.lastAccount || S.settings.accounts[0] || '');
   document.getElementById('a-amt').value  = e ? String(e.amount) : '';
   document.getElementById('a-date').value = e ? e.spent_on : todayISO();
@@ -1106,6 +1170,7 @@ function saveExpense(){
     spent_on: document.getElementById('a-date').value || todayISO(),
     payer: aPayer,
     account: aAccount,
+    personal: aPers,
     entered_by: S.settings.me || aPayer,
     note: document.getElementById('a-note').value.trim(),
     deleted: false,
@@ -1243,7 +1308,7 @@ const TABLE = 'van_expenses', STABLE = 'van_settings';
 // Settings each phone keeps to itself — display choices and what you call each other.
 const LOCAL_SETTINGS = ['p1', 'p2', 'me', 'perPerson', 'lastAccount'];
 // columns added after the first release; absent on older tables
-const OPTIONAL_COLS = ['entered_by', 'account'];
+const OPTIONAL_COLS = ['entered_by', 'account', 'personal'];
 const syncOn = () => !!(S.sync.url && S.sync.key);
 
 function sbHeaders(extra){
@@ -1286,6 +1351,7 @@ async function sync(silent){
         };
         if (!skip.includes('entered_by')) o.entered_by = e.entered_by || e.payer;
         if (!skip.includes('account'))    o.account    = e.account || '';
+        if (!skip.includes('personal'))   o.personal   = e.personal || '';
         return o;
       });
       const post = body => fetch(sbURL(TABLE), {
@@ -1338,7 +1404,7 @@ async function sync(silent){
         S.expenses[r.id] = {
           id:r.id, amount:Number(r.amount), category:r.category, spent_on:r.spent_on,
           payer:r.payer, entered_by:r.entered_by || r.payer,
-          account:r.account || '', note:r.note || '', deleted:!!r.deleted,
+          account:r.account || '', personal:r.personal || '', note:r.note || '', deleted:!!r.deleted,
           updated_at:r.updated_at, dirty:false,
         };
         changed++;
@@ -1500,6 +1566,10 @@ document.getElementById('a-payers').addEventListener('click', e => {
   const b = e.target.closest('[data-payer]'); if (!b) return;
   aPayer = b.dataset.payer; buildAddPills();
 });
+document.getElementById('a-pers').addEventListener('click', e => {
+  const b = e.target.closest('[data-pers]'); if (!b) return;
+  aPers = b.dataset.pers; buildAddPills();
+});
 document.getElementById('a-amt').addEventListener('input', e => {
   const n = parseFloat(e.target.value.replace(',','.'));
   document.getElementById('a-eur').textContent = isFinite(n) && n > 0 ? '≈ ' + eur2(n) : '';
@@ -1558,6 +1628,7 @@ document.getElementById('a-sugg').addEventListener('click', e => {
   const src = (window._sugg || [])[+b.dataset.sugg]; if (!src) return;
   document.getElementById('a-note').value = src.note;
   aCat = src.category; aPayer = src.payer; aAccount = src.account || aAccount;
+  aPers = src.personal || '';
   document.getElementById('a-sugg').classList.add('hide');
   buildAddPills();
   const f = document.getElementById('a-amt');
@@ -1568,6 +1639,7 @@ document.getElementById('a-recent').addEventListener('click', e => {
   const b = e.target.closest('[data-rep]'); if (!b) return;
   const src = (window._recent || [])[+b.dataset.rep]; if (!src) return;
   aCat = src.category; aPayer = src.payer; aAccount = src.account || aAccount;
+  aPers = src.personal || '';
   document.getElementById('a-note').value = src.note || '';
   buildAddPills();
   const f = document.getElementById('a-amt');

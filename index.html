@@ -166,6 +166,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .day{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1.2px;
   margin:16px 0 2px;display:flex;justify-content:space-between}
 
+/* category donut: the ring, and its legend beside it */
+.donut{display:flex;align-items:center;gap:16px;margin:2px 0 18px}
+.donut svg{width:140px;height:140px;flex:none;display:block}
+.donut svg circle[data-sl]{cursor:pointer;transition:opacity .2s}
+.donut .lg{flex:1;min-width:0}
+.donut .lg button{display:flex;align-items:center;gap:8px;width:100%;padding:5px 0;
+  font-size:13px;text-align:left}
+.donut .lg i{width:10px;height:10px;border-radius:2px;flex:none}
+.donut .lg span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.donut .lg em{font-style:normal;color:var(--dim);font-size:12px}
+.donut .lg button.off{opacity:.4}
 .catrow{margin-bottom:13px}
 .catrow .row{margin-bottom:5px;font-size:14px}
 .catbar{height:4px;background:var(--card2);overflow:hidden}
@@ -368,6 +379,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     </div>
     <div class="card">
       <h2>By category <span style="text-transform:none;font-weight:500" id="l-tot"></span></h2>
+      <div class="donut hide" id="l-donut"></div>
       <div id="l-cats"></div>
     </div>
     <div class="card" id="l-acct-card">
@@ -1019,6 +1031,8 @@ function renderList(){
       '</div><div class="catbar"><i style="width:' + p + '%;background:' + c.c + '"></i></div></div>';
   }).join('') : '<div class="empty">Nothing ' + label + '.</div>';
 
+  renderDonut(ordered, total, label);
+
   // by account — handy when reconciling against a bank statement
   const byA = {};
   rows.forEach(e => { const k = e.account || 'Unspecified'; byA[k] = (byA[k] || 0) + e.amount; });
@@ -1040,6 +1054,66 @@ function renderList(){
     '<div class="day"><span>' + fmtDay(d) + '</span><span>' + nz2(sum(groups[d])) + '</span></div>' +
     groups[d].sort((a,b) => b.updated_at.localeCompare(a.updated_at)).map(itemHTML).join('')
   ).join('') : '<div class="empty">Nothing ' + label + '.</div>';
+}
+
+/* Part-to-whole at a glance. More than six slices stops being readable, so the
+   biggest five keep their own colour and the rest fold into one grey slice. */
+const DONUT_TOP = 5, DONUT_REST = '__rest__';
+let donutSel = null;
+
+function renderDonut(ordered, total, label){
+  const box = document.getElementById('l-donut');
+  if (ordered.length < 2 || total <= 0){ box.classList.add('hide'); return; }
+  box.classList.remove('hide');
+
+  let segs = ordered.slice(0, DONUT_TOP).map(([id, v]) => {
+    const c = catOf(id);
+    return {id, v, name: c.name, icon: c.icon, col: c.c};
+  });
+  const rest = ordered.slice(DONUT_TOP);
+  if (rest.length === 1){
+    const [id, v] = rest[0], c = catOf(id);
+    segs.push({id, v, name: c.name, icon: c.icon, col: c.c});
+  } else if (rest.length){
+    segs.push({id: DONUT_REST, v: rest.reduce((t, r) => t + r[1], 0),
+               name: rest.length + ' others', icon: '+', col: '#56645a'});
+  }
+  if (!segs.some(g => g.id === donutSel)) donutSel = null;
+
+  // one stroked circle per slice, laid end to end with a 2px surface gap
+  const R = 46, W = 16, C = 2 * Math.PI * R, GAP = 1.6;
+  let at = 0;
+  const arcs = segs.map((g, i) => {
+    const len = g.v / total * C;
+    const vis = Math.max(len - GAP, 0.6);
+    const out = '<circle data-sl="' + i + '" cx="60" cy="60" r="' + R + '" fill="none" stroke="' + g.col +
+      '" stroke-width="' + (g.id === donutSel ? W + 4 : W) + '" stroke-dasharray="' + vis + ' ' + (C - vis) +
+      '" stroke-dashoffset="' + (-at) + '" pointer-events="stroke"' +
+      (donutSel && g.id !== donutSel ? ' opacity=".3"' : '') + '/>';
+    at += len;
+    return out;
+  }).join('');
+
+  const sel = segs.find(g => g.id === donutSel);
+  const mid = sel
+    ? [sel.icon + ' ' + (sel.v / total * 100).toFixed(0) + '%', nz(pp(sel.v)), sel.name]
+    : ['', nz(pp(total)), label];
+  const txt = (y, t, size, cls) => '<text x="60" y="' + y + '" text-anchor="middle" font-size="' + size +
+    '" fill="var(--' + cls + ')" font-family="var(--serif)" font-weight="600">' + esc(t) + '</text>';
+
+  box.innerHTML =
+    '<svg viewBox="0 0 120 120" role="img" aria-label="Spending by category">' +
+      '<g transform="rotate(-90 60 60)">' + arcs + '</g>' +
+      (mid[0] ? txt(46, mid[0], 9, 'dim') : '') +
+      txt(64, mid[1], 17, 'tx') +
+      '<text x="60" y="78" text-anchor="middle" font-size="8" fill="var(--dim)">' +
+        esc(mid[2].length > 16 ? mid[2].slice(0, 15) + '…' : mid[2]) + '</text>' +
+    '</svg>' +
+    '<div class="lg">' + segs.map((g, i) =>
+      '<button data-sl="' + i + '"' + (donutSel && g.id !== donutSel ? ' class="off"' : '') + '>' +
+      '<i style="background:' + g.col + '"></i><span>' + g.icon + ' ' + esc(g.name) + '</span>' +
+      '<em>' + (g.v / total * 100).toFixed(0) + '%</em></button>').join('') + '</div>';
+  box._segs = segs;
 }
 
 /* ============================================================
@@ -1593,6 +1667,13 @@ document.querySelectorAll('.seg button').forEach(b =>
 document.getElementById('l-cat').innerHTML =
   '<option value="">All categories</option>' + CATS.map(c => '<option value="' + c.id + '">' + c.icon + ' ' + c.name + '</option>').join('');
 document.getElementById('l-cat').addEventListener('change', e => { filterCat = e.target.value; renderList(); });
+// tap a slice (or its legend row) to read it in the middle; tap again to go back to the total
+document.getElementById('l-donut').addEventListener('click', e => {
+  const b = e.target.closest('[data-sl]'); if (!b) return;
+  const g = (e.currentTarget._segs || [])[+b.dataset.sl]; if (!g) return;
+  donutSel = donutSel === g.id ? null : g.id;
+  renderList();
+});
 
 document.getElementById('pp-toggle').addEventListener('click', e => {
   const b = e.target.closest('[data-pp]'); if (!b) return;

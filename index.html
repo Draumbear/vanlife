@@ -166,10 +166,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .day{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1.2px;
   margin:16px 0 2px;display:flex;justify-content:space-between}
 
-/* category donut: the ring, and its legend beside it */
+/* category pie, and its legend beside it */
 .donut{display:flex;align-items:center;gap:16px;margin:2px 0 18px}
 .donut svg{width:140px;height:140px;flex:none;display:block}
-.donut svg circle[data-sl]{cursor:pointer;transition:opacity .2s}
+.donut svg path{cursor:pointer;transition:opacity .2s}
+.donut .rd{font-size:12.5px;color:var(--dim);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.donut .rd b{font-family:var(--serif);font-size:17px;color:var(--tx)}
 .donut .lg{flex:1;min-width:0}
 .donut .lg button{display:flex;align-items:center;gap:8px;width:100%;padding:5px 0;
   font-size:13px;text-align:left}
@@ -1080,36 +1082,28 @@ function renderDonut(ordered, total, label){
   }
   if (!segs.some(g => g.id === donutSel)) donutSel = null;
 
-  // one stroked circle per slice, laid end to end with a 2px surface gap
-  const R = 46, W = 16, C = 2 * Math.PI * R, GAP = 1.6;
+  // solid wedges, split by a thin line in the page colour so neighbours don't merge
+  const R = 56, pt = a => (60 + R * Math.sin(a)).toFixed(2) + ' ' + (60 - R * Math.cos(a)).toFixed(2);
   let at = 0;
-  const arcs = segs.map((g, i) => {
-    const len = g.v / total * C;
-    const vis = Math.max(len - GAP, 0.6);
-    const out = '<circle data-sl="' + i + '" cx="60" cy="60" r="' + R + '" fill="none" stroke="' + g.col +
-      '" stroke-width="' + (g.id === donutSel ? W + 4 : W) + '" stroke-dasharray="' + vis + ' ' + (C - vis) +
-      '" stroke-dashoffset="' + (-at) + '" pointer-events="stroke"' +
-      (donutSel && g.id !== donutSel ? ' opacity=".3"' : '') + '/>';
-    at += len;
-    return out;
+  const wedges = segs.map((g, i) => {
+    const sweep = g.v / total * 2 * Math.PI, a0 = at, a1 = at + sweep;
+    at = a1;
+    const d = sweep >= 2 * Math.PI - 1e-6
+      ? 'M60 4a56 56 0 1 1 0 112a56 56 0 1 1 0-112Z'
+      : 'M60 60L' + pt(a0) + 'A' + R + ' ' + R + ' 0 ' + (sweep > Math.PI ? 1 : 0) + ' 1 ' + pt(a1) + 'Z';
+    return '<path data-sl="' + i + '" d="' + d + '" fill="' + g.col + '" stroke="var(--bg)" stroke-width="1.5"' +
+      ' stroke-linejoin="round"' + (donutSel && g.id !== donutSel ? ' opacity=".3"' : '') + '/>';
   }).join('');
 
   const sel = segs.find(g => g.id === donutSel);
-  const mid = sel
-    ? [sel.icon + ' ' + (sel.v / total * 100).toFixed(0) + '%', nz(pp(sel.v)), sel.name]
-    : ['', nz(pp(total)), label];
-  const txt = (y, t, size, cls) => '<text x="60" y="' + y + '" text-anchor="middle" font-size="' + size +
-    '" fill="var(--' + cls + ')" font-family="var(--serif)" font-weight="600">' + esc(t) + '</text>';
+  const head = sel
+    ? '<div class="rd"><b>' + nz(pp(sel.v)) + '</b> ' + sel.icon + ' ' + esc(sel.name) +
+      ' · ' + (sel.v / total * 100).toFixed(0) + '%</div>'
+    : '<div class="rd"><b>' + nz(pp(total)) + '</b> ' + esc(label) + '</div>';
 
   box.innerHTML =
-    '<svg viewBox="0 0 120 120" role="img" aria-label="Spending by category">' +
-      '<g transform="rotate(-90 60 60)">' + arcs + '</g>' +
-      (mid[0] ? txt(46, mid[0], 9, 'dim') : '') +
-      txt(64, mid[1], 17, 'tx') +
-      '<text x="60" y="78" text-anchor="middle" font-size="8" fill="var(--dim)">' +
-        esc(mid[2].length > 16 ? mid[2].slice(0, 15) + '…' : mid[2]) + '</text>' +
-    '</svg>' +
-    '<div class="lg">' + segs.map((g, i) =>
+    '<svg viewBox="0 0 120 120" role="img" aria-label="Spending by category">' + wedges + '</svg>' +
+    '<div class="lg">' + head + segs.map((g, i) =>
       '<button data-sl="' + i + '"' + (donutSel && g.id !== donutSel ? ' class="off"' : '') + '>' +
       '<i style="background:' + g.col + '"></i><span>' + g.icon + ' ' + esc(g.name) + '</span>' +
       '<em>' + (g.v / total * 100).toFixed(0) + '%</em></button>').join('') + '</div>';
@@ -1667,7 +1661,7 @@ document.querySelectorAll('.seg button').forEach(b =>
 document.getElementById('l-cat').innerHTML =
   '<option value="">All categories</option>' + CATS.map(c => '<option value="' + c.id + '">' + c.icon + ' ' + c.name + '</option>').join('');
 document.getElementById('l-cat').addEventListener('change', e => { filterCat = e.target.value; renderList(); });
-// tap a slice (or its legend row) to read it in the middle; tap again to go back to the total
+// tap a slice (or its legend row) to read it above the legend; tap again to go back to the total
 document.getElementById('l-donut').addEventListener('click', e => {
   const b = e.target.closest('[data-sl]'); if (!b) return;
   const g = (e.currentTarget._segs || [])[+b.dataset.sl]; if (!g) return;

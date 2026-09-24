@@ -164,7 +164,7 @@ If you'd already spent something before installing this, put the running total i
   - this week and this month against their targets, each clipped to the trip dates
     so a part-week at either end isn't budgeted as a full one
   - who's paid more and what the settle-up is
-- **Expenses** — week / month / all time, a ring chart of where the money went (the
+- **Expenses** — week / month / all time, a pie chart of where the money went (the
   five biggest categories, the rest folded into one grey slice; tap a slice to read
   it), the full category breakdown, and tap any row to edit or delete it.
 - **Settle up** — when one of you has paid more, the Who paid panel offers a Settle

@@ -1652,10 +1652,10 @@ document.body.addEventListener('click', e => {
   openAdd(it.dataset.id);
 });
 
-document.querySelectorAll('.seg button').forEach(b =>
+document.querySelectorAll('#v-list .seg button').forEach(b =>
   b.addEventListener('click', () => {
     period = b.dataset.per;
-    document.querySelectorAll('.seg button').forEach(x => x.classList.toggle('sel', x === b));
+    document.querySelectorAll('#v-list .seg button').forEach(x => x.classList.toggle('sel', x === b));
     renderList();
   }));
 document.getElementById('l-cat').innerHTML =

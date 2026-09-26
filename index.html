@@ -1787,8 +1787,21 @@ document.addEventListener('visibilitychange', () => {
 // Backstop: a phone can close the app without ever firing 'change' on a field.
 window.addEventListener('pagehide', () => { if (view === 'set') captureSyncFields(); });
 
+/* A column skipped last time may have been added since (the README's ALTER TABLE
+   lines). Try again once per launch, and re-send whatever that column dropped. */
+function reprobeColumns(){
+  const skip = S.sync.skipCols || [];
+  if (!skip.length) return;
+  Object.values(S.expenses).forEach(e => {
+    if (skip.some(c => e[c])) e.dirty = true;
+  });
+  S.sync.skipCols = [];
+  save();
+}
+
 /* ---- boot ---- */
 keepStorage();
+reprobeColumns();
 show('home');
 chipIdle();
 sync(true);

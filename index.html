@@ -166,19 +166,50 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .day{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1.2px;
   margin:16px 0 2px;display:flex;justify-content:space-between}
 
-/* category pie, and its legend beside it */
-.donut{display:flex;align-items:center;gap:16px;margin:2px 0 18px}
-.donut svg{width:140px;height:140px;flex:none;display:block}
+/* category pie, with the figure it's showing beside it */
+.donut{display:flex;align-items:center;gap:18px;margin:2px 0 18px}
+.donut svg{width:124px;height:124px;flex:none;display:block}
 .donut svg path{cursor:pointer;transition:opacity .2s}
-.donut .rd{font-size:12.5px;color:var(--dim);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.donut .rd b{font-family:var(--serif);font-size:17px;color:var(--tx)}
-.donut .lg{flex:1;min-width:0}
-.donut .lg button{display:flex;align-items:center;gap:8px;width:100%;padding:5px 0;
-  font-size:13px;text-align:left}
-.donut .lg i{width:10px;height:10px;border-radius:2px;flex:none}
-.donut .lg span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.donut .lg em{font-style:normal;color:var(--dim);font-size:12px}
-.donut .lg button.off{opacity:.4}
+.donut .rd{flex:1;min-width:0}
+.donut .rd b{display:block;font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.8px;line-height:1.1}
+.donut .rd span{display:block;font-size:13px;margin-top:3px}
+.donut .rd small{display:block;font-size:12px;color:var(--dim);margin-top:2px}
+
+/* one period (week / month) on Home: title and figure on a line, bar, then detail */
+.per+.per{margin-top:18px}
+.per h2{margin:0}
+.pv{font-size:12.5px;color:var(--dim);white-space:nowrap}
+.pv b{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.4px;margin-right:3px}
+.pv b.ok{color:var(--ok)} .pv b.warn{color:var(--warn)} .pv b.bad{color:var(--bad)}
+.per .bar{margin:9px 0 7px}
+
+/* Add: categories as a compact icon grid rather than fifteen wide pills */
+.catgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:-8px 0 15px}
+.catgrid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:8px 2px 7px;border-radius:3px;background:var(--card2);border:1px solid var(--line);
+  font-size:10.5px;font-weight:600;line-height:1.15;color:var(--dim);min-height:58px}
+.catgrid button span{font-size:19px;line-height:1}
+.catgrid button.sel{background:#4a3016;border-color:var(--accent);color:#f6cfa8}
+
+/* a small name tag on personal expenses */
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;padding:1px 5px;
+  border-radius:2px;margin-left:6px;vertical-align:2px}
+.tag.pa{color:#b5e6df;background:#123a36} .tag.pb{color:#f2c4ba;background:#452019}
+
+/* quiet text buttons, e.g. "See all" */
+.lnk{color:var(--accent);font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:none}
+h2.row{display:flex}
+
+/* sections you open when you want them */
+details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary h2{margin:0}
+details.fold>summary::after{content:'Show';font-size:11.5px;font-weight:700;color:var(--accent)}
+details.fold[open]>summary::after{content:'Hide'}
+details.fold[open]>summary{margin-bottom:12px}
+
+button.catrow{display:block;width:100%;text-align:left;transition:opacity .2s}
+.catrow.off{opacity:.35}
 .catrow{margin-bottom:13px}
 .catrow .row{margin-bottom:5px;font-size:14px}
 .catbar{height:4px;background:var(--card2);overflow:hidden}
@@ -240,7 +271,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
   <section id="v-home">
     <div class="seg two" id="pp-toggle">
       <button data-pp="0" class="sel">Both of us</button>
-      <button data-pp="1">Per person</button>
+      <button data-pp="1" id="pp-me">Just me</button>
     </div>
     <div class="card hero">
       <div class="row">
@@ -277,27 +308,19 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     <div class="card hide" id="each-card">
       <h2>Each of you</h2>
       <div class="grid2" id="each-body" style="margin-bottom:0"></div>
-      <div class="note" id="each-note"></div>
     </div>
 
     <div class="card">
-      <h2>This week <span style="text-transform:none;font-weight:500" id="w-range"></span></h2>
-      <div class="row">
-        <div class="big" style="font-size:26px" id="w-spent">—</div>
-        <div class="dim" style="font-size:13px" id="w-target"></div>
+      <div class="per">
+        <div class="row"><h2>This week</h2><div class="pv"><b id="w-spent">—</b><span id="w-target"></span></div></div>
+        <div class="bar"><i id="w-bar"></i></div>
+        <div class="sub"><span><span id="w-range"></span><span id="w-eur"></span></span><span id="w-diff"></span></div>
       </div>
-      <div class="bar"><i id="w-bar"></i></div>
-      <div class="sub"><span id="w-eur"></span><span id="w-diff"></span></div>
-    </div>
-
-    <div class="card">
-      <h2>This month <span style="text-transform:none;font-weight:500" id="m-range"></span></h2>
-      <div class="row">
-        <div class="big" style="font-size:26px" id="m-spent">—</div>
-        <div class="dim" style="font-size:13px" id="m-target"></div>
+      <div class="per">
+        <div class="row"><h2 id="m-ttl">This month</h2><div class="pv"><b id="m-spent">—</b><span id="m-target"></span></div></div>
+        <div class="bar"><i id="m-bar"></i></div>
+        <div class="sub"><span><span id="m-range"></span><span id="m-eur"></span></span><span id="m-diff"></span></div>
       </div>
-      <div class="bar"><i id="m-bar"></i></div>
-      <div class="sub"><span id="m-eur"></span><span id="m-diff"></span></div>
     </div>
 
     <div class="card hide" id="trend-card">
@@ -311,7 +334,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     </div>
 
     <div class="card">
-      <h2>Recent</h2>
+      <h2 class="row">Recent <button class="lnk" id="see-all">See all</button></h2>
       <div id="h-recent"></div>
     </div>
   </section>
@@ -326,14 +349,14 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       </label>
       <div class="eur" id="a-eur" style="margin:-6px 0 10px"></div>
       <div id="a-recent-wrap" class="hide">
-        <span class="lbl" style="display:block;margin-bottom:7px">Repeat a recent one</span>
-        <div class="pills" id="a-recent" style="margin-bottom:15px"></div>
+        <label class="f"><span>Repeat a recent one</span></label>
+        <div class="pills" id="a-recent" style="margin:-8px 0 15px"></div>
       </div>
 
       <label class="f">
         <span>Category</span>
       </label>
-      <div class="pills" id="a-cats" style="margin:-8px 0 15px"></div>
+      <div class="catgrid" id="a-cats"></div>
 
       <label class="f">
         <span>Paid from</span>
@@ -363,6 +386,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 
       <button class="btn" id="a-save">Add expense</button>
       <button class="btn ghost hide" id="a-del" style="margin-top:9px">Delete this expense</button>
+      <div class="note hide" id="a-meta" style="text-align:center;margin-top:12px"></div>
     </div>
   </section>
 
@@ -374,22 +398,16 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       <button data-per="all">All</button>
     </div>
     <div class="card">
-      <label class="f" style="margin-bottom:0">
-        <span>Filter category</span>
-        <select id="l-cat"><option value="">All categories</option></select>
-      </label>
-    </div>
-    <div class="card">
-      <h2>By category <span style="text-transform:none;font-weight:500" id="l-tot"></span></h2>
-      <div class="donut hide" id="l-donut"></div>
+      <div class="donut" id="l-donut"></div>
       <div id="l-cats"></div>
     </div>
-    <div class="card" id="l-acct-card">
-      <h2>By account</h2>
+    <details class="card fold" id="l-acct-card">
+      <summary><h2>By account</h2></summary>
       <div id="l-accts"></div>
-    </div>
+    </details>
     <div class="card">
-      <h2>Expenses</h2>
+      <h2 class="row"><span id="l-items-h">Expenses</span>
+        <button class="lnk hide" id="l-clear">Show all</button></h2>
       <div id="l-items"></div>
     </div>
   </section>
@@ -399,17 +417,14 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     <div class="group">Shared with the other phone</div>
     <div class="card">
       <h2>The trip</h2>
-      <div class="grid2">
+      <div class="grid2" style="margin-bottom:0">
         <label class="f"><span>First day</span><input id="s-start" type="date"></label>
         <label class="f"><span>Last day</span><input id="s-end" type="date"></label>
       </div>
-      <div class="note" style="margin-top:0">Every daily allowance is worked out between
-        these two dates.</div>
     </div>
 
     <div class="card">
       <h2>The budget</h2>
-      <span class="cap">Give the figure the way you think about it</span>
       <div class="seg four" id="s-mode">
         <button data-mode="daily">Day</button>
         <button data-mode="weekly">Week</button>
@@ -436,28 +451,23 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <input id="p-amt" type="text" inputmode="decimal" placeholder="220" style="max-width:104px">
         <button class="btn ghost" id="p-add" style="width:auto;padding:11px 15px">Add</button>
       </div>
-      <div class="note">Bookings you know are coming — ferry crossings, tours, the
-        big-ticket days. The money is held back from your daily allowance so a
-        booking doesn’t blow a week when you finally pay it. Delete the entry once
-        you’ve logged the real expense.</div>
+      <div class="note">Held back from your daily allowance. Delete one once you’ve
+        logged the real expense.</div>
     </div>
 
     <div class="card">
       <h2>Accounts</h2>
       <div class="pills" id="s-accounts"></div>
-      <div class="note">Where the money comes from. These show as one-tap options when
-        you add an expense; adding a new one there remembers it here. Tap × to remove
-        one — expenses already logged against it keep their label.</div>
+      <div class="note">Tap × to remove one. Expenses already logged keep their label.</div>
     </div>
 
     <div class="card">
       <h2>Euro rate</h2>
-      <label class="f"><span>1 NZD = ? EUR</span><input id="s-rate" type="text" inputmode="decimal"></label>
+      <label class="f"><span>1 NZD = ? EUR — edit to match your card’s rate</span><input id="s-rate" type="text" inputmode="decimal"></label>
       <div class="row">
         <span class="note" id="s-rate-age" style="margin:0"></span>
         <button class="btn ghost" id="s-rate-fetch" style="width:auto;padding:9px 15px">Update rate</button>
       </div>
-      <div class="note">Rate updates automatically when you're online. Edit it by hand if you want to use the rate your card actually gives you.</div>
     </div>
 
     <div class="group mid">This phone only</div>
@@ -467,9 +477,8 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <button data-me="p1" class="sel">Tanguy</button>
         <button data-me="p2">Zita</button>
       </div>
-      <div class="note" style="margin-top:0">Stamps who added each expense, so you can
-        tell that apart from who actually paid. This is per phone — picking one here
-        changes nothing on the other phone and nothing about past expenses.</div>
+      <div class="note" style="margin-top:0">Names the “Just me” view on Home and stamps
+        who added each expense.</div>
     </div>
 
     <div class="card">
@@ -480,7 +489,8 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <textarea id="s-key" rows="3" placeholder="eyJhbGci..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label>
       <button class="btn ghost" id="s-test">Save &amp; test connection</button>
       <div class="note" id="s-sync-msg"></div>
-      <div class="note" style="margin-top:12px">Put the <b>same</b> URL and key on both phones and you'll both see the same expenses. Leave blank to keep everything on this phone only.</div>
+      <div class="note" style="margin-top:12px">Use the <b>same</b> URL and key on both phones.
+        Leave blank to keep everything on this phone.</div>
     </div>
 
     <div class="card">
@@ -515,15 +525,15 @@ const CATS = [
   {id:'grocery',  name:'Groceries',     icon:'🛒', c:'#8cc07a'},  // new growth
   {id:'eatout',   name:'Eating out',    icon:'🍔', c:'#d98e4a'},
   {id:'camp',     name:'Campsites',     icon:'🏕️', c:'#5b9e6f'},  // bush
-  {id:'stay',     name:'Hostel/Hotel',  icon:'🛏️', c:'#7f9ec4'},
+  {id:'stay',     name:'Hostel/Hotel', s:'Stays',  icon:'🛏️', c:'#7f9ec4'},
   {id:'activity', name:'Activities',    icon:'🪂', c:'#c9705f'},  // kākā
-  {id:'van',      name:'Van & repairs', icon:'🔧', c:'#9aa79b'},
-  {id:'transport',name:'Ferry/Transport',icon:'⛴️', c:'#4aa6bd'}, // Cook Strait
-  {id:'utility',  name:'Showers/Laundry',icon:'🚿', c:'#6fc3b4'},
-  {id:'phone',    name:'Phone & data',  icon:'📱', c:'#8f8fc4'},
+  {id:'van',      name:'Van & repairs', s:'Van', icon:'🔧', c:'#9aa79b'},
+  {id:'transport',name:'Ferry/Transport', s:'Transport',icon:'⛴️', c:'#4aa6bd'}, // Cook Strait
+  {id:'utility',  name:'Showers/Laundry', s:'Showers',icon:'🚿', c:'#6fc3b4'},
+  {id:'phone',    name:'Phone & data', s:'Phone',  icon:'📱', c:'#8f8fc4'},
   {id:'gear',     name:'Gear',          icon:'🎒', c:'#a3b551'},
   {id:'health',   name:'Health',        icon:'💊', c:'#dd6a5f'},  // rātā
-  {id:'gift',     name:'Gifts/Souvenirs',icon:'🎁', c:'#b97fb5'},
+  {id:'gift',     name:'Gifts/Souvenirs', s:'Gifts',icon:'🎁', c:'#b97fb5'},
   {id:'drinks',   name:'Drinks',        icon:'🍻', c:'#e3b13c'},  // kōwhai
   {id:'other',    name:'Other',         icon:'✨', c:'#b9c4b6'},
 ];
@@ -730,20 +740,23 @@ function spanMult(mode, totalDays){
   if (mode === 'monthly') return totalDays / DAYS_PER_MONTH;
   return 1;                        // 'total'
 }
-function stats(){
+/* `viewed` = the numbers as Home and Expenses show them: with the Per person
+   switch on, that's this phone's person's share, not the whole pot. */
+function stats(viewed){
   const st = S.settings, t = todayISO();
   const totalDays = Math.max(1, dayDiff(st.start, st.end) + 1);
   const elapsed   = Math.min(totalDays, Math.max(0, dayDiff(st.start, t) + 1));
   const daysLeft  = Math.max(0, dayDiff(t, st.end) + (t <= st.end ? 1 : 0));
 
   // One figure in whatever unit suits you, scaled up to the whole-trip pot.
+  const div = viewed && st.perPerson ? 2 : 1;
   const budget = (+st.budgetValue || 0) * spanMult(st.budgetMode, totalDays)
-                 * (+st.budgetFor === 1 ? 2 : 1);
+                 * (+st.budgetFor === 1 ? 2 : 1) / div;
 
-  const spent = sum(live()) + (+st.preSpent || 0);
+  const spent = (viewed ? vsum(live()) : sum(live())) + (+st.preSpent || 0) / div;
   const left  = budget - spent;
   // money already spoken for by bookings you know are coming
-  const planned = (st.planned || []).reduce((t, p) => t + (+p.amount || 0), 0);
+  const planned = (st.planned || []).reduce((t, p) => t + (+p.amount || 0), 0) / div;
   const avail = left - planned;
 
   return {
@@ -770,11 +783,13 @@ function shares(s){
   return out;
 }
 
-/* Per-person view: halves every *aggregate* figure (budget, totals, allowances).
-   Individual expense rows always show what was actually paid. */
-const DIV = () => S.settings.perPerson ? 2 : 1;
-const pp  = n => n / DIV();
-const each = () => S.settings.perPerson ? ' each' : '';
+/* Per-person view: every *aggregate* figure (budget, totals, allowances) becomes
+   this phone's person's share — half of what's shared plus all of their own
+   personal buys. Individual expense rows always show what was actually paid. */
+const viewer = () => S.settings.me || 'p1';
+const vamt = e => S.settings.perPerson ? shareOf(e, viewer()) : e.amount;
+const vsum = arr => arr.reduce((t, e) => t + vamt(e), 0);
+const each = () => S.settings.perPerson ? ' · ' + who(viewer()) : '';
 const tone = r => r > 1 ? 'bad' : r > .9 ? 'warn' : 'ok';
 const toneC = r => r > 1 ? 'var(--bad)' : r > .9 ? 'var(--warn)' : 'var(--ok)';
 
@@ -782,15 +797,16 @@ const toneC = r => r > 1 ? 'var(--bad)' : r > .9 ? 'var(--warn)' : 'var(--ok)';
    RENDER — HOME
    ============================================================ */
 function renderHome(){
-  const s = stats(), st = S.settings, t = todayISO();
+  const s = stats(true), full = stats(), st = S.settings, t = todayISO();
   const $ = id => document.getElementById(id);
 
   document.querySelectorAll('#pp-toggle button').forEach(x =>
     x.classList.toggle('sel', (x.dataset.pp === '1') === !!st.perPerson));
-  $('h-left-lbl').textContent = 'Left to spend' + (st.perPerson ? ' each' : '');
-  $('h-left').textContent = nz(pp(s.left));
+  $('pp-me').textContent = 'Just ' + who(viewer());
+  $('h-left-lbl').textContent = 'Left to spend' + each();
+  $('h-left').textContent = nz((s.left));
   $('h-left').className = 'big ' + (s.left < 0 ? 'bad' : '');
-  $('h-left-e').textContent = eur(pp(s.left)) + ' left';
+  $('h-left-e').textContent = eur((s.left)) + ' left';
   $('h-days').textContent = s.daysLeft;
   $('h-end').textContent = 'until ' + fmtShort(st.end);
 
@@ -799,88 +815,84 @@ function renderHome(){
   $('h-bar').style.background = toneC(s.spent / Math.max(1, s.onPace));
   const pacePct = Math.min(100, (s.elapsed / s.totalDays) * 100);
   $('h-pace').style.left = pacePct + '%';
-  $('h-spent').textContent = nz(pp(s.spent)) + ' spent' + each();
-  $('h-total').textContent = 'of ' + nz(pp(s.budget));
+  $('h-spent').textContent = nz((s.spent)) + ' spent' + each();
+  $('h-total').textContent = 'of ' + nz((s.budget));
 
-  $('h-daily').textContent = nz(pp(s.daily));
+  $('h-daily').textContent = nz((s.daily));
   $('h-daily').className = 'n ' + (s.daily < 0 ? 'bad' : '');
-  $('h-daily-e').textContent = eur(pp(s.daily)) + ' / day' + each() +
+  $('h-daily-e').textContent = eur((s.daily)) + ' / day' + each() +
     (s.planned > 0 ? ' · after set-aside' : '');
-  $('h-avg').textContent = nz(pp(s.avg));
+  $('h-avg').textContent = nz((s.avg));
   $('h-avg').className = 'n ' + tone(s.avg / Math.max(0.01, s.perDay));
-  $('h-avg-e').textContent = 'budget is ' + nz(pp(s.perDay)) + '/day' + each();
+  $('h-avg-e').textContent = 'budget is ' + nz((s.perDay)) + '/day' + each();
 
   const diff = s.onPace - s.spent;
   const v = $('h-verdict');
   if (s.daysLeft === 0 && t > st.end) {
-    v.innerHTML = 'Trip finished. Final spend <b>' + nz(s.spent) + '</b> (' + eur(s.spent) + ').';
+    v.innerHTML = 'Trip finished. Final spend' + each() + ' <b>' + nz(s.spent) + '</b> (' + eur(s.spent) + ').';
   } else if (s.spent === 0) {
-    v.innerHTML = 'Nothing logged yet — you have <b>' + nz(pp(s.perDay)) + '</b> a day' + each() +
-      ' (' + eur(pp(s.perDay)) + ') to play with over ' + s.totalDays + ' days.';
+    v.innerHTML = 'Nothing logged yet — you have <b>' + nz((s.perDay)) + '</b> a day' + each() +
+      ' (' + eur((s.perDay)) + ') to play with over ' + s.totalDays + ' days.';
   } else if (diff >= 0) {
-    v.innerHTML = '<span class="ok">✓ ' + nz(pp(diff)) + ' under pace</span> — keep this up and you finish with about <b>' +
-      nz(pp(Math.max(0, s.budget - s.avg * s.totalDays))) + '</b> spare.';
+    v.innerHTML = '<span class="ok">✓ ' + nz((diff)) + ' under pace</span> — keep this up and you finish with about <b>' +
+      nz((Math.max(0, s.budget - s.avg * s.totalDays))) + '</b> spare.';
   } else {
     const burn = s.avg * s.totalDays;
-    v.innerHTML = '<span class="bad">⚠ ' + nz(pp(-diff)) + ' over pace</span> — at ' + nz(pp(s.avg)) +
-      '/day' + each() + ' you’d finish at <b>' + nz(pp(burn)) + '</b>, i.e. ' +
-      nz(pp(burn - s.budget)) + ' over budget.';
+    v.innerHTML = '<span class="bad">⚠ ' + nz((-diff)) + ' over pace</span> — at ' + nz((s.avg)) +
+      '/day you’d finish at <b>' + nz((burn)) + '</b>, i.e. ' +
+      nz((burn - s.budget)) + ' over budget.';
   }
 
   // week
   const ws = weekStart(t), we = weekEnd(t);
   const wDays = tripDays(ws, we);                 // only the days you're actually travelling
-  const wSpent = sum(between(ws, we)), wTarget = s.perDay * wDays;
-  $('w-range').textContent = fmtShort(ws) + ' – ' + fmtShort(we) +
-    (wDays < 7 ? ' · ' + wDays + ' day' + (wDays === 1 ? '' : 's') + ' of trip' : '');
+  const wSpent = vsum(between(ws, we)), wTarget = s.perDay * wDays;
+  $('w-range').textContent = wDays < 7 ? wDays + ' day' + (wDays === 1 ? '' : 's') + ' of trip · ' : '';
   const wR = wTarget > 0 ? wSpent/wTarget : 0;
-  $('w-spent').textContent = nz2(pp(wSpent));
-  $('w-spent').className = 'big ' + tone(wR);
-  $('w-target').textContent = 'of ' + nz(pp(wTarget)) + each();
+  $('w-spent').textContent = nz(wSpent);
+  $('w-spent').className = tone(wR);
+  $('w-target').textContent = 'of ' + nz((wTarget)) + each();
   $('w-bar').style.width = Math.min(100, wR*100) + '%';
   $('w-bar').style.background = toneC(wR);
-  $('w-eur').textContent = eur2(pp(wSpent));
-  $('w-diff').textContent = wSpent <= wTarget ? nz(pp(wTarget-wSpent)) + ' left this week' : nz(pp(wSpent-wTarget)) + ' over';
+  $('w-eur').textContent = eur2((wSpent));
+  $('w-diff').textContent = wSpent <= wTarget ? nz((wTarget-wSpent)) + ' left this week' : nz((wSpent-wTarget)) + ' over';
 
   // month
   const ms = monthStart(t), me = monthEnd(t);
-  const mSpent = sum(between(ms, me));
+  const mSpent = vsum(between(ms, me));
   const mDays = tripDays(ms, me);                 // ditto: a part-month is a part-budget
   const mTarget = s.perDay * mDays;
   const mFull = dayDiff(ms, me) + 1;
-  $('m-range').textContent = dparse(t).toLocaleDateString('en-NZ',{month:'long'}) +
-    (mDays < mFull ? ' · ' + mDays + ' days of trip' : '');
+  $('m-ttl').textContent = dparse(t).toLocaleDateString('en-NZ',{month:'long'});
+  $('m-range').textContent = mDays < mFull ? mDays + ' days of trip · ' : '';
   const mR = mTarget > 0 ? mSpent/mTarget : 0;
-  $('m-spent').textContent = nz2(pp(mSpent));
-  $('m-spent').className = 'big ' + tone(mR);
-  $('m-target').textContent = 'of ' + nz(pp(mTarget)) + each();
+  $('m-spent').textContent = nz(mSpent);
+  $('m-spent').className = tone(mR);
+  $('m-target').textContent = 'of ' + nz((mTarget)) + each();
   $('m-bar').style.width = Math.min(100, mR*100) + '%';
   $('m-bar').style.background = toneC(mR);
-  $('m-eur').textContent = eur2(pp(mSpent));
-  $('m-diff').textContent = mSpent <= mTarget ? nz(pp(mTarget-mSpent)) + ' left this month' : nz(pp(mSpent-mTarget)) + ' over';
+  $('m-eur').textContent = eur2((mSpent));
+  $('m-diff').textContent = mSpent <= mTarget ? nz((mTarget-mSpent)) + ' left this month' : nz((mSpent-mTarget)) + ' over';
 
   const pl = $('h-planned');
   if (s.planned > 0){
     pl.classList.remove('hide');
-    pl.innerHTML = '<b>' + nz(s.planned) + '</b> set aside for ' +
-      (S.settings.planned || []).length + ' planned cost' +
-      ((S.settings.planned || []).length === 1 ? '' : 's') +
-      ' — <b>' + nz(s.avail) + '</b> left for everyday spending.';
+    pl.innerHTML = '<b>' + nz(s.planned) + '</b> of that is set aside for planned costs' + each() + '.';
   } else pl.classList.add('hide');
 
-  renderEach(s);
+  renderEach(full);
   renderSplit();
   renderTrend();
   document.getElementById('h-recent').innerHTML =
     live().sort((a,b) => b.spent_on.localeCompare(a.spent_on) || b.updated_at.localeCompare(a.updated_at))
-          .slice(0,6).map(itemHTML).join('') || '<div class="empty">No expenses yet.<br>Tap <b>Add</b> to log your first one.</div>';
+          .slice(0,4).map(e => itemHTML(e)).join('') || '<div class="empty">No expenses yet.<br>Tap <b>Add</b> to log your first one.</div>';
 }
 
 /* Only worth showing once personal spending has pulled your two halves apart. */
 function renderEach(s){
   const card = document.getElementById('each-card');
   const sh = shares(s);
-  if (Math.abs(sh.p1.spent - sh.p2.spent) < 0.5){ card.classList.add('hide'); return; }
+  if (S.settings.perPerson || Math.abs(sh.p1.spent - sh.p2.spent) < 0.5){ card.classList.add('hide'); return; }
   card.classList.remove('hide');
   document.getElementById('each-body').innerHTML = ['p1', 'p2'].map(p => {
     const x = sh[p];
@@ -889,10 +901,8 @@ function renderEach(s){
         (p === S.settings.me ? ' · you' : '') + '</div>' +
       '<div class="n' + (x.left < 0 ? ' bad' : '') + '">' + nz(x.left) + '</div>' +
       '<div class="e">left · ' + nz(x.daily) + '/day</div>' +
-      '<div class="e">' + (x.own > 0 ? nz2(x.own) + ' personal' : 'nothing personal yet') + '</div></div>';
+      (x.own > 0 ? '<div class="e">incl. ' + nz(x.own) + ' just for ' + esc(who(p)) + '</div>' : '') + '</div>';
   }).join('');
-  document.getElementById('each-note').textContent =
-    'Personal buys come out of that person’s half only. The figures above still count everything.';
 }
 
 function renderSplit(){
@@ -980,34 +990,38 @@ function renderTrend(){
     '<line x1="0" y1="36.25" x2="100" y2="36.25" stroke="var(--line)" stroke-width=".5"/>' +
     '</svg>' +
     '<div class="sub" style="margin-top:6px"><span>' + fmtShort(weeks[0].ws) + '</span>' +
-    '<span>this week</span></div>' +
-    '<div class="note" style="margin-top:4px">Dashed line is that week’s target. ' +
-    'Bars turn ' + '<span class="bad">red</span> when you went over.</div>';
+    '<span>- - - target</span><span>this week</span></div>';
 }
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const who = p => PEOPLE[p] || PEOPLE.p1;
 
-function itemHTML(e){
-  const c = catOf(e.category), st = S.settings;
-  // who paid is the money fact; who added it is the audit trail, shown only when they differ
-  let byline = esc(who(e.payer)) + ' paid';
-  if (e.personal) byline += ' · just ' + esc(who(e.personal));
-  if (e.account) byline += ' · ' + esc(e.account);
-  if (e.entered_by && e.entered_by !== e.payer) byline += ' · added by ' + esc(who(e.entered_by));
+/* `inDay`: the row sits under a day heading, so it needn't repeat the date. */
+function itemHTML(e, inDay){
+  const c = catOf(e.category);
+  const bits = [];
+  if (e.note) bits.push(c.name);
+  if (inDay !== true) bits.push(fmtShort(e.spent_on));
+  bits.push(esc(who(e.payer)) + ' paid');
+  if (e.account) bits.push(esc(e.account));
+  const tag = e.personal
+    ? '<span class="tag ' + (e.personal === 'p1' ? 'pa' : 'pb') + '">' + esc(who(e.personal)) + '</span>' : '';
   return '<div class="item" data-id="' + e.id + '">' +
     '<div class="ic" style="background:' + c.c + '22">' + c.icon + '</div>' +
-    '<div class="m"><div class="t">' + esc(e.note || c.name) + '</div>' +
-      '<div class="s">' + (e.note ? c.name + ' · ' : '') + fmtShort(e.spent_on) +
-      ' · ' + byline + '</div></div>' +
+    '<div class="m"><div class="t">' + esc(e.note || c.name) + tag + '</div>' +
+      '<div class="s">' + bits.join(' · ') + '</div></div>' +
     '<div class="v"><b>' + nz2(e.amount) + '</b><small>' + eur2(e.amount) + '</small></div></div>';
 }
 
 /* ============================================================
    RENDER — LIST
    ============================================================ */
-let period = 'week', filterCat = '';
+/* Part-to-whole at a glance. More than six slices stops being readable, so the
+   biggest five keep their own colour and the rest fold into one grey slice. */
+const DONUT_TOP = 5, DONUT_REST = '__rest__', REST_COL = '#56645a';
+// Tapping a category (slice or row) narrows the list to it: a category id, or DONUT_REST.
+let period = 'week', selCat = null;
 
 function renderList(){
   const t = todayISO();
@@ -1016,98 +1030,85 @@ function renderList(){
   else if (period === 'month'){ from = monthStart(t); to = monthEnd(t); label = 'this month'; }
   else { from = '0000-01-01'; to = '9999-12-31'; label = 'all time'; }
 
-  let rows = between(from, to);
-  if (filterCat) rows = rows.filter(e => e.category === filterCat);
-  const total = sum(rows);
-  document.getElementById('l-tot').textContent = nz2(pp(total)) + ' · ' + eur2(pp(total)) + each();
+  const rows = between(from, to);
+  const total = vsum(rows);
 
-  // category breakdown
   const by = {};
-  rows.forEach(e => by[e.category] = (by[e.category] || 0) + e.amount);
-  const ordered = Object.entries(by).sort((a,b) => b[1]-a[1]);
-  document.getElementById('l-cats').innerHTML = ordered.length ? ordered.map(([id,v]) => {
-    const c = catOf(id), p = total ? v/total*100 : 0;
-    return '<div class="catrow"><div class="row">' +
-      '<span>' + c.icon + ' ' + c.name + '</span>' +
-      '<span><b>' + nz(pp(v)) + '</b> <span class="dim" style="font-size:12px">' + eur(pp(v)) + ' · ' + p.toFixed(0) + '%</span></span>' +
-      '</div><div class="catbar"><i style="width:' + p + '%;background:' + c.c + '"></i></div></div>';
-  }).join('') : '<div class="empty">Nothing ' + label + '.</div>';
+  rows.forEach(e => by[e.category] = (by[e.category] || 0) + vamt(e));
+  const ordered = Object.entries(by).filter(([, v]) => v > 0).sort((a,b) => b[1]-a[1]);
+  const top = new Set(ordered.slice(0, DONUT_TOP).map(o => o[0]));
+  const folded = ordered.length - top.size > 1;
+  const inRest = id => folded && !top.has(id);
+  if (selCat === DONUT_REST ? !folded : selCat && !by[selCat]) selCat = null;
+  const isSel = id => id === selCat || (selCat === DONUT_REST && inRest(id));
 
-  renderDonut(ordered, total, label);
+  renderPie(ordered, total, label, folded);
+
+  document.getElementById('l-cats').innerHTML = ordered.map(([id, v]) => {
+    const c = catOf(id), p = total ? v/total*100 : 0;
+    return '<button class="catrow' + (selCat && !isSel(id) ? ' off' : '') + '" data-cat="' + id + '"><div class="row">' +
+      '<span>' + c.icon + ' ' + c.name + '</span>' +
+      '<span><b>' + nz(v) + '</b> <span class="dim" style="font-size:12px">' + p.toFixed(0) + '%</span></span>' +
+      '</div><div class="catbar"><i style="width:' + p + '%;background:' + (inRest(id) ? REST_COL : c.c) + '"></i></div></button>';
+  }).join('');
 
   // by account — handy when reconciling against a bank statement
   const byA = {};
-  rows.forEach(e => { const k = e.account || 'Unspecified'; byA[k] = (byA[k] || 0) + e.amount; });
-  const aOrdered = Object.entries(byA).sort((a,b) => b[1]-a[1]);
+  rows.forEach(e => { const k = e.account || 'Unspecified'; byA[k] = (byA[k] || 0) + vamt(e); });
+  const aOrdered = Object.entries(byA).filter(([, v]) => v > 0).sort((a,b) => b[1]-a[1]);
   document.getElementById('l-acct-card').classList.toggle('hide', aOrdered.length < 2);
   document.getElementById('l-accts').innerHTML = aOrdered.map(([name,v]) => {
     const p = total ? v/total*100 : 0;
     return '<div class="catrow"><div class="row"><span>' + esc(name) + '</span>' +
-      '<span><b>' + nz(pp(v)) + '</b> <span class="dim" style="font-size:12px">' +
-      eur(pp(v)) + ' · ' + p.toFixed(0) + '%</span></span></div>' +
+      '<span><b>' + nz(v) + '</b> <span class="dim" style="font-size:12px">' +
+      eur(v) + ' · ' + p.toFixed(0) + '%</span></span></div>' +
       '<div class="catbar"><i style="width:' + p + '%;background:var(--accent)"></i></div></div>';
   }).join('');
 
   // grouped list
+  const shown = selCat ? rows.filter(e => isSel(e.category)) : rows;
+  const sc = selCat && selCat !== DONUT_REST ? catOf(selCat) : null;
+  document.getElementById('l-items-h').textContent =
+    sc ? sc.icon + ' ' + sc.name : selCat ? 'Everything else' : 'Expenses';
+  document.getElementById('l-clear').classList.toggle('hide', !selCat);
   const groups = {};
-  rows.forEach(e => (groups[e.spent_on] = groups[e.spent_on] || []).push(e));
+  shown.forEach(e => (groups[e.spent_on] = groups[e.spent_on] || []).push(e));
   const days = Object.keys(groups).sort().reverse();
   document.getElementById('l-items').innerHTML = days.length ? days.map(d =>
     '<div class="day"><span>' + fmtDay(d) + '</span><span>' + nz2(sum(groups[d])) + '</span></div>' +
-    groups[d].sort((a,b) => b.updated_at.localeCompare(a.updated_at)).map(itemHTML).join('')
+    groups[d].sort((a,b) => b.updated_at.localeCompare(a.updated_at)).map(e => itemHTML(e, true)).join('')
   ).join('') : '<div class="empty">Nothing ' + label + '.</div>';
 }
 
-/* Part-to-whole at a glance. More than six slices stops being readable, so the
-   biggest five keep their own colour and the rest fold into one grey slice. */
-const DONUT_TOP = 5, DONUT_REST = '__rest__';
-let donutSel = null;
-
-function renderDonut(ordered, total, label){
+function renderPie(ordered, total, label, folded){
   const box = document.getElementById('l-donut');
-  if (ordered.length < 2 || total <= 0){ box.classList.add('hide'); return; }
+  if (total <= 0){ box.innerHTML = ''; box.classList.add('hide'); return; }
   box.classList.remove('hide');
 
-  let segs = ordered.slice(0, DONUT_TOP).map(([id, v]) => {
-    const c = catOf(id);
-    return {id, v, name: c.name, icon: c.icon, col: c.c};
-  });
-  const rest = ordered.slice(DONUT_TOP);
-  if (rest.length === 1){
-    const [id, v] = rest[0], c = catOf(id);
-    segs.push({id, v, name: c.name, icon: c.icon, col: c.c});
-  } else if (rest.length){
-    segs.push({id: DONUT_REST, v: rest.reduce((t, r) => t + r[1], 0),
-               name: rest.length + ' others', icon: '+', col: '#56645a'});
-  }
-  if (!segs.some(g => g.id === donutSel)) donutSel = null;
+  const segs = ordered.slice(0, folded ? DONUT_TOP : ordered.length).map(([id, v]) => ({id, v, col: catOf(id).c}));
+  if (folded) segs.push({id: DONUT_REST, v: ordered.slice(DONUT_TOP).reduce((t, r) => t + r[1], 0), col: REST_COL});
 
   // solid wedges, split by a thin line in the page colour so neighbours don't merge
   const R = 56, pt = a => (60 + R * Math.sin(a)).toFixed(2) + ' ' + (60 - R * Math.cos(a)).toFixed(2);
   let at = 0;
-  const wedges = segs.map((g, i) => {
+  const wedges = segs.length < 2 ? '' : segs.map(g => {
     const sweep = g.v / total * 2 * Math.PI, a0 = at, a1 = at + sweep;
     at = a1;
-    const d = sweep >= 2 * Math.PI - 1e-6
-      ? 'M60 4a56 56 0 1 1 0 112a56 56 0 1 1 0-112Z'
-      : 'M60 60L' + pt(a0) + 'A' + R + ' ' + R + ' 0 ' + (sweep > Math.PI ? 1 : 0) + ' 1 ' + pt(a1) + 'Z';
-    return '<path data-sl="' + i + '" d="' + d + '" fill="' + g.col + '" stroke="var(--bg)" stroke-width="1.5"' +
-      ' stroke-linejoin="round"' + (donutSel && g.id !== donutSel ? ' opacity=".3"' : '') + '/>';
+    return '<path data-cat="' + g.id + '" d="M60 60L' + pt(a0) + 'A' + R + ' ' + R + ' 0 ' +
+      (sweep > Math.PI ? 1 : 0) + ' 1 ' + pt(a1) + 'Z" fill="' + g.col +
+      '" stroke="var(--bg)" stroke-width="1.5" stroke-linejoin="round"' +
+      (selCat && g.id !== selCat ? ' opacity=".3"' : '') + '/>';
   }).join('');
 
-  const sel = segs.find(g => g.id === donutSel);
-  const head = sel
-    ? '<div class="rd"><b>' + nz(pp(sel.v)) + '</b> ' + sel.icon + ' ' + esc(sel.name) +
-      ' · ' + (sel.v / total * 100).toFixed(0) + '%</div>'
-    : '<div class="rd"><b>' + nz(pp(total)) + '</b> ' + esc(label) + '</div>';
-
+  const sel = segs.find(g => g.id === selCat);
+  const sc = sel && sel.id !== DONUT_REST ? catOf(sel.id) : null;
   box.innerHTML =
-    '<svg viewBox="0 0 120 120" role="img" aria-label="Spending by category">' + wedges + '</svg>' +
-    '<div class="lg">' + head + segs.map((g, i) =>
-      '<button data-sl="' + i + '"' + (donutSel && g.id !== donutSel ? ' class="off"' : '') + '>' +
-      '<i style="background:' + g.col + '"></i><span>' + g.icon + ' ' + esc(g.name) + '</span>' +
-      '<em>' + (g.v / total * 100).toFixed(0) + '%</em></button>').join('') + '</div>';
-  box._segs = segs;
+    (wedges ? '<svg viewBox="0 0 120 120" role="img" aria-label="Spending by category">' + wedges + '</svg>' : '') +
+    '<div class="rd">' + (sel
+      ? '<b>' + nz(sel.v) + '</b><span>' + (sc ? sc.icon + ' ' + esc(sc.name) : 'Everything else') + '</span>' +
+        '<small>' + (sel.v / total * 100).toFixed(0) + '% of ' + label + '</small>'
+      : '<b>' + nz(total) + '</b><span>spent ' + label + each() + '</span><small>' + eur(total) + '</small>') +
+    '</div>';
 }
 
 /* ============================================================
@@ -1117,7 +1118,8 @@ let editing = null, aCat = 'grocery', aPayer = 'p1', aAccount = '', aPers = '';
 
 function buildAddPills(){
   document.getElementById('a-cats').innerHTML = CATS.map(c =>
-    '<button class="pill' + (c.id === aCat ? ' sel' : '') + '" data-cat="' + c.id + '">' + c.icon + ' ' + c.name + '</button>').join('');
+    '<button' + (c.id === aCat ? ' class="sel"' : '') + ' data-cat="' + c.id + '" title="' + c.name + '">' +
+    '<span>' + c.icon + '</span>' + (c.s || c.name) + '</button>').join('');
   const st = S.settings;
   document.getElementById('a-payers').innerHTML =
     '<button class="pill pa' + (aPayer === 'p1' ? ' sel' : '') + '" data-payer="p1">' + esc(PEOPLE.p1) + '</button>' +
@@ -1217,6 +1219,10 @@ function openAdd(id){
   document.getElementById('a-note').value = e ? (e.note || '') : '';
   document.getElementById('a-save').textContent = e ? 'Save changes' : 'Add expense';
   document.getElementById('a-del').classList.toggle('hide', !e);
+  // who typed it in is the audit trail, so it lives here rather than on every row
+  const meta = document.getElementById('a-meta');
+  meta.textContent = e && e.entered_by ? 'Added by ' + who(e.entered_by) : '';
+  meta.classList.toggle('hide', !meta.textContent);
   document.getElementById('a-eur').textContent = '';
   document.getElementById('a-acct-new').classList.add('hide');
   document.getElementById('a-acct-input').value = '';
@@ -1652,22 +1658,20 @@ document.body.addEventListener('click', e => {
   openAdd(it.dataset.id);
 });
 
-document.querySelectorAll('.seg button').forEach(b =>
+document.querySelectorAll('#v-list .seg button').forEach(b =>
   b.addEventListener('click', () => {
     period = b.dataset.per;
-    document.querySelectorAll('.seg button').forEach(x => x.classList.toggle('sel', x === b));
+    document.querySelectorAll('#v-list .seg button').forEach(x => x.classList.toggle('sel', x === b));
     renderList();
   }));
-document.getElementById('l-cat').innerHTML =
-  '<option value="">All categories</option>' + CATS.map(c => '<option value="' + c.id + '">' + c.icon + ' ' + c.name + '</option>').join('');
-document.getElementById('l-cat').addEventListener('change', e => { filterCat = e.target.value; renderList(); });
-// tap a slice (or its legend row) to read it above the legend; tap again to go back to the total
-document.getElementById('l-donut').addEventListener('click', e => {
-  const b = e.target.closest('[data-sl]'); if (!b) return;
-  const g = (e.currentTarget._segs || [])[+b.dataset.sl]; if (!g) return;
-  donutSel = donutSel === g.id ? null : g.id;
+// tap a slice or a category row to list just those expenses; tap it again for all
+document.getElementById('v-list').addEventListener('click', e => {
+  if (e.target.closest('#l-clear')){ selCat = null; return renderList(); }
+  const b = e.target.closest('[data-cat]'); if (!b) return;
+  selCat = selCat === b.dataset.cat ? null : b.dataset.cat;
   renderList();
 });
+document.getElementById('see-all').addEventListener('click', () => show('list'));
 
 document.getElementById('pp-toggle').addEventListener('click', e => {
   const b = e.target.closest('[data-pp]'); if (!b) return;

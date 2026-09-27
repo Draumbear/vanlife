@@ -164,9 +164,12 @@ If you'd already spent something before installing this, put the running total i
   - this week and this month against their targets, each clipped to the trip dates
     so a part-week at either end isn't budgeted as a full one
   - who's paid more and what the settle-up is
-- **Expenses** — week / month / all time, a pie chart of where the money went (the
-  five biggest categories, the rest folded into one grey slice; tap a slice to read
-  it), the full category breakdown, and tap any row to edit or delete it.
+- **Expenses** — week / month / all time, with a pie chart of where the money went
+  (the five biggest categories, the rest folded into one grey slice) and a bar per
+  category. Tap a slice or a category to list just those expenses; tap it again, or
+  **Show all**, to go back. **By account** is folded away underneath — tap **Show**
+  when reconciling against a statement. Tap any expense to edit or delete it; the
+  edit screen also says which of you added it.
 - **Settle up** — when one of you has paid more, the Who paid panel offers a Settle
   up button. It records the transfer between you, zeroes the balance, and is *not*
   counted as trip spending. There's an undo if you press it by mistake.
@@ -190,14 +193,16 @@ If you'd already spent something before installing this, put the running total i
 - **Personal spending** — on the Add screen, **Whose spending** defaults to *Both of
   us*. Pick *Just Zita* for Zita's souvenir T-shirt and it still counts against the
   combined budget, but it comes out of Zita's half only. Once that makes your halves
-  differ, Home shows an **Each of you** card with what each of you has left and your
+  differ, Home (in *Both of us* view) shows an **Each of you** card with what each of you has left and your
   own daily allowance. In **Who paid**, a personal buy isn't split: if Tanguy paid
   for Zita's T-shirt, Zita owes him all of it.
 - **Last 8 weeks** — a bar per week against that week's target, red where you went over.
 - Every NZD figure has the euro equivalent under it.
-- The **Both of us / Per person** toggle at the top of Home halves every total,
-  allowance and target so you can see your own share. Individual expenses always show
-  what was actually paid. The choice is per phone — it isn't synced.
+- The **Both of us / Just Tanguy** toggle at the top of Home (named after whoever's
+  phone it is) switches every total, allowance and target to your own share: half the
+  budget, half of what's shared, and all of your own personal buys. The Expenses tab
+  follows it too. Individual expenses always show what was actually paid. The choice
+  is per phone — it isn't synced.
 
 ## Settings
 

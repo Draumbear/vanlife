@@ -164,9 +164,12 @@ If you'd already spent something before installing this, put the running total i
   - this week and this month against their targets, each clipped to the trip dates
     so a part-week at either end isn't budgeted as a full one
   - who's paid more and what the settle-up is
-- **Expenses** — week / month / all time, a pie chart of where the money went (the
-  five biggest categories, the rest folded into one grey slice; tap a slice to read
-  it), the full category breakdown, and tap any row to edit or delete it.
+- **Expenses** — week / month / all time, with a pie chart of where the money went
+  (the five biggest categories, the rest folded into one grey slice) and a bar per
+  category. Tap a slice or a category to list just those expenses; tap it again, or
+  **Show all**, to go back. **By account** is folded away underneath — tap **Show**
+  when reconciling against a statement. Tap any expense to edit or delete it; the
+  edit screen also says which of you added it.
 - **Settle up** — when one of you has paid more, the Who paid panel offers a Settle
   up button. It records the transfer between you, zeroes the balance, and is *not*
   counted as trip spending. There's an undo if you press it by mistake.

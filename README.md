@@ -190,14 +190,16 @@ If you'd already spent something before installing this, put the running total i
 - **Personal spending** — on the Add screen, **Whose spending** defaults to *Both of
   us*. Pick *Just Zita* for Zita's souvenir T-shirt and it still counts against the
   combined budget, but it comes out of Zita's half only. Once that makes your halves
-  differ, Home shows an **Each of you** card with what each of you has left and your
+  differ, Home (in *Both of us* view) shows an **Each of you** card with what each of you has left and your
   own daily allowance. In **Who paid**, a personal buy isn't split: if Tanguy paid
   for Zita's T-shirt, Zita owes him all of it.
 - **Last 8 weeks** — a bar per week against that week's target, red where you went over.
 - Every NZD figure has the euro equivalent under it.
-- The **Both of us / Per person** toggle at the top of Home halves every total,
-  allowance and target so you can see your own share. Individual expenses always show
-  what was actually paid. The choice is per phone — it isn't synced.
+- The **Both of us / Just Tanguy** toggle at the top of Home (named after whoever's
+  phone it is) switches every total, allowance and target to your own share: half the
+  budget, half of what's shared, and all of your own personal buys. The Expenses tab
+  follows it too. Individual expenses always show what was actually paid. The choice
+  is per phone — it isn't synced.
 
 ## Settings
 

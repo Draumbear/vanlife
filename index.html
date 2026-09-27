@@ -240,7 +240,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
   <section id="v-home">
     <div class="seg two" id="pp-toggle">
       <button data-pp="0" class="sel">Both of us</button>
-      <button data-pp="1">Per person</button>
+      <button data-pp="1" id="pp-me">Just me</button>
     </div>
     <div class="card hero">
       <div class="row">
@@ -730,20 +730,23 @@ function spanMult(mode, totalDays){
   if (mode === 'monthly') return totalDays / DAYS_PER_MONTH;
   return 1;                        // 'total'
 }
-function stats(){
+/* `viewed` = the numbers as Home and Expenses show them: with the Per person
+   switch on, that's this phone's person's share, not the whole pot. */
+function stats(viewed){
   const st = S.settings, t = todayISO();
   const totalDays = Math.max(1, dayDiff(st.start, st.end) + 1);
   const elapsed   = Math.min(totalDays, Math.max(0, dayDiff(st.start, t) + 1));
   const daysLeft  = Math.max(0, dayDiff(t, st.end) + (t <= st.end ? 1 : 0));
 
   // One figure in whatever unit suits you, scaled up to the whole-trip pot.
+  const div = viewed && st.perPerson ? 2 : 1;
   const budget = (+st.budgetValue || 0) * spanMult(st.budgetMode, totalDays)
-                 * (+st.budgetFor === 1 ? 2 : 1);
+                 * (+st.budgetFor === 1 ? 2 : 1) / div;
 
-  const spent = sum(live()) + (+st.preSpent || 0);
+  const spent = (viewed ? vsum(live()) : sum(live())) + (+st.preSpent || 0) / div;
   const left  = budget - spent;
   // money already spoken for by bookings you know are coming
-  const planned = (st.planned || []).reduce((t, p) => t + (+p.amount || 0), 0);
+  const planned = (st.planned || []).reduce((t, p) => t + (+p.amount || 0), 0) / div;
   const avail = left - planned;
 
   return {
@@ -770,11 +773,13 @@ function shares(s){
   return out;
 }
 
-/* Per-person view: halves every *aggregate* figure (budget, totals, allowances).
-   Individual expense rows always show what was actually paid. */
-const DIV = () => S.settings.perPerson ? 2 : 1;
-const pp  = n => n / DIV();
-const each = () => S.settings.perPerson ? ' each' : '';
+/* Per-person view: every *aggregate* figure (budget, totals, allowances) becomes
+   this phone's person's share — half of what's shared plus all of their own
+   personal buys. Individual expense rows always show what was actually paid. */
+const viewer = () => S.settings.me || 'p1';
+const vamt = e => S.settings.perPerson ? shareOf(e, viewer()) : e.amount;
+const vsum = arr => arr.reduce((t, e) => t + vamt(e), 0);
+const each = () => S.settings.perPerson ? ' · ' + who(viewer()) : '';
 const tone = r => r > 1 ? 'bad' : r > .9 ? 'warn' : 'ok';
 const toneC = r => r > 1 ? 'var(--bad)' : r > .9 ? 'var(--warn)' : 'var(--ok)';
 
@@ -782,15 +787,16 @@ const toneC = r => r > 1 ? 'var(--bad)' : r > .9 ? 'var(--warn)' : 'var(--ok)';
    RENDER — HOME
    ============================================================ */
 function renderHome(){
-  const s = stats(), st = S.settings, t = todayISO();
+  const s = stats(true), full = stats(), st = S.settings, t = todayISO();
   const $ = id => document.getElementById(id);
 
   document.querySelectorAll('#pp-toggle button').forEach(x =>
     x.classList.toggle('sel', (x.dataset.pp === '1') === !!st.perPerson));
-  $('h-left-lbl').textContent = 'Left to spend' + (st.perPerson ? ' each' : '');
-  $('h-left').textContent = nz(pp(s.left));
+  $('pp-me').textContent = 'Just ' + who(viewer());
+  $('h-left-lbl').textContent = 'Left to spend' + each();
+  $('h-left').textContent = nz((s.left));
   $('h-left').className = 'big ' + (s.left < 0 ? 'bad' : '');
-  $('h-left-e').textContent = eur(pp(s.left)) + ' left';
+  $('h-left-e').textContent = eur((s.left)) + ' left';
   $('h-days').textContent = s.daysLeft;
   $('h-end').textContent = 'until ' + fmtShort(st.end);
 
@@ -799,65 +805,65 @@ function renderHome(){
   $('h-bar').style.background = toneC(s.spent / Math.max(1, s.onPace));
   const pacePct = Math.min(100, (s.elapsed / s.totalDays) * 100);
   $('h-pace').style.left = pacePct + '%';
-  $('h-spent').textContent = nz(pp(s.spent)) + ' spent' + each();
-  $('h-total').textContent = 'of ' + nz(pp(s.budget));
+  $('h-spent').textContent = nz((s.spent)) + ' spent' + each();
+  $('h-total').textContent = 'of ' + nz((s.budget));
 
-  $('h-daily').textContent = nz(pp(s.daily));
+  $('h-daily').textContent = nz((s.daily));
   $('h-daily').className = 'n ' + (s.daily < 0 ? 'bad' : '');
-  $('h-daily-e').textContent = eur(pp(s.daily)) + ' / day' + each() +
+  $('h-daily-e').textContent = eur((s.daily)) + ' / day' + each() +
     (s.planned > 0 ? ' · after set-aside' : '');
-  $('h-avg').textContent = nz(pp(s.avg));
+  $('h-avg').textContent = nz((s.avg));
   $('h-avg').className = 'n ' + tone(s.avg / Math.max(0.01, s.perDay));
-  $('h-avg-e').textContent = 'budget is ' + nz(pp(s.perDay)) + '/day' + each();
+  $('h-avg-e').textContent = 'budget is ' + nz((s.perDay)) + '/day' + each();
 
   const diff = s.onPace - s.spent;
   const v = $('h-verdict');
   if (s.daysLeft === 0 && t > st.end) {
-    v.innerHTML = 'Trip finished. Final spend <b>' + nz(s.spent) + '</b> (' + eur(s.spent) + ').';
+    v.innerHTML = 'Trip finished. Final spend' + each() + ' <b>' + nz(s.spent) + '</b> (' + eur(s.spent) + ').';
   } else if (s.spent === 0) {
-    v.innerHTML = 'Nothing logged yet — you have <b>' + nz(pp(s.perDay)) + '</b> a day' + each() +
-      ' (' + eur(pp(s.perDay)) + ') to play with over ' + s.totalDays + ' days.';
+    v.innerHTML = 'Nothing logged yet — you have <b>' + nz((s.perDay)) + '</b> a day' + each() +
+      ' (' + eur((s.perDay)) + ') to play with over ' + s.totalDays + ' days.';
   } else if (diff >= 0) {
-    v.innerHTML = '<span class="ok">✓ ' + nz(pp(diff)) + ' under pace</span> — keep this up and you finish with about <b>' +
-      nz(pp(Math.max(0, s.budget - s.avg * s.totalDays))) + '</b> spare.';
+    v.innerHTML = '<span class="ok">✓ ' + nz((diff)) + ' under pace</span> — keep this up and you finish with about <b>' +
+      nz((Math.max(0, s.budget - s.avg * s.totalDays))) + '</b> spare.';
   } else {
     const burn = s.avg * s.totalDays;
-    v.innerHTML = '<span class="bad">⚠ ' + nz(pp(-diff)) + ' over pace</span> — at ' + nz(pp(s.avg)) +
-      '/day' + each() + ' you’d finish at <b>' + nz(pp(burn)) + '</b>, i.e. ' +
-      nz(pp(burn - s.budget)) + ' over budget.';
+    v.innerHTML = '<span class="bad">⚠ ' + nz((-diff)) + ' over pace</span> — at ' + nz((s.avg)) +
+      '/day you’d finish at <b>' + nz((burn)) + '</b>, i.e. ' +
+      nz((burn - s.budget)) + ' over budget.';
   }
 
   // week
   const ws = weekStart(t), we = weekEnd(t);
   const wDays = tripDays(ws, we);                 // only the days you're actually travelling
-  const wSpent = sum(between(ws, we)), wTarget = s.perDay * wDays;
+  const wSpent = vsum(between(ws, we)), wTarget = s.perDay * wDays;
   $('w-range').textContent = fmtShort(ws) + ' – ' + fmtShort(we) +
     (wDays < 7 ? ' · ' + wDays + ' day' + (wDays === 1 ? '' : 's') + ' of trip' : '');
   const wR = wTarget > 0 ? wSpent/wTarget : 0;
-  $('w-spent').textContent = nz2(pp(wSpent));
+  $('w-spent').textContent = nz2((wSpent));
   $('w-spent').className = 'big ' + tone(wR);
-  $('w-target').textContent = 'of ' + nz(pp(wTarget)) + each();
+  $('w-target').textContent = 'of ' + nz((wTarget)) + each();
   $('w-bar').style.width = Math.min(100, wR*100) + '%';
   $('w-bar').style.background = toneC(wR);
-  $('w-eur').textContent = eur2(pp(wSpent));
-  $('w-diff').textContent = wSpent <= wTarget ? nz(pp(wTarget-wSpent)) + ' left this week' : nz(pp(wSpent-wTarget)) + ' over';
+  $('w-eur').textContent = eur2((wSpent));
+  $('w-diff').textContent = wSpent <= wTarget ? nz((wTarget-wSpent)) + ' left this week' : nz((wSpent-wTarget)) + ' over';
 
   // month
   const ms = monthStart(t), me = monthEnd(t);
-  const mSpent = sum(between(ms, me));
+  const mSpent = vsum(between(ms, me));
   const mDays = tripDays(ms, me);                 // ditto: a part-month is a part-budget
   const mTarget = s.perDay * mDays;
   const mFull = dayDiff(ms, me) + 1;
   $('m-range').textContent = dparse(t).toLocaleDateString('en-NZ',{month:'long'}) +
     (mDays < mFull ? ' · ' + mDays + ' days of trip' : '');
   const mR = mTarget > 0 ? mSpent/mTarget : 0;
-  $('m-spent').textContent = nz2(pp(mSpent));
+  $('m-spent').textContent = nz2((mSpent));
   $('m-spent').className = 'big ' + tone(mR);
-  $('m-target').textContent = 'of ' + nz(pp(mTarget)) + each();
+  $('m-target').textContent = 'of ' + nz((mTarget)) + each();
   $('m-bar').style.width = Math.min(100, mR*100) + '%';
   $('m-bar').style.background = toneC(mR);
-  $('m-eur').textContent = eur2(pp(mSpent));
-  $('m-diff').textContent = mSpent <= mTarget ? nz(pp(mTarget-mSpent)) + ' left this month' : nz(pp(mSpent-mTarget)) + ' over';
+  $('m-eur').textContent = eur2((mSpent));
+  $('m-diff').textContent = mSpent <= mTarget ? nz((mTarget-mSpent)) + ' left this month' : nz((mSpent-mTarget)) + ' over';
 
   const pl = $('h-planned');
   if (s.planned > 0){
@@ -865,10 +871,10 @@ function renderHome(){
     pl.innerHTML = '<b>' + nz(s.planned) + '</b> set aside for ' +
       (S.settings.planned || []).length + ' planned cost' +
       ((S.settings.planned || []).length === 1 ? '' : 's') +
-      ' — <b>' + nz(s.avail) + '</b> left for everyday spending.';
+      ' — <b>' + nz(s.avail) + '</b> left for everyday spending' + each() + '.';
   } else pl.classList.add('hide');
 
-  renderEach(s);
+  renderEach(full);
   renderSplit();
   renderTrend();
   document.getElementById('h-recent').innerHTML =
@@ -880,7 +886,7 @@ function renderHome(){
 function renderEach(s){
   const card = document.getElementById('each-card');
   const sh = shares(s);
-  if (Math.abs(sh.p1.spent - sh.p2.spent) < 0.5){ card.classList.add('hide'); return; }
+  if (S.settings.perPerson || Math.abs(sh.p1.spent - sh.p2.spent) < 0.5){ card.classList.add('hide'); return; }
   card.classList.remove('hide');
   document.getElementById('each-body').innerHTML = ['p1', 'p2'].map(p => {
     const x = sh[p];
@@ -1018,18 +1024,18 @@ function renderList(){
 
   let rows = between(from, to);
   if (filterCat) rows = rows.filter(e => e.category === filterCat);
-  const total = sum(rows);
-  document.getElementById('l-tot').textContent = nz2(pp(total)) + ' · ' + eur2(pp(total)) + each();
+  const total = vsum(rows);
+  document.getElementById('l-tot').textContent = nz2((total)) + ' · ' + eur2((total)) + each();
 
   // category breakdown
   const by = {};
-  rows.forEach(e => by[e.category] = (by[e.category] || 0) + e.amount);
-  const ordered = Object.entries(by).sort((a,b) => b[1]-a[1]);
+  rows.forEach(e => by[e.category] = (by[e.category] || 0) + vamt(e));
+  const ordered = Object.entries(by).filter(([, v]) => v > 0).sort((a,b) => b[1]-a[1]);
   document.getElementById('l-cats').innerHTML = ordered.length ? ordered.map(([id,v]) => {
     const c = catOf(id), p = total ? v/total*100 : 0;
     return '<div class="catrow"><div class="row">' +
       '<span>' + c.icon + ' ' + c.name + '</span>' +
-      '<span><b>' + nz(pp(v)) + '</b> <span class="dim" style="font-size:12px">' + eur(pp(v)) + ' · ' + p.toFixed(0) + '%</span></span>' +
+      '<span><b>' + nz((v)) + '</b> <span class="dim" style="font-size:12px">' + eur((v)) + ' · ' + p.toFixed(0) + '%</span></span>' +
       '</div><div class="catbar"><i style="width:' + p + '%;background:' + c.c + '"></i></div></div>';
   }).join('') : '<div class="empty">Nothing ' + label + '.</div>';
 
@@ -1037,14 +1043,14 @@ function renderList(){
 
   // by account — handy when reconciling against a bank statement
   const byA = {};
-  rows.forEach(e => { const k = e.account || 'Unspecified'; byA[k] = (byA[k] || 0) + e.amount; });
-  const aOrdered = Object.entries(byA).sort((a,b) => b[1]-a[1]);
+  rows.forEach(e => { const k = e.account || 'Unspecified'; byA[k] = (byA[k] || 0) + vamt(e); });
+  const aOrdered = Object.entries(byA).filter(([, v]) => v > 0).sort((a,b) => b[1]-a[1]);
   document.getElementById('l-acct-card').classList.toggle('hide', aOrdered.length < 2);
   document.getElementById('l-accts').innerHTML = aOrdered.map(([name,v]) => {
     const p = total ? v/total*100 : 0;
     return '<div class="catrow"><div class="row"><span>' + esc(name) + '</span>' +
-      '<span><b>' + nz(pp(v)) + '</b> <span class="dim" style="font-size:12px">' +
-      eur(pp(v)) + ' · ' + p.toFixed(0) + '%</span></span></div>' +
+      '<span><b>' + nz((v)) + '</b> <span class="dim" style="font-size:12px">' +
+      eur((v)) + ' · ' + p.toFixed(0) + '%</span></span></div>' +
       '<div class="catbar"><i style="width:' + p + '%;background:var(--accent)"></i></div></div>';
   }).join('');
 
@@ -1097,9 +1103,9 @@ function renderDonut(ordered, total, label){
 
   const sel = segs.find(g => g.id === donutSel);
   const head = sel
-    ? '<div class="rd"><b>' + nz(pp(sel.v)) + '</b> ' + sel.icon + ' ' + esc(sel.name) +
+    ? '<div class="rd"><b>' + nz((sel.v)) + '</b> ' + sel.icon + ' ' + esc(sel.name) +
       ' · ' + (sel.v / total * 100).toFixed(0) + '%</div>'
-    : '<div class="rd"><b>' + nz(pp(total)) + '</b> ' + esc(label) + '</div>';
+    : '<div class="rd"><b>' + nz((total)) + '</b> ' + esc(label) + '</div>';
 
   box.innerHTML =
     '<svg viewBox="0 0 120 120" role="img" aria-label="Spending by category">' + wedges + '</svg>' +

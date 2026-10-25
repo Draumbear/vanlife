@@ -162,6 +162,7 @@ textarea{min-height:72px;resize:vertical}
 .addrow{display:flex;gap:8px}
 .idea{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .idea:first-child{border-top:0}
+.rm{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--muted);background:none;font-size:1.15rem;line-height:1;cursor:pointer;flex:none}
 .plus{width:36px;height:36px;border-radius:50%;border:1px solid var(--fern);color:var(--fern);background:none;font-size:1.2rem;line-height:1;cursor:pointer}
 .mapwrap{background:var(--water);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
 .mapwrap svg{display:block;width:100%;height:auto}
@@ -487,7 +488,7 @@ function renderDay(){
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
-        ${goBtns(x,x.kind)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
+        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       <form class="addrow" id="addact"><input id="f-act" placeholder="Add something" autocomplete="off" aria-label="Add an activity"><button class="btn primary" type="submit">Add</button></form></div>
     <div class="card"><span class="label" id="ideas-h">Ideas</span>
       <input id="q-ideas" type="search" placeholder="Search your places" value="${esc(state.ideaQ)}" aria-label="Search ideas">
@@ -506,7 +507,7 @@ function renderIdeas(){
     .sort((a,b)=>(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
-  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}${x._km!=null?` · ${x._km<5?"here":x._km+" km"}`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
+  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
     +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"")}
 
 function render(){renderHeader();renderToday();renderDays();renderPlaces();renderDay()}
@@ -687,6 +688,7 @@ document.addEventListener("click",e=>{
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
   else if(ds.day)openDay(ds.day);
+  else if(ds.unplan){const x=S.docs.spots[ds.unplan];patch("spots",ds.unplan,{day:null,order:null});toast(`Removed ${x?.name||""} from this day`)}
   else if(ds.plan){const d=state.day;patch("spots",ds.plan,{day:d,order:planFor(d).length});toast("Added")}
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}

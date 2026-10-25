@@ -170,6 +170,8 @@ textarea{min-height:72px;resize:vertical}
 .sheet details[open] summary{margin-bottom:10px}
 .sheet details>div{display:grid;gap:12px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nights{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--paper);border-radius:14px;padding:8px}
+.nights b{display:block;font-size:1.05rem}.nights .muted{font-size:.78rem}.nights .ib{font-size:1.3rem;font-weight:700}
 .end{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .end>div{display:flex;gap:8px}
 label.check{display:flex;gap:10px;align-items:center;font-size:.95rem}label.check input{width:22px;height:22px}
@@ -535,6 +537,8 @@ function openCamp(it){
 function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)[0];
   sheet(head(isNew?"New stop":"Edit stop")+`
     <label>Name<input name="name" value="${esc(it.name)}" placeholder="e.g. Lake Mapourika"></label>
+    ${isNew?"":(()=>{const st=sortStops(),nx=st[st.findIndex(x=>x.id===it.id)+1],n=it.end?daysBetween(it.start,it.end):0;
+      return `<div class="nights"><button class="ib" type="button" id="n-minus" aria-label="One night less">−</button><div><b class="mono">${n} night${n===1?"":"s"}</b><span class="muted">${nx&&nx.start===it.end?`swaps with ${esc(nx.name)}`:"changes the leave date"}</span></div><button class="ib" type="button" id="n-plus" aria-label="One night more">+</button></div>`})()}
     <div class="two"><label>Arrive<input name="start" type="date" value="${esc(it.start||last?.end||today())}"></label><label>Leave<input name="end" type="date" value="${esc(it.end)}"></label></div>
     <div class="two"><label>Campsite<input name="camp" list="camp-names" value="${esc(it.camp)}"></label><label>Type<select name="campType">${typeOpts(CAMPTYPES,it.campType||"unknown")}</select></label></div>
     <datalist id="camp-names">${state.camps.map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
@@ -545,7 +549,18 @@ function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)
       <label>MetService link<input name="weather" type="url" value="${esc(it.weather)}" placeholder="https://www.metservice.com/…"></label></div></details>
     ${saveRow(isNew)}`,"stop",it.id);
   armed($("#del"),"Tap again",()=>{del("stops",it.id);closeSheet();toast("Stop deleted")});
+  if(!isNew){$("#n-minus").onclick=()=>shiftNight(it.id,-1);$("#n-plus").onclick=()=>shiftNight(it.id,1)}
   const c=$("#form [name=camp]");c.addEventListener("change",()=>{const m=state.camps.find(x=>x.name===c.value);if(m)$("#form [name=campType]").value=m.type||"unknown"})}
+function shiftNight(id,delta){
+  const st=sortStops(),i=st.findIndex(x=>x.id===id),s=st[i],nx=st[i+1];if(!s||!s.end)return;
+  const end=addDays(s.end,delta);
+  if(daysBetween(s.start,end)<1)return toast("Keep at least one night");
+  if(nx&&nx.start===s.end){const ns=addDays(nx.start,delta);
+    if(nx.end&&daysBetween(ns,nx.end)<1)return toast(`${nx.name} needs at least one night`);
+    S.docs.stops[nx.id]={...S.docs.stops[nx.id],start:ns};S.pending["stops/"+nx.id]=1}
+  else if(nx&&delta>0&&end>nx.start)return toast(`That overlaps ${nx.name}`);
+  S.docs.stops[s.id]={...S.docs.stops[s.id],end};S.pending["stops/"+s.id]=1;
+  persist();refresh();scheduleSync();openStop({id:s.id,...S.docs.stops[s.id]})}
 function openNight(d){const n=nightInfo(d),multi=n.stop&&stopDays(n.stop).length>1;
   sheet(head(`Sleeping · ${wd(d)} ${fmt(d)}`)+`
     <label>Campsite<input name="camp" list="camp-names" value="${esc(n.camp)}" placeholder="Pick or type"></label>

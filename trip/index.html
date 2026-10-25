@@ -127,6 +127,12 @@ textarea{min-height:72px;resize:vertical}
 .fav{width:40px;height:40px;border:0;background:none;cursor:pointer;color:var(--line);font-size:1.15rem}
 .fav.on{color:var(--rust)}
 .sg .nm,.nm.sg{color:var(--tussock)}
+.item.sg{box-shadow:inset 3px 0 0 var(--tussock);padding-left:10px}
+.srcseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:3px;border-radius:12px;margin:2px 0 8px}
+.srcseg button{border:0;background:none;border-radius:9px;padding:7px 4px;font:inherit;font-weight:700;font-size:.85rem;color:var(--muted);cursor:pointer}
+.srcseg button[aria-pressed="true"]{background:var(--card,#fff);color:var(--ink,inherit);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.srcseg button.c{color:var(--tussock)}
+.srcseg button.c[aria-pressed="true"]{background:var(--tussock);color:#fff}
 .tag{font-weight:800;color:var(--tussock)}
 .pill.sgp{border-color:var(--tussock);color:var(--tussock)}
 .pill.sgp[aria-pressed="true"]{background:var(--tussock);border-color:var(--tussock);color:#fff}
@@ -212,6 +218,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
   <section id="days"><div id="todaycard"></div><div id="daylist"><p class="empty">Loading…</p></div></section>
   <section id="places" hidden>
     <div class="tools"><input id="q" type="search" placeholder="Search" aria-label="Search places"><select id="region" aria-label="Region"></select></div>
+    <div class="srcseg" id="src" role="group" aria-label="Whose ideas"></div>
     <div class="chips" id="kinds"></div>
     <div id="plist"></div>
   </section>
@@ -227,15 +234,16 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 <script>
 /* ================= constants & helpers ================= */
 const REGIONS=["Marlborough","Nelson/Tasman","West Coast","Otago","Fiordland","Southland","Canterbury"];
-const KINDS={place:"Sight",hike:"Hike",bike:"Bike",disc:"Disc golf"};
+const KINDS={place:"Sight",hike:"Hike",multi:"Overnight hike",bike:"MTB & bike",disc:"Disc golf",paid:"Paid activity",quirky:"Quirky",food:"Food & drink"};
+const KINDS_PL={place:"Sights",hike:"Hikes",multi:"Overnight hikes",bike:"MTB & bike",disc:"Disc golf",paid:"Paid ($)",quirky:"Quirky",food:"Food"};
 const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
 const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
 const COLLS=["stops","spots","camps","nights"];
 const COLL={stop:"stops",spot:"spots",camp:"camps"};
-const state={tab:"days",stops:[],spots:[],camps:[],nights:[],kind:"all",region:null,q:"",showPast:false,day:null,ideaQ:"",ideaAll:false,showSug:true};
-try{state.showSug=localStorage.getItem("sil-sug")!=="0"}catch{}
-const visSug=x=>state.showSug||!x.suggested||!!x.day;
+const state={tab:"days",stops:[],spots:[],camps:[],nights:[],kind:"all",region:null,q:"",showPast:false,day:null,ideaQ:"",ideaAll:false,src:"both"};
+try{const v=localStorage.getItem("sil-sug");state.src=v==="0"?"ours":v==="claude"?"claude":"both"}catch{}
+const visSug=x=>state.src==="both"||(state.src==="ours"?(!x.suggested||!!x.day):!!x.suggested);
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"Pacific/Auckland"});
@@ -439,10 +447,12 @@ function renderPlaces(){
   const reg=state.region||"all";
   const sel=$("#region");sel.innerHTML=`<option value="all">All regions</option>`+REGIONS.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join("");sel.value=reg;
   const q=state.q.toLowerCase(),base=allPlaces().filter(x=>q||reg==="all"||x.region===reg);
-  const f={all:x=>x._c==="spot",fav:x=>x.fav,hike:x=>x._c==="spot"&&x.kind==="hike",place:x=>x._c==="spot"&&x.kind==="place",bike:x=>x._c==="spot"&&x.kind==="bike",disc:x=>x._c==="spot"&&x.kind==="disc",camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
-  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["hike","Hikes"],["place","Sights"],["bike","Bike"],["disc","Disc golf"]];
-  $("#kinds").innerHTML=`<button class="pill sgp" type="button" aria-pressed="${state.showSug}" data-sug>✦ Claude</button>`+labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
-  const items=base.filter(x=>visSug(x)&&f[state.kind](x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
+  const f={all:x=>x._c==="spot",fav:x=>x.fav,camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
+  Object.keys(KINDS).forEach(k=>f[k]=x=>x._c==="spot"&&(x.kind||"place")===k);
+  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],...Object.entries(KINDS_PL)];
+  $("#src").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-src="${k}">${l}</button>`).join("");
+  $("#kinds").innerHTML=labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
+  const items=base.filter(x=>visSug(x)&&(f[state.kind]||f.all)(x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
     .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   const by={};items.forEach(x=>(by[x.region||"Other"]??=[]).push(x));
   const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
@@ -492,7 +502,7 @@ function renderIdeas(){
   const pt=x=>{if(hasLL(x))return x;const m=LLRE.exec(x.loc||"");return m?{lat:+m[1],lng:+m[2]}:null};
   const dist=x=>{const p=ref&&pt(x);return p?Math.round(hav(ref,p)*ROAD):null};
   const ideas=state.spots.filter(x=>!x.day&&!x.done&&visSug(x)).map(x=>({...x,_km:dist(x)}))
-    .filter(x=>q?(x.name+" "+(x.notes||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
+    .filter(x=>q?(x.name+" "+(x.notes||"")+" "+(KINDS[x.kind]||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
     .sort((a,b)=>(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
@@ -682,7 +692,7 @@ document.addEventListener("click",e=>{
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
   else if(ds.tog){const [c,f,id]=ds.tog.split(":"),it=S.docs[c][id];if(it)patch(c,id,{[f]:!it[f]})}
   else if(ds.night)openNight(ds.night);
-  else if("sug" in ds){state.showSug=!state.showSug;try{localStorage.setItem("sil-sug",state.showSug?"1":"0")}catch{}renderPlaces();renderIdeas();toast(state.showSug?"Showing Claude's ideas":"Only your own list")}
+  else if(ds.src){state.src=ds.src;try{localStorage.setItem("sil-sug",{both:"1",ours:"0",claude:"claude"}[ds.src])}catch{}renderPlaces();renderIdeas()}
   else if(ds.kind){state.kind=ds.kind;renderPlaces()}
   else if("showpast" in ds){state.showPast=!state.showPast;renderDays()}
   else if("ideaall" in ds){state.ideaAll=true;renderIdeas()}

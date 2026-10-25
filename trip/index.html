@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2f6b4f">
 <meta name="description" content="Our South Island campervan days, campsites and plans. Works offline, syncs between our phones.">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>South Island Loop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -126,6 +126,12 @@ textarea{min-height:72px;resize:vertical}
 .item .meta .pl{color:var(--fern);font-weight:700}
 .fav{width:40px;height:40px;border:0;background:none;cursor:pointer;color:var(--line);font-size:1.15rem}
 .fav.on{color:var(--rust)}
+.sg .nm,.nm.sg{color:var(--tussock)}
+.tag{font-weight:800;color:var(--tussock)}
+.pill.sgp{border-color:var(--tussock);color:var(--tussock)}
+.pill.sgp[aria-pressed="true"]{background:var(--tussock);border-color:var(--tussock);color:#fff}
+.sgbox{border:1px solid var(--tussock);background:var(--tussock-soft);border-radius:14px;padding:10px 12px;display:grid;gap:8px;font-size:.88rem}
+.sgbox b{color:var(--tussock)}
 
 /* full-screen views */
 .view{position:fixed;inset:0;z-index:15;background:var(--paper);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
@@ -227,7 +233,9 @@ const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
 const COLLS=["stops","spots","camps","nights"];
 const COLL={stop:"stops",spot:"spots",camp:"camps"};
-const state={tab:"days",stops:[],spots:[],camps:[],nights:[],kind:"all",region:null,q:"",showPast:false,day:null,ideaQ:"",ideaAll:false};
+const state={tab:"days",stops:[],spots:[],camps:[],nights:[],kind:"all",region:null,q:"",showPast:false,day:null,ideaQ:"",ideaAll:false,showSug:true};
+try{state.showSug=localStorage.getItem("sil-sug")!=="0"}catch{}
+const visSug=x=>state.showSug||!x.suggested||!!x.day;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"Pacific/Auckland"});
@@ -433,14 +441,14 @@ function renderPlaces(){
   const q=state.q.toLowerCase(),base=allPlaces().filter(x=>q||reg==="all"||x.region===reg);
   const f={all:x=>x._c==="spot",fav:x=>x.fav,hike:x=>x._c==="spot"&&x.kind==="hike",place:x=>x._c==="spot"&&x.kind==="place",bike:x=>x._c==="spot"&&x.kind==="bike",camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
   const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["hike","Hikes"],["place","Sights"],["bike","Bike"]];
-  $("#kinds").innerHTML=labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
-  const items=base.filter(x=>f[state.kind](x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
+  $("#kinds").innerHTML=`<button class="pill sgp" type="button" aria-pressed="${state.showSug}" data-sug>✦ Claude</button>`+labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
+  const items=base.filter(x=>visSug(x)&&f[state.kind](x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
     .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   const by={};items.forEach(x=>(by[x.region||"Other"]??=[]).push(x));
   const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
   $("#plist").innerHTML=items.length?order.map(r=>(order.length>1?`<div class="reg">${esc(r)}</div>`:"")+by[r].map(x=>{
-    const meta=x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(KINDS[x.kind]||"Sight")}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`;
-    return `<div class="item ${x.done?"done":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
+    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(KINDS[x.kind]||"Sight")}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
+    return `<div class="item ${x.done?"done":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
       <button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
   $("#fab").setAttribute("aria-label",state.kind==="camp"?"Add campsite":"Add place")}
@@ -468,7 +476,7 @@ function renderDay(){
     <div class="card"><span class="label">Plan</span>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm">${esc(x.name)}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         ${goBtns(x,x.kind)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       <form class="addrow" id="addact"><input id="f-act" placeholder="Add something" autocomplete="off" aria-label="Add an activity"><button class="btn primary" type="submit">Add</button></form></div>
     <div class="card"><span class="label" id="ideas-h">Ideas</span>
@@ -481,11 +489,11 @@ function renderDay(){
 function renderIdeas(){
   const d=state.day;if(!d||!$("#ideas"))return;
   const region=stopFor(d)?.region,q=state.ideaQ.toLowerCase();
-  const ideas=state.spots.filter(x=>!x.day&&!x.done&&(q?(x.name+" "+(x.notes||"")).toLowerCase().includes(q):(!region||x.region===region)))
+  const ideas=state.spots.filter(x=>!x.day&&!x.done&&visSug(x)&&(q?(x.name+" "+(x.notes||"")).toLowerCase().includes(q):(!region||x.region===region)))
     .sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
-  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span style="font-weight:700">${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
+  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
     +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"")}
 
 function render(){renderHeader();renderToday();renderDays();renderPlaces();renderDay()}
@@ -511,27 +519,33 @@ function campFields(it){return `<label>Name<input name="name" value="${esc(it.na
   <label>Map location <span class="muted" style="font-weight:400">(optional)</span><input name="loc" value="${esc(it.loc)}" placeholder="-44.441, 169.262"></label>
   <label>Info link <span class="muted" style="font-weight:400">(optional)</span><input name="url" type="url" value="${esc(it.url)}" placeholder="https://…"></label>`}
 
+const sgBox=it=>it.suggested?`<div class="sgbox"><span><b>✦ Claude's suggestion</b></span><div class="row2"><button type="button" class="btn sm" id="sg-keep">Keep it</button><button type="button" class="btn sm" id="sg-drop">Not for us</button></div></div>`:"";
+function sgWire(c,it){if(!it.suggested)return;$("#sg-keep").onclick=()=>{patch(c,it.id,{suggested:false});closeSheet();toast("Kept")};$("#sg-drop").onclick=()=>{del(c,it.id);closeSheet();toast("Removed")}}
 function openSpot(it){
   if(!it){const r=stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
     sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
   sheet(head(esc(it.name))+`
+    ${sgBox(it)}
     <div class="muted" style="font-size:.85rem">${esc(KINDS[it.kind]||"Sight")}${it.region?" · "+esc(it.region):""}</div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
     <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
     <label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>
     <details><summary>Edit details</summary><div>${spotFields(it)}${saveRow(false)}</div></details>`,"spot",it.id);
+  sgWire("spots",it);
   $("#q-day").onchange=e=>{const d=e.target.value||null;patch("spots",it.id,{day:d,order:d?planFor(d).length:0});toast(d?`Planned for ${wd(d)} ${fmt(d)}`:"Back to ideas")};
   $("#q-done").onchange=e=>{patch("spots",it.id,{done:e.target.checked});toast(e.target.checked?"Done ✓":"Not done")};
   armed($("#del"),"Tap again",()=>{del("spots",it.id);closeSheet();toast("Deleted")})}
 function openCamp(it){
   if(!it){sheet(head("New campsite")+campFields({region:state.region!=="all"?state.region:""})+saveRow(true),"camp");return}
   sheet(head(esc(it.name))+`
+    ${sgBox(it)}
     <div><span class="chip c-${esc(it.type||"unknown")}">${esc(CAMPTYPES[it.type]||"To sort")}</span> <span class="muted" style="font-size:.85rem">${esc(it.region||"")}</span></div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,"camp")}
     <label>Sleep here<select id="q-sleep">${dayOpts("","Pick a night…")}</select></label>
     <details><summary>Edit details</summary><div>${campFields(it)}${saveRow(false)}</div></details>`,"camp",it.id);
+  sgWire("camps",it);
   $("#q-sleep").onchange=e=>{const d=e.target.value;if(!d)return;setNight(d,it.name,it.type||"unknown","");toast(`Sleeping here ${wd(d)} ${fmt(d)}`);closeSheet()};
   armed($("#del"),"Tap again",()=>{del("camps",it.id);closeSheet();toast("Deleted")})}
 function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)[0];
@@ -665,6 +679,7 @@ document.addEventListener("click",e=>{
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
   else if(ds.tog){const [c,f,id]=ds.tog.split(":"),it=S.docs[c][id];if(it)patch(c,id,{[f]:!it[f]})}
   else if(ds.night)openNight(ds.night);
+  else if("sug" in ds){state.showSug=!state.showSug;try{localStorage.setItem("sil-sug",state.showSug?"1":"0")}catch{}renderPlaces();renderIdeas();toast(state.showSug?"Showing Claude's ideas":"Only your own list")}
   else if(ds.kind){state.kind=ds.kind;renderPlaces()}
   else if("showpast" in ds){state.showPast=!state.showPast;renderDays()}
   else if("ideaall" in ds){state.ideaAll=true;renderIdeas()}

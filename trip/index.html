@@ -488,12 +488,15 @@ function renderDay(){
   if(keep)$("#f-act").value=keep;if(focus)$("#f-act").focus();el.scrollTop=scroll}
 function renderIdeas(){
   const d=state.day;if(!d||!$("#ideas"))return;
-  const region=stopFor(d)?.region,q=state.ideaQ.toLowerCase();
-  const ideas=state.spots.filter(x=>!x.day&&!x.done&&visSug(x)&&(q?(x.name+" "+(x.notes||"")).toLowerCase().includes(q):(!region||x.region===region)))
-    .sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
+  const st=stopFor(d),region=st?.region,q=state.ideaQ.toLowerCase(),ref=st&&hasLL(st)?st:null;
+  const pt=x=>{if(hasLL(x))return x;const m=LLRE.exec(x.loc||"");return m?{lat:+m[1],lng:+m[2]}:null};
+  const dist=x=>{const p=ref&&pt(x);return p?Math.round(hav(ref,p)*ROAD):null};
+  const ideas=state.spots.filter(x=>!x.day&&!x.done&&visSug(x)).map(x=>({...x,_km:dist(x)}))
+    .filter(x=>q?(x.name+" "+(x.notes||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
+    .sort((a,b)=>(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
-  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
+  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}${x._km!=null?` · ${x._km<5?"here":x._km+" km"}`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
     +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"")}
 
 function render(){renderHeader();renderToday();renderDays();renderPlaces();renderDay()}

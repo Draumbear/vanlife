@@ -109,6 +109,10 @@ textarea{min-height:72px;resize:vertical}
 .day .camp{display:block;font-size:.78rem;color:var(--tussock);font-weight:700}
 .day .n{font:500 .78rem var(--mono);color:var(--muted)}
 .day.past{opacity:.55}
+.fit{display:inline-block;font:700 .7rem var(--body);padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:1px;letter-spacing:.02em}
+.fit.short{background:var(--rust-soft);color:var(--rust)}
+.fit.ok{background:var(--fern-soft);color:var(--fern)}
+.fit.chill{background:var(--sea-soft);color:var(--sea)}
 .day.flex{border:1.5px dashed color-mix(in srgb,var(--muted) 55%,transparent);background:transparent}
 .day .fx{display:block;font-size:.72rem;color:var(--muted)}
 .day.flex{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -443,10 +447,15 @@ function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
     <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night${fx?" · drag to another stop":""}</span>`:""}</span>
     ${fx?`<span class="grip" aria-hidden="true">⠿</span>`:`<span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span>`}</button>`}
+/* how the planned nights compare with the ideal range set on the stop (imin–imax) */
+function fitOf(s){const n=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0,lo=s.imin,hi=s.imax??s.imin;
+  if(lo==null||!n)return null;const rng=lo===hi?`${lo}`:`${lo}–${hi}`;
+  return n<lo?{c:"short",l:`Short · ideal ${rng}`}:n>hi?{c:"chill",l:`Chill · ideal ${rng}`}:{c:"ok",l:"About right"}}
+const fitTag=s=>{const f=fitOf(s);return f?`<span class="fit ${f.c}">${f.l}</span>`:""};
 function stopBlock(s,days,t,L,i,showLeg){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ~${L[i]} km</div>`:"")+
-   `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    days.map(d=>dayRow(d,t)).join("")}
 function renderDays(){
   const t=today(),st=sortStops(),L=legs(),el=$("#daylist");
@@ -588,11 +597,12 @@ function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)
   sheet(head(isNew?"New stop":"Edit stop")+`
     <label>Name<input name="name" value="${esc(it.name)}" placeholder="e.g. Lake Mapourika"></label>
     ${isNew?"":(()=>{const st=sortStops(),nx=st[st.findIndex(x=>x.id===it.id)+1],n=it.end?daysBetween(it.start,it.end):0;
-      return `<div class="nights"><button class="ib" type="button" id="n-minus" aria-label="One night less">−</button><div><b class="mono">${n} night${n===1?"":"s"}</b><span class="muted">${nx&&nx.start===it.end?`swaps with ${esc(nx.name)}`:"changes the leave date"}</span></div><button class="ib" type="button" id="n-plus" aria-label="One night more">+</button></div>`})()}
+      return `<div class="nights"><button class="ib" type="button" id="n-minus" aria-label="One night less">−</button><div><b class="mono">${n} night${n===1?"":"s"}</b>${fitTag(it)}<span class="muted">${nx&&nx.start===it.end?`swaps with ${esc(nx.name)}`:"changes the leave date"}</span></div><button class="ib" type="button" id="n-plus" aria-label="One night more">+</button></div>`})()}
     <div class="two"><label>Arrive<input name="start" type="date" value="${esc(it.start||last?.end||today())}"></label><label>Leave<input name="end" type="date" value="${esc(it.end)}"></label></div>
     <div class="two"><label>Campsite<input name="camp" list="camp-names" value="${esc(it.camp)}"></label><label>Type<select name="campType">${typeOpts(CAMPTYPES,it.campType||"unknown")}</select></label></div>
     ${campList(it.lat!=null?it:null)}
     <label>Region<select name="region">${regionOpts(it.region)}</select></label>
+    <div class="two"><label>Ideal nights, at least<input name="imin" type="number" min="0" inputmode="numeric" value="${esc(it.imin??"")}"></label><label>at most<input name="imax" type="number" min="0" inputmode="numeric" value="${esc(it.imax??"")}"></label></div>
     <label>Notes<textarea name="notes">${esc(it.notes)}</textarea></label>
     <details><summary>Map position &amp; weather</summary><div>
       <div class="two"><label>Latitude<input name="lat" inputmode="decimal" value="${it.lat??""}" placeholder="-43.31"></label><label>Longitude<input name="lng" inputmode="decimal" value="${it.lng??""}" placeholder="170.20"></label></div>
@@ -690,7 +700,7 @@ $("#form").addEventListener("submit",e=>{
     else setNight(id,v.camp,v.campType,v.notes,!!v.flex);
     closeSheet();toast("Saved");return}
   if(type==="stop"){if(!v.start){toast("Pick an arrival date");return}
-    const num=x=>x===""||x==null?null:parseFloat(String(x).replace(",","."));v.lat=num(v.lat);v.lng=num(v.lng);if(v.end&&v.end<v.start)v.end=v.start}
+    const num=x=>x===""||x==null?null:parseFloat(String(x).replace(",","."));v.lat=num(v.lat);v.lng=num(v.lng);v.imin=num(v.imin);v.imax=num(v.imax);if(v.imin!=null&&v.imax!=null&&v.imax<v.imin)v.imax=v.imin;if(v.end&&v.end<v.start)v.end=v.start}
   const c=COLL[type],prev=id?S.docs[c][id]:null,doc={...(prev||{}),...v};
   if(!id&&type==="spot"){doc.fav=false;doc.done=false;doc.day=v.day||null;if(doc.day)doc.order=planFor(doc.day).length}
   if(!id&&type==="camp")doc.fav=false;

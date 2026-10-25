@@ -4,665 +4,765 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f6b4f">
-<meta name="description" content="Our South Island campervan route, campsites and day plans. Works offline.">
+<meta name="description" content="Our South Island campervan route, campsites and day plans. Works offline, syncs between our phones.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>South Island Loop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: phone-first field notebook. Sticky header with trip progress, three tabs (Route / Places / Camps), bottom sheet for editing. */
+/* Layout: phone-first field notebook. Sticky header (title, sync badge, progress, four tabs);
+   full-screen day view; bottom sheets for details and editing. */
 :root{
   --paper:#f3f4ee; --card:#fbfbf7; --ink:#1d2621; --muted:#5f6b63; --line:#d9ddd2;
   --fern:#2f6b4f; --fern-soft:#dbe9df; --tussock:#b8761f; --tussock-soft:#f3e3c8;
   --sea:#2b6f86; --sea-soft:#d6e8ee; --rust:#a6432e; --rust-soft:#f2dcd5;
-  --land:#e4e8dc; --water:#dfe9ec;
-  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --land:#e4e8dc; --water:#dfe9ec; --on-fern:#ffffff;
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --paper:#141a17; --card:#1b231f; --ink:#e7ece6; --muted:#9aa79f; --line:#2c3732;
   --fern:#7cc49b; --fern-soft:#1f3a2c; --tussock:#e2a552; --tussock-soft:#3a2c17;
   --sea:#79bdd3; --sea-soft:#183139; --rust:#e58a73; --rust-soft:#3d2119;
-  --land:#232e29; --water:#16232a; color-scheme:dark }}
+  --land:#232e29; --water:#16232a; --on-fern:#10201a; color-scheme:dark }}
 :root[data-theme="dark"]{
   --paper:#141a17; --card:#1b231f; --ink:#e7ece6; --muted:#9aa79f; --line:#2c3732;
   --fern:#7cc49b; --fern-soft:#1f3a2c; --tussock:#e2a552; --tussock-soft:#3a2c17;
   --sea:#79bdd3; --sea-soft:#183139; --rust:#e58a73; --rust-soft:#3d2119;
-  --land:#232e29; --water:#16232a; color-scheme:dark }
+  --land:#232e29; --water:#16232a; --on-fern:#10201a; color-scheme:dark }
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font:16px/1.5 var(--body);margin:0}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font:16px/1.5 var(--body);margin:0;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
-.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 120px}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding-block:14px 0;border-bottom:1px solid var(--line)}
-.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
-h1{font:800 1.6rem/1.1 var(--display);margin:0;letter-spacing:-.01em;text-wrap:balance}
-.sub{color:var(--muted);font-size:.9rem}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-block:0 110px}
+button{font:inherit;color:inherit}
+a{color:var(--sea)}
+:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.progress{height:6px;background:var(--line);border-radius:3px;margin:10px 0 0;overflow:hidden}
-.progress span{display:block;height:100%;background:var(--fern)}
-.tabs{display:flex;gap:4px;margin-top:10px}
-.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:10px 4px;font:700 .95rem var(--body);color:var(--muted);cursor:pointer}
+.sub{color:var(--muted);font-size:.85rem}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+header .wrap{padding-block:10px 0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font:800 1.3rem/1.1 var(--display);margin:0;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hd-r{display:flex;align-items:center;gap:6px;flex:none}
+.sync{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 10px;font:700 .75rem var(--body);color:var(--muted);cursor:pointer;white-space:nowrap}
+.sync.on{color:var(--fern);border-color:var(--fern)}
+.sync.off{color:var(--tussock);border-color:var(--tussock)}
+.sync.err{color:var(--rust);border-color:var(--rust)}
+.prog{display:flex;align-items:center;gap:10px;margin-top:8px}
+.progress{flex:1;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--fern);width:0}
+.tabs{display:flex;margin-top:6px}
+.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:9px 2px;font:700 .92rem var(--body);color:var(--muted);cursor:pointer}
 .tab[aria-selected="true"]{color:var(--ink);border-color:var(--tussock)}
-.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
-section{padding-top:16px}
-.banner{background:var(--tussock-soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.92rem;margin-bottom:14px}
-/* map */
-.mapcard{background:var(--water);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.mapcard svg{display:block;width:100%;height:auto;max-height:520px}
-.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 18px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
-.stat b{display:block;font:800 1.25rem var(--display)}
-.stat small{color:var(--muted);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase}
-/* timeline */
-.group-h{font:800 .78rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
-.stop{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
-.stop.now{background:var(--fern-soft);border-radius:10px;padding:12px;border-top:0;margin:4px 0}
-.stop.past{opacity:.6}
-.dates{font:500 .82rem/1.35 var(--mono);color:var(--muted)}
-.dates b{display:block;color:var(--ink);font-weight:500}
-.stop h3{font:700 1.05rem/1.25 var(--display);margin:0}
-.stop p{margin:4px 0 0;color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.chip{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--ink);white-space:nowrap}
+section{padding-top:14px}
+
+/* shared bits */
+.icon-btn{background:none;border:1px solid var(--line);border-radius:10px;min-width:40px;height:40px;color:var(--muted);cursor:pointer;font-size:1.05rem;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 14px;font:700 .92rem var(--body);cursor:pointer;text-decoration:none;min-height:42px}
+.btn.primary{background:var(--fern);border-color:var(--fern);color:var(--on-fern)}
+.btn.danger{color:var(--rust);border-color:var(--rust);background:none}
+.btn.small{min-height:34px;padding:6px 10px;font-size:.82rem}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--ink);white-space:nowrap;vertical-align:middle}
 .c-doc{background:var(--fern-soft);color:var(--fern)} .c-free{background:var(--sea-soft);color:var(--sea)}
 .c-paid{background:var(--tussock-soft);color:var(--tussock)} .c-booked{background:var(--rust-soft);color:var(--rust)}
-.leg{grid-column:2 / -1;font:500 .75rem var(--mono);color:var(--muted)}
-.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.lk{display:inline-flex;align-items:center;gap:4px;font-size:.82rem;font-weight:700;color:var(--sea);text-decoration:none;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px;min-height:34px}
-.lk:hover{border-color:var(--sea)}
-.lk.sm{margin-top:4px;padding:3px 8px;min-height:0;font-size:.78rem}
-.nowcard{background:var(--fern-soft);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
-.nowcard h2{font:800 1.4rem/1.15 var(--display);margin:2px 0 4px}
-.now-k{font:800 .75rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--fern)}
-.now-p{margin:6px 0 0;font-size:.92rem}
-.night{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 6px;color:var(--ink);font:inherit;cursor:pointer}
-.night:hover{background:var(--card)}
+.minilinks{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;font-weight:700}
+.minilinks a{text-decoration:none}
+.group-h{font:800 .74rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:22px 0 6px}
+.empty{color:var(--muted);padding:18px 0}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.clamp1{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.pill{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font:700 .82rem var(--body);color:var(--muted);cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:4px;scrollbar-width:none}
+.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:8px}
+input,select,textarea{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);width:100%;min-width:0}
+select{width:auto;max-width:46vw}
+textarea{min-height:76px;resize:vertical}
+
+/* tonight card */
+.nowcard{background:var(--fern-soft);border-radius:16px;padding:14px 16px 16px;display:grid;gap:8px}
+.now-k{font:800 .72rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--fern)}
+.nowcard h2{font:800 1.45rem/1.15 var(--display);margin:0;text-wrap:balance}
+.campline{font-size:1.02rem}
+.now-p{margin:0;font-size:.9rem;color:var(--muted)}
+.now-p b{color:var(--ink)}
+.preview{background:var(--card);border-radius:10px;padding:8px 12px;font-size:.88rem}
+.preview b{display:block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* map */
+details.mapbox{margin-top:12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+details.mapbox summary{cursor:pointer;padding:10px 14px;font-weight:700;display:flex;justify-content:space-between;gap:8px;list-style:none}
+details.mapbox summary::-webkit-details-marker{display:none}
+details.mapbox summary::after{content:"▾";color:var(--muted)}
+details.mapbox[open] summary::after{content:"▴"}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 12px 10px}
+.stat{min-width:0}
+.stat b{display:block;font:800 1.15rem var(--display)}
+.stat small{color:var(--muted);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
+.mapcard{background:var(--water);border-top:1px solid var(--line);border-radius:0 0 14px 14px;overflow:hidden}
+.mapcard svg{display:block;width:100%;height:auto;max-height:440px}
+
+/* timeline */
+.stop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;padding:10px 0;border-top:1px solid var(--line)}
+.stop.past{opacity:.6}
+.stop-main{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;text-align:left;background:none;border:0;padding:0;cursor:pointer;min-width:0}
+.dates{font:500 .8rem/1.35 var(--mono);color:var(--muted)}
+.dates b{display:block;color:var(--ink);font-weight:500}
+.stop-name{display:block;font:700 1.05rem/1.25 var(--display)}
+.stop-camp{display:block;font-size:.86rem;margin-top:2px}
+.stop-notes{font-size:.85rem;color:var(--muted);margin-top:2px}
+.daychips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding-left:82px}
+.daychip{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:4px 8px;font:700 .75rem var(--body);cursor:pointer}
+.daychip.today{background:var(--fern);color:var(--on-fern);border-color:var(--fern)}
+.daychip span{font-family:var(--mono);color:var(--tussock);margin-left:4px}
+.daychip.today span{color:var(--on-fern)}
+.leg{font:500 .72rem var(--mono);color:var(--muted);padding:2px 0 2px 82px}
+
+/* nights */
+.night{display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 6px;cursor:pointer}
 .night.tonight{background:var(--fern-soft);border-radius:10px;border-top-color:transparent}
 .night.past{opacity:.55}
-.nd{font:500 .85rem var(--mono);font-variant-numeric:tabular-nums}.nd b{font-weight:500;color:var(--muted);margin-right:4px}
+.nd{font:500 .82rem var(--mono)}.nd b{font-weight:500;color:var(--muted);margin-right:4px}
 .nc{display:grid;min-width:0}
-.ncamp{font-weight:700;overflow-wrap:anywhere}.ncamp i{color:var(--rust);font-weight:400}
-.nstop{color:var(--muted);font-size:.82rem}
-.tonight-camp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:1.05rem;margin-top:6px}
-label.check{display:flex;gap:8px;align-items:center;font-weight:400}label.check input{width:auto}
-.dayview{position:fixed;inset:0;z-index:15;background:var(--paper);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
-.dayhead{position:sticky;top:0;z-index:2;background:var(--paper);border-bottom:1px solid var(--line)}
-.dayhead .wrap{display:flex;align-items:center;gap:8px;padding-block:10px}
-.dayhead h2{flex:1;min-width:0;font:800 1.15rem/1.2 var(--display);margin:0;text-align:center;text-wrap:balance}
-.daybody{display:grid;gap:14px;padding-block:14px 48px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
-.panel h3{font:800 .78rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
-.panel p.note{margin:6px 0 0}
-.act{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
-.act:first-of-type{border-top:0;padding-top:4px}
-.act.done .name{text-decoration:line-through;color:var(--muted)}
-.mv{display:flex;flex-direction:column;gap:4px}
-.mv button{width:38px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--muted);cursor:pointer}
-.mv button:disabled{opacity:.35;cursor:default}
-.addrow{display:flex;gap:8px;margin-top:12px}.addrow input{flex:1;min-width:0}
-.idea{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
-.daychips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.daychip{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 9px;font:700 .78rem var(--body);color:var(--ink);cursor:pointer}
-.daychip.today{background:var(--fern);color:var(--paper);border-color:var(--fern)}
-.daychip span{font-family:var(--mono);color:var(--tussock);margin-left:4px}
-.daychip.today span{color:var(--paper)}
-button.lk{cursor:pointer;font-family:var(--body)}
-.icon-btn{background:none;border:1px solid var(--line);border-radius:8px;min-width:40px;height:40px;color:var(--muted);cursor:pointer;font-size:1rem}
-.icon-btn:hover{color:var(--ink);border-color:var(--muted)}
-/* filters */
-.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;scrollbar-width:thin}
-.pill{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font:700 .85rem var(--body);color:var(--muted);cursor:pointer}
-.pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.search{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;margin-bottom:10px}
-.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.ncamp{font-weight:700;overflow-wrap:anywhere}.ncamp i{color:var(--rust);font-weight:400;font-style:normal}
+.nstop{color:var(--muted);font-size:.8rem}
+
+/* lists */
+.region-h{font:800 1rem var(--display);margin:18px 0 2px;display:flex;justify-content:space-between;align-items:baseline}
+.region-h span{font:500 .72rem var(--mono);color:var(--muted)}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.rowmain{background:none;border:0;padding:4px 0;text-align:left;cursor:pointer;min-width:0}
+.row .name{font-weight:700;display:block}
 .row.done .name{text-decoration:line-through;color:var(--muted)}
-.row .name{font-weight:700}
-.row .note{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
-.kind{font:500 .7rem var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.toggles{display:flex;gap:4px}
-.tg{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:1.05rem;color:var(--muted)}
+.row .note{color:var(--muted);font-size:.83rem}
+.kind{font:500 .68rem var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kind .plan{color:var(--fern)}
+.tg{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:1rem;color:var(--muted)}
 .tg.on.fav{color:var(--rust);border-color:var(--rust);background:var(--rust-soft)}
 .tg.on.chk{color:var(--fern);border-color:var(--fern);background:var(--fern-soft)}
-.region-h{font:800 1.05rem var(--display);margin:20px 0 4px;display:flex;justify-content:space-between;align-items:baseline}
-.region-h span{font:500 .75rem var(--mono);color:var(--muted)}
-.empty{color:var(--muted);padding:24px 0;text-align:left}
-/* fab + sheet */
-.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--tussock);color:#fff;border:0;border-radius:999px;padding:14px 20px;font:700 1rem var(--body);box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
+
+/* day view */
+.dayview{position:fixed;inset:0;z-index:15;background:var(--paper);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.dayhead{position:sticky;top:0;z-index:2;background:var(--paper);border-bottom:1px solid var(--line)}
+.dayhead .wrap{display:flex;align-items:center;gap:8px;padding-block:8px}
+.dayhead h2{flex:1;min-width:0;font:800 1.08rem/1.2 var(--display);margin:0;text-align:center}
+.dayhead h2 small{display:block;font:500 .75rem var(--body);color:var(--muted)}
+.daybody{display:grid;gap:12px;padding-block:12px 48px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0;display:grid;gap:8px}
+.panel h3{font:800 .72rem var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.panel .big{font:700 1.15rem/1.25 var(--display);margin:0}
+.act{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.act:first-of-type{border-top:0;padding-top:2px}
+.act.done .name{text-decoration:line-through;color:var(--muted)}
+.act .name{font-weight:700;display:block}
+.act .note{font-size:.83rem;color:var(--muted)}
+.mv{display:flex;flex-direction:column;gap:4px}
+.mv button{width:36px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--muted);cursor:pointer}
+.mv button:disabled{opacity:.3;cursor:default}
+.addrow{display:flex;gap:8px}.addrow input{flex:1}
+.idea{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.idea .name{font-weight:700}
+
+/* sheet */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--tussock);color:#fff;border:0;border-radius:999px;padding:13px 18px;font:700 .95rem var(--body);box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
 .scrim{position:fixed;inset:0;background:rgba(10,15,12,.45);z-index:20}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--card);border-radius:18px 18px 0 0;max-height:88vh;overflow:auto;padding-block:18px calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.sheet-in{max-width:620px;margin:0 auto;display:grid;gap:12px}
-.sheet h2{font:800 1.3rem var(--display);margin:0}
-label{display:grid;gap:4px;font-weight:700;font-size:.85rem}
-input,select,textarea{font:inherit;font-weight:400;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);width:100%}
-textarea{min-height:80px;resize:vertical}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--card);border-radius:18px 18px 0 0;max-height:90vh;overflow:auto;padding-block:16px calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sheet-in{max-width:620px;margin:0 auto;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.sheet-in>*,.sheet details,.sheet label{min-width:0}
+pre.sql{max-width:100%}
+.sheet h2{font:800 1.25rem/1.2 var(--display);margin:0}
+.sheet label{display:grid;gap:4px;font-weight:700;font-size:.84rem}
+.sheet input,.sheet select,.sheet textarea{background:var(--paper)}
+.sheet select{width:100%;max-width:none}
+.sheet hr{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-top:6px}
-.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:11px 16px;font:700 .95rem var(--body);cursor:pointer}
-.btn.primary{background:var(--fern);border-color:var(--fern);color:var(--paper)}
-.btn.danger{color:var(--rust);border-color:var(--rust)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-top:4px}
 .hint{color:var(--muted);font-size:.8rem;font-weight:400}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-weight:700;z-index:30;font-size:.9rem}
-@media (max-width:420px){.stop{grid-template-columns:62px minmax(0,1fr) auto;gap:10px}.two{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
+label.check{display:flex;gap:8px;align-items:center;font-weight:400}label.check input{width:auto}
+pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px;font:500 .72rem/1.4 var(--mono);overflow-x:auto;white-space:pre;margin:0;max-height:200px}
+.okmsg{color:var(--fern);font-weight:700;font-size:.88rem}.errmsg{color:var(--rust);font-weight:700;font-size:.88rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-weight:700;z-index:30;font-size:.88rem;max-width:calc(100vw - 32px);text-align:center}
+@media (max-width:380px){.two{grid-template-columns:1fr}.daychips,.leg{padding-left:0}}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .2s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 </style>
 </head>
 <body>
 
-
-<header><div class="wrap" style="padding-block:0">
-  <div class="top"><h1>South Island Loop</h1><div style="display:flex;align-items:center;gap:10px"><span class="sub mono" id="dayline">8 Oct → Picton ferry</span><button class="icon-btn" id="menu" type="button" aria-label="Backup and settings">⋯</button></div></div>
-  <div class="progress" aria-hidden="true"><span id="bar" style="width:0%"></span></div>
+<header><div class="wrap">
+  <div class="top">
+    <h1>South Island Loop</h1>
+    <div class="hd-r"><button class="sync" id="sync" type="button" title="Sync status">Local</button><button class="icon-btn" id="menu" type="button" aria-label="Backup and settings">⋯</button></div>
+  </div>
+  <div class="prog"><div class="progress" aria-hidden="true"><span id="bar"></span></div><span class="sub mono" id="dayline"></span></div>
   <nav class="tabs" role="tablist">
-    <button class="tab" role="tab" id="t-route" aria-selected="true" data-tab="route">Route</button>
-    <button class="tab" role="tab" id="t-nights" aria-selected="false" data-tab="nights">Nights</button>
-    <button class="tab" role="tab" id="t-spots" aria-selected="false" data-tab="spots">Places</button>
-    <button class="tab" role="tab" id="t-camps" aria-selected="false" data-tab="camps">Campsites</button>
+    <button class="tab" role="tab" aria-selected="true" data-tab="route">Route</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="nights">Nights</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="spots">Places</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="camps">Camps</button>
   </nav>
 </div></header>
 
 <main class="wrap">
-  <div id="notice" class="banner" hidden></div>
-
   <section id="route">
     <div class="nowcard" id="nowcard" hidden></div>
-    <div class="mapcard"><svg id="map" viewBox="0 0 400 470" role="img" aria-label="Map of the South Island with your stops"></svg></div>
-    <div class="stats">
-      <div class="stat"><small>Stops</small><b class="mono" id="s-stops">–</b></div>
-      <div class="stat"><small>Est. km</small><b class="mono" id="s-km">–</b></div>
-      <div class="stat"><small>Diesel + RUC</small><b class="mono" id="s-cost">–</b></div>
-    </div>
+    <details class="mapbox" id="mapbox"><summary>Map &amp; distances <span class="sub mono" id="mapsum"></span></summary>
+      <div class="stats">
+        <div class="stat"><small>Stops</small><b class="mono" id="s-stops">–</b></div>
+        <div class="stat"><small>Total km</small><b class="mono" id="s-km">–</b></div>
+        <div class="stat"><small>Fuel+RUC left</small><b class="mono" id="s-cost">–</b></div>
+      </div>
+      <div class="mapcard"><svg id="map" viewBox="0 0 400 470" role="img" aria-label="Map of the South Island with your stops"></svg></div>
+    </details>
     <div id="timeline"><p class="empty">Loading your route…</p></div>
   </section>
 
   <section id="nights" hidden>
-    <p class="sub" style="margin:0 0 10px">Where you sleep each night. Tap a night to open that day: campsite, plan and directions.</p>
-    <div id="nightlist"><p class="empty">Loading nights…</p></div>
+    <p class="sub" style="margin:0 0 6px">Where you sleep each night. Tap a night to open that day.</p>
+    <div id="nightlist"></div>
   </section>
 
   <section id="spots" hidden>
-    <input class="search" id="q-spots" type="search" placeholder="Search places, hikes, notes">
+    <div class="toolbar"><input id="q-spots" type="search" placeholder="Search places &amp; hikes" aria-label="Search places"><select id="r-spots" aria-label="Region"></select></div>
     <div class="filters" id="f-kind"></div>
-    <div class="filters" id="f-region-spots"></div>
-    <div id="spotlist"><p class="empty">Loading places…</p></div>
+    <div id="spotlist"></div>
   </section>
 
   <section id="camps" hidden>
-    <input class="search" id="q-camps" type="search" placeholder="Search campsites">
+    <div class="toolbar"><input id="q-camps" type="search" placeholder="Search campsites" aria-label="Search campsites"><select id="r-camps" aria-label="Region"></select></div>
     <div class="filters" id="f-type"></div>
-    <div class="filters" id="f-region-camps"></div>
-    <div id="camplist"><p class="empty">Loading campsites…</p></div>
+    <div id="camplist"></div>
   </section>
 </main>
 
 <button class="fab" id="fab" type="button">+ Add stop</button>
 <div class="dayview" id="dayview" role="dialog" aria-modal="true" aria-label="Day plan" hidden></div>
 <div class="scrim" id="scrim" hidden></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden><form class="sheet-in" id="form"></form></div>
-<div class="toast" id="toast" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden><form class="sheet-in" id="form" novalidate></form></div>
+<div class="toast" id="toast" hidden role="status"></div>
 
 <script>
+/* ================= constants & helpers ================= */
 const REGIONS=["Marlborough","Nelson/Tasman","West Coast","Otago","Fiordland","Southland","Canterbury"];
 const KINDS={place:"Place",hike:"Hike",bike:"Bike / disc golf"};
-const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"Unsorted"};
+const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
+const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"To sort"};
 const KM_COST=0.38, ROAD=1.3;
-const state={tab:"route",stops:[],spots:[],camps:[],kind:"all",regS:"all",regC:"all",ctype:"all",qS:"",qC:"",readOnly:false,nights:[],showPast:false,showDone:false,day:null,ideaQ:"",ideaAll:false};
-let db=null;
+const COLLS=["stops","spots","camps","nights"];
+const COLL={stop:"stops",spot:"spots",camp:"camps"};
+const state={tab:"route",stops:[],spots:[],camps:[],nights:[],kind:"all",regS:null,regC:null,ctype:"all",qS:"",qC:"",showPast:false,showDone:false,day:null,ideaQ:"",ideaAll:false};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const today=()=>{const d=new Date();return d.toLocaleDateString("en-CA",{timeZone:"Pacific/Auckland"})};
-const fmt=d=>d?new Date(d+"T12:00:00").toLocaleDateString("en-NZ",{day:"numeric",month:"short"}):"";
-function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+const today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"Pacific/Auckland"});
+const D=d=>new Date(d+"T12:00:00");
+const fmt=d=>d?D(d).toLocaleDateString("en-NZ",{day:"numeric",month:"short"}):"";
+const wd=d=>D(d).toLocaleDateString("en-NZ",{weekday:"short"});
+const addDays=(d,n)=>{const x=new Date(d+"T12:00:00Z");x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
+const daysBetween=(a,b)=>Math.round((D(b)-D(a))/864e5);
+const safeUrl=u=>/^https:\/\//i.test(u||"")?u:"";
+function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2400)}
 function hav(a,b){const R=6371,r=x=>x*Math.PI/180;const dLa=r(b.lat-a.lat),dLo=r(b.lng-a.lng);const h=Math.sin(dLa/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 const hasLL=s=>typeof s.lat==="number"&&typeof s.lng==="number"&&!isNaN(s.lat)&&!isNaN(s.lng);
 const sortStops=()=>[...state.stops].sort((a,b)=>(a.start||"9").localeCompare(b.start||"9")||(a.name||"").localeCompare(b.name||""));
+const isPastStop=(s,t)=>s.end&&s.end>s.start?s.end<=t:(s.start||"")<t;
+function currentStop(){const t=today(),st=sortStops();return st.find(s=>s.start<=t&&s.end&&t<s.end)||st.find(s=>s.start===t)||st.find(s=>s.start>t)||null}
+function stopFor(d){return sortStops().find(s=>s.start&&s.start<=d&&(s.end&&s.end>s.start?d<s.end:d===s.start))}
+function stopDays(s){const out=[];if(!s.start)return out;const e=s.end&&s.end>s.start?s.end:addDays(s.start,1);let d=s.start,g=0;while(d<e&&g++<60){out.push(d);d=addDays(d,1)}return out}
+function nightInfo(d){const o=state.nights.find(n=>n.id===d),s=stopFor(d);
+  return {date:d,stop:s,override:o,camp:(o&&o.camp!=null?o.camp:s?.camp)||"",type:(o&&o.campType?o.campType:s?.campType)||"unknown",notes:o?.notes||""}}
+const planFor=d=>state.spots.filter(x=>x.day===d).sort((a,b)=>(a.order??0)-(b.order??0)||(a.name||"").localeCompare(b.name||""));
+function tripRange(){const st=sortStops();if(!st.length)return null;const first=st[0].start;const last=st.reduce((m,s)=>{const e=s.end||s.start;return e>m?e:m},first);return {first,last}}
+function upcomingNights(){const r=tripRange();if(!r)return[];const out=[];let d=today()>r.first?today():r.first,g=0;while(d<r.last&&g++<400){out.push(d);d=addDays(d,1)}return out}
+function curRegion(){return currentStop()?.region||""}
 
-/* ---------- map ---------- */
+/* links */
+const MS_INDEX="https://www.metservice.com/towns-cities";
+const windyUrl=s=>`https://www.windy.com/${s.lat.toFixed(3)}/${s.lng.toFixed(3)}?${s.lat.toFixed(3)},${s.lng.toFixed(3)},10`;
+const LLRE=/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
+function dest(x,kind){
+  if(hasLL(x))return {ll:x.lat+","+x.lng};
+  const m=LLRE.exec(x.loc||"");if(m)return {ll:m[1]+","+m[2]};
+  const base=x.loc||((x.name||"")+(kind==="camp"&&!/camp/i.test(x.name||"")?" campsite":"")+(x.region?", "+x.region:""));
+  return {q:base+", New Zealand"}}
+function gUrl(x,kind){const t=dest(x,kind);return "https://www.google.com/maps/dir/?api=1&destination="+(t.ll||encodeURIComponent(t.q))}
+function wazeUrl(x,kind){const t=dest(x,kind);return t.ll?`https://waze.com/ul?ll=${t.ll}&navigate=yes`:`https://waze.com/ul?q=${encodeURIComponent(t.q)}&navigate=yes`}
+function infoUrl(x,kind){return safeUrl(x.url)||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(x.region||"")+" New Zealand"+(kind==="hike"||(kind==="camp"&&x.type==="doc")?" DOC":""))}
+function navRow(x,kind){return `<div class="minilinks"><a href="${esc(gUrl(x,kind))}" target="_blank" rel="noopener">Google Maps</a><a href="${esc(wazeUrl(x,kind))}" target="_blank" rel="noopener">Waze</a><a href="${esc(infoUrl(x,kind))}" target="_blank" rel="noopener">${x.url?"Info":"Look up"}</a></div>`}
+function weatherRow(s){if(!s)return"";const ms=safeUrl(s.weather);
+  return `<div class="minilinks"><a href="${esc(ms||MS_INDEX)}" target="_blank" rel="noopener">MetService${ms?"":" (towns)"}</a>${hasLL(s)?`<a href="${windyUrl(s)}" target="_blank" rel="noopener">Windy</a>`:""}</div>`}
+
+/* ================= local store + sync ================= */
+const LS="sil-v2",OLD="sil-plan-v1",PREV="sil-plan-prev",LS_CRED="sil-sync-v1",KEA_CRED="vanbudget.sync.v1";
+let S=loadStore();
+function loadStore(){let s=null;try{s=JSON.parse(localStorage.getItem(LS))}catch{}
+  if(!s){s={docs:{},pending:{},lastPull:"",synced:false};
+    try{const o=JSON.parse(localStorage.getItem(OLD));if(o&&o.stops)s.docs={stops:o.stops,spots:o.spots||{},camps:o.camps||{},nights:o.nights||{}}}catch{}}
+  s.docs??={};COLLS.forEach(c=>s.docs[c]??={});s.pending??={};return s}
+function persist(){try{localStorage.setItem(LS,JSON.stringify(S))}catch{toast("Phone storage is full — couldn't save")}}
+function refresh(){COLLS.forEach(c=>state[c]=Object.entries(S.docs[c]).map(([id,v])=>({id,...v})));render()}
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function strip(v){const o={...v};delete o.id;return o}
+function put(c,id,v){S.docs[c][id]=strip(v);S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
+function patch(c,id,p){const o=S.docs[c][id];if(!o)return;put(c,id,{...o,...p})}
+function del(c,id){delete S.docs[c][id];S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
+function add(c,v){const id=newId();put(c,id,v);return id}
+function replaceAll(docs){
+  try{localStorage.setItem(PREV,JSON.stringify(S.docs))}catch{}
+  COLLS.forEach(c=>{const nw=docs[c]||{},cur=S.docs[c];
+    Object.keys(cur).forEach(id=>{if(!(id in nw)){delete cur[id];S.pending[c+"/"+id]=1}});
+    Object.entries(nw).forEach(([id,v])=>{if(JSON.stringify(cur[id])!==JSON.stringify(v)){cur[id]=v;S.pending[c+"/"+id]=1}})});
+  persist();refresh();scheduleSync(300)}
+async function fetchPlan(){const r=await fetch("plan.json",{cache:"no-store"});if(!r.ok)throw new Error("plan");return r.json()}
+
+let cred=loadCred(),syncing=false,syncTimer=null,lastErr=null;
+function loadCred(){let c={};try{c=JSON.parse(localStorage.getItem(LS_CRED)||"{}")}catch{}
+  if(c.off)return {off:true};
+  if(!c.url||!c.key){try{const k=JSON.parse(localStorage.getItem(KEA_CRED)||"{}");if(k.url&&k.key)return {url:k.url,key:k.key,fromKea:true}}catch{}}
+  return c}
+const syncOn=()=>!!(cred.url&&cred.key);
+async function api(path,opt={},c=cred){
+  const ac=new AbortController(),t=setTimeout(()=>ac.abort(),15000);
+  try{const r=await fetch(c.url.replace(/\/+$/,"")+"/rest/v1/"+path,{...opt,signal:ac.signal,headers:{apikey:c.key,Authorization:"Bearer "+c.key,"Content-Type":"application/json",...(opt.headers||{})}});
+    if(!r.ok){let b="";try{b=await r.text()}catch{}const e=new Error("HTTP "+r.status);e.status=r.status;e.body=b;throw e}
+    const ct=r.headers.get("content-type")||"";return r.status===204||!ct.includes("json")?null:r.json()}
+  finally{clearTimeout(t)}}
+async function pullAll(since){const out=[];let off=0;
+  for(;;){const rows=await api(`trip_docs?select=coll,id,data,deleted,updated_at${since?"&updated_at=gte."+encodeURIComponent(since):""}&order=updated_at.asc,coll.asc,id.asc&limit=1000&offset=${off}`);
+    out.push(...rows);if(rows.length<1000||off>60000)break;off+=1000}
+  return out}
+const maxTs=rows=>rows.reduce((m,r)=>r.updated_at>m?r.updated_at:m,"");
+function scheduleSync(ms=1200){setChip();if(!syncOn())return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>sync(false),ms)}
+const missingTable=e=>e&&(e.status===404||/PGRST205|trip_docs/.test(e.body||""));
+async function sync(manual){
+  if(!syncOn()||syncing)return setChip();
+  if(!navigator.onLine){if(manual)toast("No signal — changes stay on this phone until you're back online");return setChip()}
+  syncing=true;setChip("Syncing…");
+  try{
+    if(!S.synced){
+      const probe=await api("trip_docs?select=id&limit=1");
+      if(probe.length){
+        try{localStorage.setItem(PREV,JSON.stringify(S.docs))}catch{}
+        const all=await pullAll("");const docs={stops:{},spots:{},camps:{},nights:{}};
+        all.forEach(r=>{if(!r.deleted&&docs[r.coll])docs[r.coll][r.id]=r.data});
+        S.docs=docs;S.pending={};S.lastPull=maxTs(all);S.synced=true;persist();refresh();
+        toast("Shared plan loaded");return;
+      }
+      if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{})}catch{}}
+      COLLS.forEach(c=>Object.keys(S.docs[c]).forEach(id=>S.pending[c+"/"+id]=1));
+      S.synced=true;persist();refresh();
+    }
+    const keys=Object.keys(S.pending);
+    for(let i=0;i<keys.length;i+=200){
+      const chunk=keys.slice(i,i+200),sent={};
+      const body=chunk.map(k=>{const j=k.indexOf("/"),c=k.slice(0,j),id=k.slice(j+1),v=S.docs[c]?.[id];sent[k]=JSON.stringify(v??null);return {coll:c,id,data:v||{},deleted:!v}});
+      await api("trip_docs?on_conflict=coll,id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(body)});
+      chunk.forEach(k=>{const j=k.indexOf("/");if(JSON.stringify(S.docs[k.slice(0,j)]?.[k.slice(j+1)]??null)===sent[k])delete S.pending[k]});
+      persist();
+    }
+    const rows=await pullAll(S.lastPull);let changed=false;
+    rows.forEach(r=>{const k=r.coll+"/"+r.id;if(S.pending[k]||!S.docs[r.coll])return;
+      if(r.deleted){if(r.id in S.docs[r.coll]){delete S.docs[r.coll][r.id];changed=true}}
+      else if(JSON.stringify(S.docs[r.coll][r.id])!==JSON.stringify(r.data)){S.docs[r.coll][r.id]=r.data;changed=true}});
+    const m=maxTs(rows);if(m)S.lastPull=m;persist();if(changed)refresh();
+    lastErr=null;if(manual)toast("Synced");
+  }catch(e){lastErr=e;console.warn("sync",e);if(manual)toast(missingTable(e)?"The shared table isn't set up yet — see ⋯":"Sync failed — will retry")}
+  finally{syncing=false;setChip()}
+}
+function setChip(busy){const c=$("#sync");
+  if(!syncOn()){c.textContent="This phone";c.className="sync";c.title="Saved on this phone only";return}
+  const p=Object.keys(S.pending).length;
+  if(busy){c.textContent=busy;c.className="sync";return}
+  if(!navigator.onLine){c.textContent=p?`Offline · ${p}`:"Offline";c.className="sync off";c.title="Changes sync when you have signal";return}
+  if(lastErr){c.textContent="Sync error";c.className="sync err";c.title="Tap to see what's wrong";return}
+  if(p){c.textContent=`${p} to sync`;c.className="sync off";return}
+  c.textContent="Synced";c.className="sync on";c.title="Shared plan is up to date"}
+
+/* ================= map ================= */
 const COAST=[[-40.5,172.65],[-40.68,172.7],[-40.8,173.0],[-41.05,173.05],[-41.27,173.28],[-41.0,173.6],[-40.82,173.85],[-40.99,174.31],[-41.27,174.3],[-41.73,174.28],[-42.1,173.95],[-42.42,173.7],[-42.85,173.3],[-43.15,172.8],[-43.53,172.75],[-43.6,173.0],[-43.75,173.12],[-43.88,172.85],[-43.85,172.4],[-44.1,171.8],[-44.4,171.27],[-44.75,171.15],[-45.1,170.97],[-45.5,170.75],[-45.88,170.6],[-46.2,170.15],[-46.45,169.81],[-46.6,169.4],[-46.67,169.0],[-46.6,168.33],[-46.36,168.0],[-46.25,167.4],[-46.16,166.6],[-45.7,166.65],[-45.25,166.85],[-44.95,167.3],[-44.6,167.8],[-44.25,168.2],[-43.98,168.6],[-43.88,169.0],[-43.6,169.6],[-43.4,169.82],[-43.22,170.16],[-42.95,170.65],[-42.72,170.96],[-42.45,171.2],[-42.1,171.33],[-41.75,171.6],[-41.5,171.9],[-41.25,172.1],[-41.1,172.1],[-40.78,172.22],[-40.65,172.43]];
-const LAT0=-40.35,LAT1=-46.85,LNG0=166.3,LNG1=174.6,W=400,H=470;
-const kx=Math.cos(43.6*Math.PI/180);
+const LAT0=-40.35,LAT1=-46.85,LNG0=166.3,LNG1=174.6,W=400,H=470,kx=Math.cos(43.6*Math.PI/180);
 const scale=Math.min((W-20)/((LNG1-LNG0)*kx),(H-20)/(LAT0-LAT1));
 const P=(lat,lng)=>[10+(lng-LNG0)*kx*scale,10+(LAT0-lat)*scale];
 function drawMap(){
-  const t=today(),stops=sortStops().filter(hasLL);
-  let s=`<rect width="${W}" height="${H}" fill="var(--water)"/>`;
-  s+=`<polygon points="${COAST.map(c=>P(...c).map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="var(--land)" stroke="var(--line)" stroke-width="1.2" stroke-linejoin="round"/>`;
-  if(stops.length>1){
-    const past=[],fut=[];
-    stops.forEach(st=>{const pt=P(st.lat,st.lng);(isPastStop(st,t)?past:fut).push(pt)});
+  const t=today(),stops=sortStops().filter(hasLL),cur=currentStop();
+  let s=`<rect width="${W}" height="${H}" fill="var(--water)"/><polygon points="${COAST.map(c=>P(...c).map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="var(--land)" stroke="var(--line)" stroke-width="1.2" stroke-linejoin="round"/>`;
+  if(stops.length>1){const past=[],fut=[];stops.forEach(st=>(isPastStop(st,t)?past:fut).push(P(st.lat,st.lng)));
     if(past.length&&fut.length)fut.unshift(past[past.length-1]);
     if(past.length>1)s+=`<polyline points="${past.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round"/>`;
-    if(fut.length>1)s+=`<polyline points="${fut.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--tussock)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
-  }
+    if(fut.length>1)s+=`<polyline points="${fut.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--tussock)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`}
+  stops.forEach(st=>{const [x,y]=P(st.lat,st.lng),past=isPastStop(st,t),now=cur&&cur.id===st.id;
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${now?7:3.6}" fill="${now?"var(--fern)":past?"var(--muted)":"var(--card)"}" stroke="${now?"var(--card)":past?"var(--muted)":"var(--tussock)"}" stroke-width="2"><title>${esc(st.name)}</title></circle>`});
+  if(cur&&hasLL(cur)){const [x,y]=P(cur.lat,cur.lng),left=x>W*0.6;
+    s+=`<text x="${(left?x-11:x+11).toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${left?"end":"start"}" font-family="var(--body)" font-weight="700" font-size="13" fill="var(--ink)" paint-order="stroke" stroke="var(--land)" stroke-width="4">${esc(cur.name)}</text>`}
+  $("#map").innerHTML=s}
+
+/* ================= route ================= */
+function renderRoute(){
+  const t=today(),st=sortStops(),r=tripRange();
+  if(r){const total=Math.max(1,daysBetween(r.first,r.last)),done=Math.min(total,Math.max(0,daysBetween(r.first,t)+1));
+    $("#bar").style.width=(done/total*100)+"%";$("#dayline").textContent=t<r.first?`Starts ${fmt(r.first)}`:t>=r.last?"Trip done":`Day ${done} of ${total}`}
+  let km=0,kmLeft=0;
+  const legs=st.map((s,i)=>{if(!i||!hasLL(s)||!hasLL(st[i-1]))return 0;const d=Math.round(hav(st[i-1],s)*ROAD);km+=d;if((s.start||"")>t)kmLeft+=d;return d});
+  $("#s-stops").textContent=st.length;$("#s-km").textContent=km?km.toLocaleString("en-NZ"):"–";
+  $("#s-cost").textContent=kmLeft?"$"+Math.round(kmLeft*KM_COST).toLocaleString("en-NZ"):"–";
+  $("#mapsum").textContent=kmLeft?`~${kmLeft.toLocaleString("en-NZ")} km to go`:"";
+  if($("#mapbox").open)drawMap();
+  renderNow(legs);
+  if(!st.length){$("#timeline").innerHTML=`<p class="empty">No stops yet. Tap <b>+ Add stop</b> to put your first campsite or town on the route.</p>`;return}
   const cur=currentStop();
-  stops.forEach(st=>{const [x,y]=P(st.lat,st.lng);const isPast=isPastStop(st,t);const isNow=cur&&cur.id===st.id;
-    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${isNow?7:3.6}" fill="${isNow?"var(--fern)":isPast?"var(--muted)":"var(--card)"}" stroke="${isNow?"var(--card)":isPast?"var(--muted)":"var(--tussock)"}" stroke-width="2"><title>${esc(st.name)}</title></circle>`;});
-  if(cur&&hasLL(cur)){const [x,y]=P(cur.lat,cur.lng);const left=x>W*0.6;
-    s+=`<text x="${(left?x-11:x+11).toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${left?"end":"start"}" font-family="var(--body)" font-weight="700" font-size="13" fill="var(--ink)" paint-order="stroke" stroke="var(--land)" stroke-width="4">${esc(cur.name)}</text>`;}
-  if(!stops.length)s+=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="var(--muted)" font-size="13" font-family="var(--body)">Stops with coordinates appear here</text>`;
-  $("#map").innerHTML=s;
+  const row=(s,i,past,showLeg)=>{
+    const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0,days=stopDays(s);
+    const open=days.includes(t)?t:days[0]||s.start;
+    const chips=days.length>1||!past?days.map(d=>{const c=state.spots.filter(x=>x.day===d).length;return `<button class="daychip ${d===t?"today":""}" type="button" data-day="${d}">${wd(d)} ${D(d).getDate()}${c?`<span>${c}</span>`:""}</button>`}).join(""):"";
+    return (showLeg&&legs[i]?`<div class="leg">↓ ~${legs[i]} km · ~$${Math.round(legs[i]*KM_COST)}</div>`:"")+
+    `<div class="stop ${past?"past":""}">
+      <button class="stop-main" type="button" data-day="${open}" aria-label="Open ${esc(s.name)}">
+        <span class="dates"><b>${fmt(s.start)}</b>${nights?`${nights} night${nights>1?"s":""}`:"day stop"}</span>
+        <span style="min-width:0"><span class="stop-name">${esc(s.name)}</span>
+          ${s.camp?`<span class="stop-camp">⛺ ${esc(s.camp)} <span class="chip c-${esc(s.campType||"unknown")}">${esc(SHORT[s.campType]||"To sort")}</span></span>`:""}
+          ${s.notes&&!past?`<span class="stop-notes clamp">${esc(s.notes)}</span>`:""}</span>
+      </button>
+      <button class="icon-btn" type="button" data-edit="stop:${esc(s.id)}" aria-label="Edit ${esc(s.name)}">✎</button>
+      ${chips?`<div class="daychips">${chips}</div>`:""}
+    </div>`};
+  const up=[],done=[];
+  st.forEach((s,i)=>{if(cur&&cur.id===s.id)return;(isPastStop(s,t)?done:up).push([s,i])});
+  let html="";
+  if(cur&&stopDays(cur).length>1)html+=`<div class="group-h">This stop</div>`+row(cur,st.indexOf(cur),false,false);
+  if(up.length)html+=`<div class="group-h">Coming up</div>`+up.map(([s,i],k)=>row(s,i,false,true)).join("");
+  if(done.length){html+=`<div class="group-h">Done</div><button class="pill" type="button" data-showdone>${state.showDone?"Hide":"Show"} ${done.length} done stop${done.length>1?"s":""}</button>`;
+    if(state.showDone)html+=done.slice().reverse().map(([s,i])=>row(s,i,true,false)).join("")}
+  $("#timeline").innerHTML=html;
 }
-function currentStop(){const t=today();const st=sortStops();return st.find(s=>s.start<=t&&s.end&&t<s.end)||st.find(s=>s.start===t)||st.find(s=>s.start>t)||null}
-const isPastStop=(s,t)=>s.end&&s.end>s.start?s.end<=t:(s.start||"")<t;
-const MS_INDEX="https://www.metservice.com/towns-cities";
-const windyUrl=s=>`https://www.windy.com/${s.lat.toFixed(3)}/${s.lng.toFixed(3)}?${s.lat.toFixed(3)},${s.lng.toFixed(3)},10`;
-const gmaps=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
-const gdir=s=>"https://www.google.com/maps/dir/?api=1&destination="+s.lat+","+s.lng;
-const safeUrl=u=>/^https:\/\//i.test(u||"")?u:"";
-function linkRow(s){
-  const out=[];const ms=safeUrl(s.weather);
-  out.push(`<a class="lk" href="${esc(ms||MS_INDEX)}" target="_blank" rel="noopener">☁ MetService${ms?"":" (pick town)"}</a>`);
-  if(hasLL(s)){out.push(`<a class="lk" href="${windyUrl(s)}" target="_blank" rel="noopener">≋ Windy</a>`);out.push(`<a class="lk" href="${gdir(s)}" target="_blank" rel="noopener">➜ Directions</a>`)}
-  return `<div class="links">${out.join("")}</div>`;
-}
-function renderNow(){
+function renderNow(legs){
   const t=today(),st=sortStops(),cur=currentStop(),el=$("#nowcard");
   if(!cur){el.hidden=true;return}
-  const i=st.indexOf(cur),next=st[i+1],here=cur.start<=t;
-  const left=cur.end?Math.max(0,Math.round((new Date(cur.end)-new Date(t))/864e5)):0;
-  const legKm=next&&hasLL(cur)&&hasLL(next)?Math.round(hav(cur,next)*ROAD):null;
+  const i=st.indexOf(cur),next=st[i+1],here=cur.start<=t,d=here?t:cur.start,n=nightInfo(d);
+  const left=cur.end?Math.max(0,daysBetween(t,cur.end)):0;
+  const legKm=next&&legs?legs[i+1]:0;
+  const plan=planFor(d);
+  const campObj=state.camps.find(c=>(c.name||"").toLowerCase()===(n.camp||"").toLowerCase())||{name:n.camp,region:cur.region,type:n.type};
   el.hidden=false;
-  el.innerHTML=`<div class="now-k">${here?"Tonight":"Next stop · "+fmt(cur.start)}</div>
-   <h2>${esc(cur.name)}</h2>
-   ${(()=>{const nd=here?t:cur.start,n=nightInfo(nd);return `<div class="tonight-camp"><span>⛺ <b>${n.camp?esc(n.camp):"No campsite set"}</b></span><span class="chip c-${esc(n.type)}">${esc(SHORT[n.type]||"To sort")}</span><button class="lk" type="button" data-night="${nd}">Change</button></div>`})()}
-   ${here&&cur.end?`<p class="now-p">${left?`${left} night${left>1?"s":""} left here`:"Moving on today"}${next?` · then <b>${esc(next.name)}</b>${legKm?` (~${legKm} km, ~$${Math.round(legKm*KM_COST)})`:""}`:""}</p>`:""}
-   ${linkRow(cur)}
-   <button class="btn primary" type="button" style="margin-top:10px" data-day="${here?t:cur.start}">Open ${here?"today's":"the day's"} plan</button>`;
+  el.innerHTML=`<div class="now-k">${here?"Tonight · "+wd(t)+" "+fmt(t):"Next stop · "+wd(d)+" "+fmt(d)}</div>
+    <h2>${esc(cur.name)}</h2>
+    <div class="campline">⛺ <b>${n.camp?esc(n.camp):"No campsite yet"}</b> <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></div>
+    ${here&&cur.end?`<p class="now-p">${left>1?`${left} nights left here`:left===1?"Last night here":"Moving on today"}${next?` · next <b>${esc(next.name)}</b>${legKm?` · ~${legKm} km`:""}`:""}</p>`:""}
+    <div class="preview"><b>${here?"Today":"That day"}</b>${plan.length?plan.slice(0,3).map(x=>esc(x.name)).join(" · ")+(plan.length>3?` · +${plan.length-3} more`:""):"Nothing planned yet"}</div>
+    <div class="btnrow"><button class="btn primary" type="button" data-day="${d}">Open ${here?"today":"day"}</button>${n.camp?`<a class="btn" href="${esc(gUrl(campObj,"camp"))}" target="_blank" rel="noopener">Directions to camp</a>`:""}</div>
+    ${weatherRow(cur)}`;
 }
 
-
-/* ---------- nights ---------- */
-const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"To sort"};
-const addDays=(d,n)=>{const x=new Date(d+"T12:00:00Z");x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
-function stopFor(d){return sortStops().find(s=>s.start&&s.start<=d&&(s.end&&s.end>s.start?d<s.end:d===s.start))}
-function nightInfo(d){const o=state.nights.find(n=>n.id===d),s=stopFor(d);
-  return {date:d,stop:s,override:o,camp:(o&&o.camp!=null?o.camp:s?.camp)||"",type:(o?o.campType:s?.campType)||"unknown",notes:o?.notes||""}}
+/* ================= nights ================= */
 function renderNights(){
-  const st=sortStops(),el=$("#nightlist");
-  if(!st.length){el.innerHTML=`<p class="empty">No stops yet. Add a stop on the Route tab and its nights appear here.</p>`;return}
-  const t=today(),first=st[0].start;
-  const last=st.reduce((m,s)=>{const e=s.end||s.start;return e>m?e:m},first);
-  const fut=[],past=[];let d=first,g=0;
-  while(d<last&&g++<500){(d<t?past:fut).push(d);d=addDays(d,1)}
-  const row=d=>{const n=nightInfo(d),dt=new Date(d+"T12:00:00"),cnt=state.spots.filter(x=>x.day===d).length;
-    return `<button type="button" class="night ${d===t?"tonight":""} ${d<t?"past":""}" data-day="${d}" aria-label="Open ${fmt(d)}">
-      <span class="nd"><b>${dt.toLocaleDateString("en-NZ",{weekday:"short"})}</b>${fmt(d)}</span>
-      <span class="nc"><span class="ncamp">${n.camp?esc(n.camp):"<i>No campsite yet</i>"}</span><span class="nstop">${d===t?"Tonight · ":""}${n.stop?esc(n.stop.name):"No stop planned"}${cnt?` · ${cnt} planned`:""}${n.notes?" · "+esc(n.notes):""}</span></span>
-      <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type]||"To sort")}</span></button>`};
-  const months=list=>{let m0="",h="";list.forEach(d=>{const m=new Date(d+"T12:00:00").toLocaleDateString("en-NZ",{month:"long"});if(m!==m0){h+=`<div class="group-h">${m}</div>`;m0=m}h+=row(d)});return h};
-  let html=fut.length?months(fut):`<p class="empty">No nights ahead.</p>`;
-  if(past.length){html+=`<div class="group-h">Past nights</div><button class="pill" type="button" data-showpast>${state.showPast?"Hide":"Show"} ${past.length} past night${past.length>1?"s":""}</button>`;
-    if(state.showPast)html+=past.slice().reverse().map(row).join("")}
+  const r=tripRange(),el=$("#nightlist");
+  if(!r){el.innerHTML=`<p class="empty">No stops yet. Add a stop on the Route tab and its nights appear here.</p>`;return}
+  const t=today(),fut=[],past=[];let d=r.first,g=0;
+  while(d<r.last&&g++<500){(d<t?past:fut).push(d);d=addDays(d,1)}
+  const row=d=>{const n=nightInfo(d),cnt=planFor(d).length;
+    return `<button type="button" class="night ${d===t?"tonight":""} ${d<t?"past":""}" data-day="${d}">
+      <span class="nd"><b>${wd(d)}</b>${fmt(d)}</span>
+      <span class="nc"><span class="ncamp">${n.camp?esc(n.camp):"<i>No campsite yet</i>"}</span><span class="nstop">${d===t?"Tonight · ":""}${n.stop?esc(n.stop.name):"No stop planned"}${cnt?` · ${cnt} planned`:""}</span></span>
+      <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></button>`};
+  let m0="",html="";fut.forEach(d=>{const m=D(d).toLocaleDateString("en-NZ",{month:"long"});if(m!==m0){html+=`<div class="group-h">${m}</div>`;m0=m}html+=row(d)});
+  if(!fut.length)html=`<p class="empty">No nights ahead.</p>`;
+  if(past.length){html+=`<div class="group-h">Past nights</div><button class="pill" type="button" data-showpast>${state.showPast?"Hide":"Show"} ${past.length} past nights</button>`;if(state.showPast)html+=past.slice().reverse().map(row).join("")}
   el.innerHTML=html;
 }
-function openNight(d){
-  const n=nightInfo(d),f=$("#form"),dt=new Date(d+"T12:00:00");
-  f.innerHTML=`<h2 id="sheet-title">${dt.toLocaleDateString("en-NZ",{weekday:"long"})} ${fmt(d)}</h2>
-   <span class="hint">${n.stop?"Stop: "+esc(n.stop.name):"No stop planned for this night"}</span>
-   <label>Campsite<input id="f-camp" name="camp" list="camp-names" value="${esc(n.camp)}" placeholder="Pick from your list or type a name"></label>
-   <datalist id="camp-names">${state.camps.map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
-   <label>Type<select id="f-ctype" name="campType">${Object.entries(CAMPTYPES).map(([k,l])=>`<option value="${k}" ${k===n.type?"selected":""}>${l}</option>`).join("")}</select></label>
-   <label>Note for this night<input id="f-nnotes" name="notes" value="${esc(n.notes)}" placeholder="Booking ref, check-in time…"></label>
-   ${n.stop&&n.stop.end&&n.stop.end>n.stop.start?`<label class="check"><input type="checkbox" id="f-all" name="all"> Use this campsite for every night at ${esc(n.stop.name)}</label>`:""}
-   <div class="actions"><div>${n.override?`<button type="button" class="btn" id="reset">Reset to stop's campsite</button>`:""}</div>
-   <div style="display:flex;gap:8px"><button type="button" class="btn" id="cancel">Cancel</button><button class="btn primary" type="submit">Save</button></div></div>`;
-  f.dataset.type="night";f.dataset.id=d;
-  $("#scrim").hidden=false;$("#sheet").hidden=false;setTimeout(()=>$("#f-camp")?.focus(),50);
-  $("#cancel").onclick=closeSheet;
-  $("#f-camp").addEventListener("change",e=>{const c=state.camps.find(x=>x.name===e.target.value);if(c)$("#f-ctype").value=c.type||"unknown"});
-  const r=$("#reset");if(r)r.onclick=async()=>{closeSheet();if(!db||state.readOnly)return toast("You can view this plan but not change it");try{await db.collection("nights").doc(d).delete();toast("Reset")}catch(e){handleErr(e)}};
+
+/* ================= places & camps ================= */
+function regionSelect(el,cur){el.innerHTML=`<option value="all">All regions</option>`+REGIONS.map(r=>`<option value="${esc(r)}" ${r===cur?"selected":""}>${esc(r)}</option>`).join("");if(cur==="all")el.value="all"}
+function pills(el,opts,cur,key){el.innerHTML=opts.map(([v,l,n])=>`<button class="pill" type="button" aria-pressed="${v===cur}" data-f="${key}" data-v="${esc(v)}">${esc(l)}${n!=null?` <span class="mono">${n}</span>`:""}</button>`).join("")}
+function grouped(items,render){const by={};items.forEach(it=>(by[it.region||"Other"]??=[]).push(it));
+  const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))];
+  return order.filter(r=>by[r]).map(r=>`<div class="region-h">${esc(r)}<span>${by[r].length}</span></div>`+by[r].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||(a.done?1:0)-(b.done?1:0)||(a.name||"").localeCompare(b.name||"")).map(render).join("")).join("")}
+function renderSpots(){
+  if(state.regS===null)state.regS=curRegion()||"all";
+  regionSelect($("#r-spots"),state.regS);
+  const q=state.qS.toLowerCase(),base=state.spots.filter(s=>q||state.regS==="all"||s.region===state.regS);
+  pills($("#f-kind"),[["all","All",base.length],["todo","To do",base.filter(s=>!s.done).length],["fav","♥",base.filter(s=>s.fav).length],["planned","Planned",base.filter(s=>s.day).length],...Object.entries(KINDS).map(([k,l])=>[k,l,base.filter(s=>s.kind===k).length])],state.kind,"kind");
+  const k=state.kind,items=base.filter(s=>(k==="all"||(k==="fav"?s.fav:k==="todo"?!s.done:k==="planned"?!!s.day:s.kind===k))&&(!q||(s.name+" "+(s.notes||"")).toLowerCase().includes(q)));
+  $("#spotlist").innerHTML=items.length?grouped(items,s=>`<div class="row ${s.done?"done":""}">
+     <button class="tg fav ${s.fav?"on":""}" type="button" data-tog="spots:fav:${esc(s.id)}" aria-pressed="${!!s.fav}" aria-label="Favourite">♥</button>
+     <button class="rowmain" type="button" data-open="spot:${esc(s.id)}"><span class="kind">${esc(KINDS[s.kind]||"Place")}${s.day?` · <span class="plan">${wd(s.day)} ${fmt(s.day)}</span>`:""}</span><span class="name">${esc(s.name)}</span>${s.notes?`<span class="note clamp1">${esc(s.notes)}</span>`:""}</button>
+     <button class="tg chk ${s.done?"on":""}" type="button" data-tog="spots:done:${esc(s.id)}" aria-pressed="${!!s.done}" aria-label="Done">✓</button></div>`)
+    :`<p class="empty">Nothing matches. Try another region, or tap <b>+ Add place</b>.</p>`;
 }
-async function saveNight(d,v){
-  if(!db){toast("Can't save here — open the page signed in to claude.ai");return}
-  if(state.readOnly){toast("You can view this plan but not change it");return}
-  const n=nightInfo(d);
-  try{
-    if(v.all&&n.stop){
-      const {id,...rest}=n.stop;
-      await db.collection("stops").doc(id).set({...rest,camp:v.camp,campType:v.campType,updatedAt:new Date().toISOString()});
-      for(const o of state.nights.filter(o=>stopFor(o.id)?.id===id))await db.collection("nights").doc(o.id).delete();
-      if(v.notes)await db.collection("nights").doc(d).set({notes:v.notes,camp:v.camp,campType:v.campType,updatedAt:new Date().toISOString()});
-    } else {
-      await db.collection("nights").doc(d).set({camp:v.camp,campType:v.campType,notes:v.notes||"",updatedAt:new Date().toISOString()});
-    }
-    toast("Saved");
-  }catch(e){handleErr(e)}
+function renderCamps(){
+  if(state.regC===null)state.regC=curRegion()||"all";
+  regionSelect($("#r-camps"),state.regC);
+  const q=state.qC.toLowerCase(),base=state.camps.filter(c=>q||state.regC==="all"||c.region===state.regC);
+  pills($("#f-type"),[["all","All",base.length],["fav","♥",base.filter(c=>c.fav).length],...Object.entries(SHORT).map(([k,l])=>[k,l,base.filter(c=>(c.type||"unknown")===k).length]).filter(x=>x[2]||x[0]===state.ctype)],state.ctype,"ctype");
+  const items=base.filter(c=>(state.ctype==="all"||(state.ctype==="fav"?c.fav:(c.type||"unknown")===state.ctype))&&(!q||(c.name+" "+(c.notes||"")).toLowerCase().includes(q)));
+  $("#camplist").innerHTML=items.length?grouped(items,c=>`<div class="row" style="grid-template-columns:auto minmax(0,1fr)">
+     <button class="tg fav ${c.fav?"on":""}" type="button" data-tog="camps:fav:${esc(c.id)}" aria-pressed="${!!c.fav}" aria-label="Favourite">♥</button>
+     <button class="rowmain" type="button" data-open="camp:${esc(c.id)}"><span class="name">${esc(c.name)} <span class="chip c-${esc(c.type||"unknown")}">${esc(SHORT[c.type]||"To sort")}</span></span>${c.notes?`<span class="note clamp1">${esc(c.notes)}</span>`:""}</button></div>`)
+    :`<p class="empty">No campsites match. Try another region, or tap <b>+ Add campsite</b>.</p>`;
 }
 
-
-/* ---------- day view ---------- */
-const LLRE=/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
-function dest(x,kind){const m=LLRE.exec(x.loc||"");if(m)return {ll:m[1]+","+m[2]};
-  const base=x.loc||((x.name||"")+(kind==="camp"&&!/camp/i.test(x.name||"")?" campsite":"")+(x.region?", "+x.region:""));
-  return {q:base+", New Zealand"}}
-function navLinks(x,kind,small){
-  const t=dest(x,kind),c=small?"lk sm":"lk";
-  const g=t.ll?`https://www.google.com/maps/dir/?api=1&destination=${t.ll}`:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(t.q)}`;
-  const w=t.ll?`https://waze.com/ul?ll=${t.ll}&navigate=yes`:`https://waze.com/ul?q=${encodeURIComponent(t.q)}&navigate=yes`;
-  const own=safeUrl(x.url);
-  const info=own||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(x.region||"")+" New Zealand"+(kind==="hike"||(kind==="camp"&&x.type==="doc")?" DOC":""));
-  return `<div class="links"><a class="${c}" href="${esc(g)}" target="_blank" rel="noopener">➜ Google Maps</a><a class="${c}" href="${esc(w)}" target="_blank" rel="noopener">Waze</a><a class="${c}" href="${esc(info)}" target="_blank" rel="noopener">ⓘ ${own?"Info":"Look up"}</a></div>`;
-}
-const planFor=d=>state.spots.filter(x=>x.day===d).sort((a,b)=>(a.order??0)-(b.order??0)||(a.name||"").localeCompare(b.name||""));
+/* ================= day view ================= */
 function openDay(d){state.day=d;state.ideaQ="";state.ideaAll=false;document.body.style.overflow="hidden";renderDay();$("#dayview").scrollTop=0}
 function closeDay(){state.day=null;document.body.style.overflow="";renderDay()}
 function renderDay(){
   const d=state.day,el=$("#dayview");
   if(!d){el.hidden=true;el.innerHTML="";return}
-  const keepAct=$("#f-act")?.value||"",focusAct=document.activeElement?.id==="f-act";
-  const n=nightInfo(d),s=n.stop,t=today(),dt=new Date(d+"T12:00:00");
-  const plan=planFor(d);
+  const keep=$("#f-act")?.value||"",focus=document.activeElement?.id==="f-act",scroll=el.scrollTop;
+  const n=nightInfo(d),s=n.stop,t=today(),plan=planFor(d);
   const campObj=state.camps.find(c=>(c.name||"").toLowerCase()===(n.camp||"").toLowerCase())||{name:n.camp,region:s?.region,type:n.type};
   el.hidden=false;
   el.innerHTML=`<div class="dayhead"><div class="wrap">
-     <button class="btn" type="button" data-closeday>← Back</button>
-     <h2>${dt.toLocaleDateString("en-NZ",{weekday:"long",day:"numeric",month:"long"})}</h2>
+     <button class="icon-btn" type="button" data-closeday aria-label="Back">←</button>
      <button class="icon-btn" type="button" data-day="${addDays(d,-1)}" aria-label="Previous day">‹</button>
+     <h2>${D(d).toLocaleDateString("en-NZ",{weekday:"long",day:"numeric",month:"long"})}<small>${d===t?"Today":d<t?"Past":"In "+daysBetween(t,d)+" day"+(daysBetween(t,d)>1?"s":"")}${s?" · "+esc(s.name):""}</small></h2>
      <button class="icon-btn" type="button" data-day="${addDays(d,1)}" aria-label="Next day">›</button></div></div>
    <div class="wrap daybody">
-    <div class="panel"><h3>${d===t?"Today":d<t?"Past day":"Coming up"}${s?" · "+esc(s.region||""):""}</h3>
-      <div class="stop" style="border:0;padding:0;grid-template-columns:minmax(0,1fr)"><div style="min-width:0"><h3 style="font:700 1.25rem/1.2 var(--display);text-transform:none;letter-spacing:0;color:var(--ink);margin:0">${s?esc(s.name):"No stop planned"}</h3>
-      ${s&&s.notes?`<p>${esc(s.notes)}</p>`:""}${s?linkRow(s):""}</div></div></div>
     <div class="panel"><h3>Sleeping</h3>
-      <div class="tonight-camp" style="margin-top:0"><span>⛺ <b>${n.camp?esc(n.camp):"No campsite yet"}</b></span><span class="chip c-${esc(n.type)}">${esc(SHORT[n.type]||"To sort")}</span><button class="lk" type="button" data-night="${d}">Change</button></div>
-      ${n.notes?`<p class="note">${esc(n.notes)}</p>`:""}${campObj.notes?`<p class="note">${esc(campObj.notes)}</p>`:""}
-      ${n.camp?navLinks(campObj,"camp"):""}</div>
-    <div class="panel"><h3>Plan · ${plan.length} ${plan.length===1?"activity":"activities"}</h3>
+      <p class="big">⛺ ${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></p>
+      ${n.notes?`<div class="sub">${esc(n.notes)}</div>`:""}${campObj.notes?`<div class="sub">${esc(campObj.notes)}</div>`:""}
+      ${n.camp?navRow(campObj,"camp"):""}
+      <div class="btnrow"><button class="btn small" type="button" data-night="${d}">Change campsite</button></div></div>
+    <div class="panel"><h3>Plan · ${plan.length}</h3>
       ${plan.length?plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
-        <button class="tg chk ${x.done?"on":""}" type="button" data-tog="done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Mark ${esc(x.name)} done">✓</button>
-        <div style="min-width:0"><div class="kind">${esc(KINDS[x.kind]||"")}</div><div class="name">${esc(x.name)}</div>${x.notes?`<div class="note">${esc(x.notes)}</div>`:""}
-          ${navLinks(x,x.kind)}
-          <div class="links"><button class="lk sm" type="button" data-edit="spot:${esc(x.id)}">✎ Edit</button><button class="lk sm" type="button" data-plan="rm:${esc(x.id)}">Remove from day</button></div></div>
+        <button class="tg chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
+        <div style="min-width:0"><button class="rowmain" type="button" data-open="spot:${esc(x.id)}" style="padding:0"><span class="name">${esc(x.name)}</span>${x.notes?`<span class="note clamp">${esc(x.notes)}</span>`:""}</button>
+          <div class="minilinks" style="margin-top:4px"><a href="${esc(gUrl(x,x.kind))}" target="_blank" rel="noopener">Google Maps</a><a href="${esc(wazeUrl(x,x.kind))}" target="_blank" rel="noopener">Waze</a></div></div>
         <div class="mv"><button type="button" data-plan="up:${esc(x.id)}" ${i===0?"disabled":""} aria-label="Move up">↑</button><button type="button" data-plan="down:${esc(x.id)}" ${i===plan.length-1?"disabled":""} aria-label="Move down">↓</button></div>
-      </div>`).join(""):`<p class="empty" style="padding:4px 0">Nothing planned yet. Add an idea below or type your own.</p>`}
-      <form class="addrow" id="addact"><input id="f-act" name="act" placeholder="Add an activity, e.g. Ship Creek" autocomplete="off" aria-label="New activity"><button class="btn primary" type="submit">Add</button></form></div>
+      </div>`).join(""):`<p class="sub" style="margin:0">Nothing planned yet. Pick from the ideas below or type your own.</p>`}
+      <form class="addrow" id="addact"><input id="f-act" placeholder="Add an activity" autocomplete="off" aria-label="New activity"><button class="btn primary" type="submit">Add</button></form></div>
     <div class="panel"><h3 id="ideas-h">Ideas</h3>
-      <input class="search" id="q-ideas" type="search" placeholder="Search your places" value="${esc(state.ideaQ)}" aria-label="Search ideas">
+      <input id="q-ideas" type="search" placeholder="Search all your places" value="${esc(state.ideaQ)}" aria-label="Search ideas">
       <div id="ideas"></div></div>
+    ${s?`<div class="panel"><h3>${esc(s.name)}</h3>${s.notes?`<div class="sub">${esc(s.notes)}</div>`:""}${weatherRow(s)}${hasLL(s)?`<div class="minilinks"><a href="${esc(gUrl(s))}" target="_blank" rel="noopener">Directions to this stop</a></div>`:""}</div>`:""}
    </div>`;
   renderIdeas();
-  if(keepAct){$("#f-act").value=keepAct}if(focusAct)$("#f-act").focus();
+  if(keep)$("#f-act").value=keep;if(focus)$("#f-act").focus();el.scrollTop=scroll;
 }
 function renderIdeas(){
   const d=state.day;if(!d||!$("#ideas"))return;
-  const s=stopFor(d),region=s?.region,q=state.ideaQ.toLowerCase();
-  const ideas=state.spots.filter(x=>!x.day&&!x.done&&(q?true:(!region||x.region===region))&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
+  const region=stopFor(d)?.region,q=state.ideaQ.toLowerCase();
+  const ideas=state.spots.filter(x=>!x.day&&!x.done&&(q?(x.name+" "+(x.notes||"")).toLowerCase().includes(q):(!region||x.region===region)))
     .sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
-  $("#ideas-h").textContent=`Ideas${q?"":region?" in "+region:""} · ${ideas.length}`;
-  const shown=state.ideaAll?ideas:ideas.slice(0,12);
-  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><div style="min-width:0"><div class="name">${x.fav?"♥ ":""}${esc(x.name)}</div><div class="note">${esc(KINDS[x.kind]||"")}${q&&x.region?" · "+esc(x.region):""}${x.notes?" · "+esc(x.notes):""}</div></div><button class="btn" type="button" data-plan="add:${esc(x.id)}">+ Add</button></div>`).join("")||`<p class="empty" style="padding:4px 0">No open ideas${region&&!q?" in "+esc(region):""}. Search to find places elsewhere.</p>`)
-    +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall>Show all ${ideas.length}</button>`:"");
+  $("#ideas-h").textContent=`Ideas${q?"":region?" · "+region:""} · ${ideas.length}`;
+  const shown=state.ideaAll?ideas:ideas.slice(0,8);
+  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="rowmain" type="button" data-open="spot:${esc(x.id)}"><span class="name">${x.fav?"♥ ":""}${esc(x.name)}</span><span class="note clamp1">${esc(KINDS[x.kind]||"")}${q&&x.region?" · "+esc(x.region):""}${x.notes?" · "+esc(x.notes):""}</span></button><button class="btn small" type="button" data-plan="add:${esc(x.id)}">+ Add</button></div>`).join("")||`<p class="sub" style="margin:0">No open ideas${region&&!q?" here":""}. Search to find places elsewhere.</p>`)
+    +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"");
 }
-document.addEventListener("input",e=>{if(e.target.id==="q-ideas"){state.ideaQ=e.target.value;state.ideaAll=false;renderIdeas()}});
-document.addEventListener("submit",async e=>{
-  if(e.target.id!=="addact")return;e.preventDefault();
-  const inp=$("#f-act"),name=inp.value.trim();if(!name)return;
-  if(!db||state.readOnly){toast(db?"You can view this plan but not change it":"Open signed in to change things");return}
-  const d=state.day,plan=planFor(d),s=stopFor(d);
-  inp.value="";
-  try{await db.collection("spots").add({name,kind:"place",region:s?.region||"",notes:"",fav:false,done:false,day:d,order:plan.length,updatedAt:new Date().toISOString()});toast("Added to the day")}catch(err){inp.value=name;handleErr(err)}
-});
-async function planAct(op,id){
-  if(!db||state.readOnly){toast(db?"You can view this plan but not change it":"Open signed in to change things");return}
-  const d=state.day,plan=planFor(d),ref=i=>db.collection("spots").doc(i);
-  try{
-    if(op==="add"){await ref(id).update({day:d,order:plan.length});toast("Added to the day")}
-    else if(op==="rm"){await ref(id).update({day:null});toast("Back in ideas")}
-    else{const i=plan.findIndex(x=>x.id===id),j=op==="up"?i-1:i+1;if(i<0||j<0||j>=plan.length)return;
-      const arr=plan.slice();[arr[i],arr[j]]=[arr[j],arr[i]];
-      for(let k=0;k<arr.length;k++)if(arr[k].order!==k)await ref(arr[k].id).update({order:k});}
-  }catch(e){handleErr(e)}
+function planAct(op,id){
+  const d=state.day,plan=planFor(d);
+  if(op==="add"){patch("spots",id,{day:d,order:plan.length});toast("Added to the day")}
+  else{const i=plan.findIndex(x=>x.id===id),j=op==="up"?i-1:i+1;if(i<0||j<0||j>=plan.length)return;
+    const arr=plan.slice();[arr[i],arr[j]]=[arr[j],arr[i]];arr.forEach((x,k)=>{if(x.order!==k)S.docs.spots[x.id]={...S.docs.spots[x.id],order:k},S.pending["spots/"+x.id]=1});
+    persist();refresh();scheduleSync()}
 }
 
-/* ---------- route ---------- */
-function renderRoute(){
-  const t=today(),st=sortStops();
-  $("#s-stops").textContent=st.length;
-  let km=0,kmLeft=0;
-  const legs=st.map((s,i)=>{if(i===0||!hasLL(s)||!hasLL(st[i-1]))return null;const d=Math.round(hav(st[i-1],s)*ROAD);km+=d;if((s.start||"")>t)kmLeft+=d;return d});
-  $("#s-km").textContent=km?km.toLocaleString("en-NZ"):"–";
-  $("#s-cost").textContent=kmLeft?"$"+Math.round(kmLeft*KM_COST).toLocaleString("en-NZ"):"–";
-  $("#s-cost").title="Estimated diesel + RUC for the km still ahead";
-  // progress
-  if(st.length){const a=new Date(st[0].start),b=new Date(st[st.length-1].end||st[st.length-1].start),n=new Date(t);
-    const total=Math.max(1,Math.round((b-a)/864e5)+1),done=Math.min(total,Math.max(0,Math.round((n-a)/864e5)+1));
-    $("#bar").style.width=(done/total*100)+"%";$("#dayline").textContent=`Day ${done} of ${total}`;}
-  if(!st.length){$("#timeline").innerHTML=`<p class="empty">No stops yet. Tap <b>+ Add stop</b> to put your first campsite or town on the route.</p>`;drawMap();return}
-  const cur=currentStop();
-  const stopHtml=(s,i,past,isNow,showLeg)=>{
-    const nights=s.end&&s.start?Math.max(0,Math.round((new Date(s.end)-new Date(s.start))/864e5)):0;
-    const days=[];if(s.start){let d=s.start,g=0;const e=s.end&&s.end>s.start?s.end:addDays(s.start,1);while(d<e&&g++<60){days.push(d);d=addDays(d,1)}}
-    const chips=days.map(d=>{const c=state.spots.filter(x=>x.day===d).length;return `<button class="daychip ${d===t?"today":""}" type="button" data-day="${d}">${new Date(d+"T12:00:00").toLocaleDateString("en-NZ",{weekday:"short",day:"numeric"})}${c?`<span>${c}</span>`:""}</button>`}).join("");
-    return (showLeg&&legs[i]?`<div class="leg" style="padding-left:88px">↓ ~${legs[i]} km · ~$${Math.round(legs[i]*KM_COST)}</div>`:"")+
-    `<div class="stop ${past?"past":""} ${isNow?"now":""}">
-      <div class="dates"><b>${fmt(s.start)}</b>${s.end&&s.end!==s.start?"→ "+fmt(s.end):""}${nights?`<br>${nights} night${nights>1?"s":""}`:""}</div>
-      <div style="min-width:0"><h3>${esc(s.name)}</h3>
-        <div class="chips">${s.region?`<span class="chip">${esc(s.region)}</span>`:""}${s.camp?`<span class="chip c-${esc(s.campType||"unknown")}">⛺ ${esc(s.camp)}</span>`:""}</div>
-        ${s.notes?`<p>${esc(s.notes)}</p>`:""}<div class="daychips">${chips}</div>${past?"":linkRow(s)}</div>
-      <button class="icon-btn" data-edit="stop:${esc(s.id)}" aria-label="Edit ${esc(s.name)}">✎</button></div>`};
-  const now=[],up=[],done=[];
-  st.forEach((s,i)=>{const past=isPastStop(s,t),isNow=!!(cur&&cur.id===s.id);(isNow?now:past?done:up).push([s,i,past,isNow])});
-  let html="";
-  if(now.length)html+=`<div class="group-h">Now</div>`+now.map(x=>stopHtml(...x,false)).join("");
-  if(up.length)html+=`<div class="group-h">Coming up</div>`+up.map(x=>stopHtml(...x,true)).join("");
-  if(done.length){html+=`<div class="group-h">Done</div><button class="pill" type="button" data-showdone>${state.showDone?"Hide":"Show"} ${done.length} done stop${done.length>1?"s":""}</button>`;
-    if(state.showDone)html+=done.slice().reverse().map(x=>stopHtml(...x,false)).join("")}
-  $("#timeline").innerHTML=html;drawMap();renderNow();
-}
-
-/* ---------- lists ---------- */
-function pills(el,opts,cur,key){el.innerHTML=opts.map(([v,l,n])=>`<button class="pill" type="button" aria-pressed="${v===cur}" data-f="${key}" data-v="${esc(v)}">${esc(l)}${n!=null?` <span class="mono">${n}</span>`:""}</button>`).join("")}
-function grouped(items,render){
-  const by={};items.forEach(it=>{(by[it.region||"Other"]??=[]).push(it)});
-  const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))];
-  return order.filter(r=>by[r]).map(r=>`<div class="region-h">${esc(r)}<span>${by[r].length}</span></div>`+by[r].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||"")).map(render).join("")).join("");
-}
-function renderSpots(){
-  const q=state.qS.toLowerCase();
-  const base=state.spots.filter(s=>state.regS==="all"||s.region===state.regS);
-  pills($("#f-kind"),[["all","All",base.length],["fav","♥ Favourites",base.filter(s=>s.fav).length],["todo","To do",base.filter(s=>!s.done).length],...Object.entries(KINDS).map(([k,l])=>[k,l,base.filter(s=>s.kind===k).length])],state.kind,"kind");
-  pills($("#f-region-spots"),[["all","All regions"],...REGIONS.map(r=>[r,r])],state.regS,"regS");
-  const items=base.filter(s=>(state.kind==="all"||(state.kind==="fav"?s.fav:state.kind==="todo"?!s.done:s.kind===state.kind))&&(!q||(s.name+" "+(s.notes||"")).toLowerCase().includes(q)));
-  $("#spotlist").innerHTML=items.length?grouped(items,s=>`<div class="row ${s.done?"done":""}">
-     <div class="toggles"><button class="tg fav ${s.fav?"on":""}" data-tog="fav:${esc(s.id)}" aria-pressed="${!!s.fav}" aria-label="Favourite">♥</button><button class="tg chk ${s.done?"on":""}" data-tog="done:${esc(s.id)}" aria-pressed="${!!s.done}" aria-label="Done">✓</button></div>
-     <div style="min-width:0"><div class="kind">${esc(KINDS[s.kind]||s.kind||"")}</div><div class="name">${esc(s.name)}</div>${s.notes?`<div class="note">${esc(s.notes)}</div>`:""}${s.day?`<div class="daychips"><button class="daychip" type="button" data-day="${s.day}">Planned ${fmt(s.day)}</button></div>`:""}${navLinks(s,s.kind,true)}</div>
-     <button class="icon-btn" data-edit="spot:${esc(s.id)}" aria-label="Edit ${esc(s.name)}">✎</button></div>`):`<p class="empty">Nothing here yet. Tap <b>+ Add place</b> to save a spot, hike or bike trail.</p>`;
-}
-function renderCamps(){
-  const q=state.qC.toLowerCase();
-  const base=state.camps.filter(c=>state.regC==="all"||c.region===state.regC);
-  pills($("#f-type"),[["all","All",base.length],...Object.entries(CAMPTYPES).map(([k,l])=>[k,l,base.filter(c=>(c.type||"unknown")===k).length]).filter(x=>x[2]||x[0]===state.ctype)],state.ctype,"ctype");
-  pills($("#f-region-camps"),[["all","All regions"],...REGIONS.map(r=>[r,r])],state.regC,"regC");
-  const items=base.filter(c=>(state.ctype==="all"||(c.type||"unknown")===state.ctype)&&(!q||(c.name+" "+(c.notes||"")).toLowerCase().includes(q)));
-  $("#camplist").innerHTML=items.length?grouped(items,c=>`<div class="row">
-     <div class="toggles"><button class="tg fav ${c.fav?"on":""}" data-ctog="fav:${esc(c.id)}" aria-pressed="${!!c.fav}" aria-label="Favourite">♥</button></div>
-     <div style="min-width:0"><div class="name">${esc(c.name)}</div><div class="chips"><span class="chip c-${esc(c.type||"unknown")}">${esc(CAMPTYPES[c.type]||"Unsorted")}</span></div>${c.notes?`<div class="note">${esc(c.notes)}</div>`:""}${navLinks(c,"camp",true)}</div>
-     <button class="icon-btn" data-edit="camp:${esc(c.id)}" aria-label="Edit ${esc(c.name)}">✎</button></div>`):`<p class="empty">No campsites match. Tap <b>+ Add campsite</b> to save one.</p>`;
-}
 function render(){renderRoute();renderNights();renderSpots();renderCamps();renderDay()}
 
-/* ---------- sheet / forms ---------- */
-const COLL={stop:"stops",spot:"spots",camp:"camps"};
-function regionSelect(v){return `<select id="f-region" name="region"><option value="">—</option>${REGIONS.map(r=>`<option ${r===v?"selected":""}>${esc(r)}</option>`).join("")}</select>`}
-function openSheet(type,item){
-  const it=item||{},isNew=!item,f=$("#form");let body="";
-  if(type==="stop"){
-    const last=sortStops().slice(-1)[0];
-    body=`<label>Name<input id="f-name" name="name" required value="${esc(it.name)}" placeholder="e.g. Lake Mapourika"></label>
-    <div class="two"><label>Arrive<input id="f-start" name="start" type="date" required value="${esc(it.start||(last?.end||today()))}"></label>
-    <label>Leave<input id="f-end" name="end" type="date" value="${esc(it.end)}"></label></div>
-    <label>Region${regionSelect(it.region)}</label>
-    <div class="two"><label>Campsite (every night)<input id="f-camp" name="camp" list="camp-names" value="${esc(it.camp)}" placeholder="Campsite"></label>
-    <label>Camp type<select id="f-ctype" name="campType">${Object.entries(CAMPTYPES).map(([k,l])=>`<option value="${k}" ${k===(it.campType||"unknown")?"selected":""}>${l}</option>`).join("")}</select></label></div>
-    <datalist id="camp-names">${state.camps.map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
-    <div class="two"><label>Latitude<input id="f-lat" name="lat" inputmode="decimal" value="${it.lat??""}" placeholder="-43.31"></label>
-    <label>Longitude<input id="f-lng" name="lng" inputmode="decimal" value="${it.lng??""}" placeholder="170.20"></label></div>
-    <span class="hint">Coordinates put the stop on the map and count its km. In Google Maps, long-press a spot and copy the two numbers.</span>
-    <label>MetService forecast link<input id="f-weather" name="weather" type="url" value="${esc(it.weather)}" placeholder="https://www.metservice.com/towns-cities/…"><span class="hint">Open the nearest town on metservice.com and paste its address here.</span></label>
-    <label>Notes<textarea id="f-notes" name="notes">${esc(it.notes)}</textarea></label>`;
-  } else if(type==="spot"){
-    body=`<label>Name<input id="f-name" name="name" required value="${esc(it.name)}"></label>
-    <div class="two"><label>Type<select id="f-kind" name="kind">${Object.entries(KINDS).map(([k,l])=>`<option value="${k}" ${k===(it.kind||"place")?"selected":""}>${l}</option>`).join("")}</select></label>
-    <label>Region${regionSelect(it.region||(state.regS!=="all"?state.regS:""))}</label></div>
-    <label>Notes<textarea id="f-notes" name="notes" placeholder="Distance, time, tides, closures…">${esc(it.notes)}</textarea></label>
-    <label>Plan for day<input id="f-day" name="day" type="date" value="${esc(it.day)}"><span class="hint">Leave empty to keep it as an idea.</span></label>
-    <label>Map location<input id="f-loc" name="loc" value="${esc(it.loc)}" placeholder="Car park name or coordinates, e.g. -43.43, 169.97"><span class="hint">Used for Google Maps and Waze. Empty = search by name.</span></label>
-    <label>Info link<input id="f-url" name="url" type="url" value="${esc(it.url)}" placeholder="https://www.doc.govt.nz/…"></label>`;
-  } else {
-    body=`<label>Name<input id="f-name" name="name" required value="${esc(it.name)}"></label>
-    <div class="two"><label>Type<select id="f-type" name="type">${Object.entries(CAMPTYPES).map(([k,l])=>`<option value="${k}" ${k===(it.type||"unknown")?"selected":""}>${l}</option>`).join("")}</select></label>
-    <label>Region${regionSelect(it.region||(state.regC!=="all"?state.regC:""))}</label></div>
-    <label>Notes<textarea id="f-notes" name="notes" placeholder="Price, facilities, booking, max nights…">${esc(it.notes)}</textarea></label>
-    <label>Map location<input id="f-loc" name="loc" value="${esc(it.loc)}" placeholder="Coordinates, e.g. -44.441, 169.262"><span class="hint">Used for Google Maps and Waze. Empty = search by name.</span></label>
-    <label>Info link<input id="f-url" name="url" type="url" value="${esc(it.url)}" placeholder="https://www.doc.govt.nz/…"></label>`;
-  }
-  const label={stop:"stop",spot:"place",camp:"campsite"}[type];
-  f.innerHTML=`<h2 id="sheet-title">${isNew?"Add "+label:"Edit "+label}</h2>${body}
-   <div class="actions"><div>${isNew?"":`<button type="button" class="btn danger" id="del">Delete</button>`}</div>
-   <div style="display:flex;gap:8px"><button type="button" class="btn" id="cancel">Cancel</button><button class="btn primary" type="submit">${isNew?"Add":"Save"}</button></div></div>`;
-  f.dataset.type=type;f.dataset.id=it.id||"";
-  $("#scrim").hidden=false;$("#sheet").hidden=false;setTimeout(()=>$("#f-name")?.focus(),50);
-  $("#cancel").onclick=closeSheet;
-  const del=$("#del");if(del)del.onclick=()=>{if(del.dataset.armed){remove(type,it.id);closeSheet()}else{del.dataset.armed=1;del.textContent="Tap again to delete"}};
-}
+/* ================= sheets ================= */
+function sheet(html,type,id){const f=$("#form");f.innerHTML=html;f.dataset.type=type;f.dataset.id=id||"";$("#scrim").hidden=false;$("#sheet").hidden=false;$("#sheet").scrollTop=0;f.querySelector("[data-cancel]")?.addEventListener("click",closeSheet)}
 function closeSheet(){$("#scrim").hidden=true;$("#sheet").hidden=true}
-$("#scrim").onclick=closeSheet;
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(state.day)closeDay()});
-$("#form").addEventListener("submit",async e=>{
+function armed(btn,label,fn){if(!btn)return;btn.onclick=()=>{if(btn.dataset.armed)fn();else{btn.dataset.armed=1;btn.textContent=label}}}
+const regionOpts=v=>`<option value="">—</option>`+REGIONS.map(r=>`<option ${r===v?"selected":""}>${esc(r)}</option>`).join("");
+const typeOpts=(map,v)=>Object.entries(map).map(([k,l])=>`<option value="${k}" ${k===v?"selected":""}>${esc(l)}</option>`).join("");
+const dayOpts=(v,label)=>`<option value="">${label}</option>`+[...new Set([...(v?[v]:[]),...upcomingNights()])].sort().map(d=>{const s=stopFor(d);return `<option value="${d}" ${d===v?"selected":""}>${wd(d)} ${fmt(d)}${s?" · "+esc(s.name):""}</option>`}).join("");
+const footer=(isNew,label)=>`<div class="actions"><div>${isNew?"":`<button type="button" class="btn danger" id="del">Delete</button>`}</div><div class="btnrow"><button type="button" class="btn" data-cancel>Cancel</button><button class="btn primary" type="submit">${isNew?"Add":label||"Save"}</button></div></div>`;
+
+function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)[0];
+  sheet(`<h2 id="sheet-title">${isNew?"Add stop":"Edit stop"}</h2>
+    <label>Name<input name="name" required value="${esc(it.name)}" placeholder="e.g. Lake Mapourika"></label>
+    <div class="two"><label>Arrive<input name="start" type="date" required value="${esc(it.start||last?.end||today())}"></label><label>Leave<input name="end" type="date" value="${esc(it.end)}"></label></div>
+    <label>Region<select name="region">${regionOpts(it.region)}</select></label>
+    <div class="two"><label>Campsite (every night)<input name="camp" list="camp-names" value="${esc(it.camp)}"></label><label>Type<select name="campType">${typeOpts(CAMPTYPES,it.campType||"unknown")}</select></label></div>
+    <datalist id="camp-names">${state.camps.map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
+    <label>Notes<textarea name="notes">${esc(it.notes)}</textarea></label>
+    <details><summary class="hint" style="cursor:pointer">Map position &amp; weather link</summary>
+      <div class="two" style="margin-top:8px"><label>Latitude<input name="lat" inputmode="decimal" value="${it.lat??""}" placeholder="-43.31"></label><label>Longitude<input name="lng" inputmode="decimal" value="${it.lng??""}" placeholder="170.20"></label></div>
+      <span class="hint">Long-press a spot in Google Maps to copy its two numbers.</span>
+      <label style="margin-top:8px">MetService link<input name="weather" type="url" value="${esc(it.weather)}" placeholder="https://www.metservice.com/towns-cities/…"></label></details>
+    ${footer(isNew)}`,"stop",it.id);
+  armed($("#del"),"Tap again to delete",()=>{del("stops",it.id);closeSheet();toast("Stop deleted")});
+  const c=$("#form [name=camp]");c.addEventListener("change",()=>{const m=state.camps.find(x=>x.name===c.value);if(m)$("#form [name=campType]").value=m.type||"unknown"});
+}
+function openSpot(it){const isNew=!it;it=it||{};
+  sheet(`<h2 id="sheet-title">${isNew?"Add place":esc(it.name)}</h2>
+    ${isNew?"":`<div class="sub">${esc(KINDS[it.kind]||"Place")}${it.region?" · "+esc(it.region):""}</div>${it.notes?`<div>${esc(it.notes)}</div>`:""}${navRow(it,it.kind)}<hr>`}
+    <label>Plan for<select name="day">${dayOpts(it.day,"Not planned (idea)")}</select></label>
+    ${isNew?"":`<label class="check"><input type="checkbox" name="done" ${it.done?"checked":""}> Done</label><hr>`}
+    <label>Name<input name="name" required value="${esc(it.name)}"></label>
+    <div class="two"><label>Type<select name="kind">${typeOpts(KINDS,it.kind||"place")}</select></label><label>Region<select name="region">${regionOpts(it.region||(isNew?(stopFor(state.day||today())?.region||""):""))}</select></label></div>
+    <label>Notes<textarea name="notes" placeholder="Distance, time, tides, closures…">${esc(it.notes)}</textarea></label>
+    <details><summary class="hint" style="cursor:pointer">Map location &amp; info link</summary>
+      <label style="margin-top:8px">Map location<input name="loc" value="${esc(it.loc)}" placeholder="Car park name or -43.43, 169.97"></label>
+      <label style="margin-top:8px">Info link<input name="url" type="url" value="${esc(it.url)}" placeholder="https://www.doc.govt.nz/…"></label></details>
+    ${footer(isNew)}`,"spot",it.id);
+  armed($("#del"),"Tap again to delete",()=>{del("spots",it.id);closeSheet();toast("Deleted")});
+}
+function openCamp(it){const isNew=!it;it=it||{};
+  sheet(`<h2 id="sheet-title">${isNew?"Add campsite":esc(it.name)}</h2>
+    ${isNew?"":`<div><span class="chip c-${esc(it.type||"unknown")}">${esc(CAMPTYPES[it.type]||"To sort")}</span>${it.region?` <span class="sub">${esc(it.region)}</span>`:""}</div>${it.notes?`<div>${esc(it.notes)}</div>`:""}${navRow(it,"camp")}<hr>
+    <label>Sleep here on<select name="sleep">${dayOpts("","Choose a night…")}</select></label><hr>`}
+    <label>Name<input name="name" required value="${esc(it.name)}"></label>
+    <div class="two"><label>Type<select name="type">${typeOpts(CAMPTYPES,it.type||"unknown")}</select></label><label>Region<select name="region">${regionOpts(it.region)}</select></label></div>
+    <label>Notes<textarea name="notes" placeholder="Price, facilities, booking, max nights…">${esc(it.notes)}</textarea></label>
+    <details><summary class="hint" style="cursor:pointer">Map location &amp; info link</summary>
+      <label style="margin-top:8px">Map location<input name="loc" value="${esc(it.loc)}" placeholder="-44.441, 169.262"></label>
+      <label style="margin-top:8px">Info link<input name="url" type="url" value="${esc(it.url)}" placeholder="https://www.doc.govt.nz/…"></label></details>
+    ${footer(isNew)}`,"camp",it.id);
+  armed($("#del"),"Tap again to delete",()=>{del("camps",it.id);closeSheet();toast("Deleted")});
+}
+function openNight(d){const n=nightInfo(d);
+  sheet(`<h2 id="sheet-title">${D(d).toLocaleDateString("en-NZ",{weekday:"long",day:"numeric",month:"long"})}</h2>
+    <span class="hint">${n.stop?"Stop: "+esc(n.stop.name):"No stop planned for this night"}</span>
+    <label>Campsite<input name="camp" list="camp-names" value="${esc(n.camp)}" placeholder="Pick from your list or type a name"></label>
+    <datalist id="camp-names">${state.camps.map(c=>`<option value="${esc(c.name)}">`).join("")}</datalist>
+    <label>Type<select name="campType">${typeOpts(CAMPTYPES,n.type)}</select></label>
+    <label>Note for this night<input name="notes" value="${esc(n.notes)}" placeholder="Booking ref, check-in time…"></label>
+    ${n.stop&&n.stop.end>n.stop.start&&daysBetween(n.stop.start,n.stop.end)>1?`<label class="check"><input type="checkbox" name="all"> Every night at ${esc(n.stop.name)}</label>`:""}
+    <div class="actions"><div>${n.override?`<button type="button" class="btn" id="reset">Use stop's campsite</button>`:""}</div><div class="btnrow"><button type="button" class="btn" data-cancel>Cancel</button><button class="btn primary" type="submit">Save</button></div></div>`,"night",d);
+  const c=$("#form [name=camp]");c.addEventListener("change",()=>{const m=state.camps.find(x=>x.name===c.value);if(m)$("#form [name=campType]").value=m.type||"unknown"});
+  const r=$("#reset");if(r)r.onclick=()=>{del("nights",d);closeSheet();toast("Back to the stop's campsite")};
+}
+function setNight(d,camp,type,notes){
+  const s=stopFor(d);
+  if(s&&s.camp===camp&&(s.campType||"unknown")===type&&!notes){if(S.docs.nights[d])del("nights",d)}
+  else put("nights",d,{camp,campType:type,notes:notes||""});
+}
+$("#form").addEventListener("submit",e=>{
   e.preventDefault();const f=e.target,type=f.dataset.type,id=f.dataset.id;if(type==="settings")return;
-  const d=Object.fromEntries(new FormData(f).entries());
-  for(const k in d)d[k]=d[k].trim();
-  if(type==="night"){closeSheet();await saveNight(id,d);return}
-  if(type==="spot"&&!d.day)d.day=null;
-  if(type==="stop"){d.lat=d.lat===""?null:parseFloat(d.lat.replace(",","."));d.lng=d.lng===""?null:parseFloat(d.lng.replace(",","."));if(d.end&&d.end<d.start)d.end=d.start}
-  const prev=id?state[COLL[type]].find(x=>x.id===id):null;
-  const doc={...(prev||{}),...d};delete doc.id;
-  closeSheet();await save(type,id||null,doc);
+  const fd=new FormData(f),v={};for(const [k,x] of fd.entries())v[k]=typeof x==="string"?x.trim():x;
+  if(f.querySelector("[name=name]")&&!v.name){toast("Give it a name first");f.querySelector("[name=name]").focus();return}
+  if(type==="night"){
+    if(v.all){const s=stopFor(id);patch("stops",s.id,{camp:v.camp,campType:v.campType});stopDays(s).forEach(d=>{if(S.docs.nights[d])del("nights",d)});if(v.notes)put("nights",id,{camp:v.camp,campType:v.campType,notes:v.notes})}
+    else setNight(id,v.camp,v.campType,v.notes);
+    closeSheet();toast("Saved");return}
+  if(type==="stop"){
+    if(!v.start){toast("Pick an arrival date");return}
+    const num=x=>x===""||x==null?null:parseFloat(String(x).replace(",","."));v.lat=num(v.lat);v.lng=num(v.lng);if(v.end&&v.end<v.start)v.end=v.start}
+  if(type==="spot"){v.day=v.day||null;v.done=!!v.done;if(v.day&&id&&S.docs.spots[id]?.day!==v.day)v.order=planFor(v.day).length}
+  let sleep=null;if(type==="camp"){sleep=v.sleep;delete v.sleep}
+  const c=COLL[type],prev=id?S.docs[c][id]:null;
+  const doc={...(prev||{}),...v};
+  if(type==="spot"&&!id){doc.fav=false;if(!("done" in v))doc.done=false}
+  if(id)put(c,id,doc);else add(c,doc);
+  if(sleep)setNight(sleep,doc.name,doc.type||"unknown","");
+  closeSheet();toast(id?(sleep?`Saved · sleeping here ${fmt(sleep)}`:"Saved"):"Added");
 });
 
-/* ---------- data ---------- */
-async function save(type,id,doc){
-  if(!db){toast("Can't save here — open the page signed in to claude.ai");return}
-  if(state.readOnly){toast("You can view this plan but not change it");return}
-  try{const coll=db.collection(COLL[type]);doc.updatedAt=new Date().toISOString();
-    if(id)await coll.doc(id).set(doc);else await coll.add(doc);
-    toast(id?"Saved":"Added")}
-  catch(e){handleErr(e)}
-}
-async function remove(type,id){if(!db||state.readOnly)return;try{await db.collection(COLL[type]).doc(id).delete();toast("Deleted")}catch(e){handleErr(e)}}
-async function toggle(coll,id,field){
-  const arr=coll==="spots"?state.spots:state.camps,it=arr.find(x=>x.id===id);if(!it)return;
-  if(!db||state.readOnly){toast(db?"You can view this plan but not change it":"Open signed in to change things");return}
-  it[field]=!it[field];render();
-  try{await db.collection(coll).doc(id).update({[field]:it[field]})}catch(e){it[field]=!it[field];render();handleErr(e)}
-}
-function handleErr(e){const c=e&&e.code;
-  if(c==="invalid_argument"){state.readOnly=true;$("#fab").hidden=true;toast("You can view this plan but not change it")}
-  else if(c==="quota_exceeded")toast("The plan is full — delete a few old items to add new ones");
-  else toast("Couldn't save on this phone — storage may be full")}
-function listen(name){
-  db.collection(name).onSnapshot(snap=>{state[name]=snap.docs.map(d=>({id:d.id,...d.data()}));render()},
-    e=>{if(e.code!=="revoked")toast("Lost connection to the plan — reload the page")});
+/* ================= settings ================= */
+const SQL=`create table if not exists trip_docs (
+  coll text not null, id text not null,
+  data jsonb not null default '{}'::jsonb,
+  deleted boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (coll, id));
+create index if not exists trip_docs_updated on trip_docs (updated_at);
+create or replace function trip_docs_touch() returns trigger
+  language plpgsql set search_path = '' as $$
+  begin new.updated_at := now(); return new; end $$;
+drop trigger if exists trip_docs_touch on trip_docs;
+create trigger trip_docs_touch before insert or update on trip_docs
+  for each row execute function trip_docs_touch();
+alter table trip_docs enable row level security;
+drop policy if exists trip_docs_all on trip_docs;
+create policy trip_docs_all on trip_docs for all to anon using (true) with check (true);
+grant select, insert, update, delete on trip_docs to anon;`;
+function backupBlob(){return new Blob([JSON.stringify({version:2,exported:new Date().toISOString(),...S.docs})],{type:"application/json"})}
+function downloadBackup(){const a=document.createElement("a");a.href=URL.createObjectURL(backupBlob());a.download=`south-island-loop-${today()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Backup saved to Downloads")}
+async function shareBackup(){const f=new File([backupBlob()],`south-island-loop-${today()}.json`,{type:"application/json"});try{await navigator.share({files:[f],title:"South Island Loop backup"})}catch(e){if(e&&e.name!=="AbortError")downloadBackup()}}
+function openSettings(){
+  const canShare=!!(navigator.canShare&&navigator.canShare({files:[new File(["{}"],"x.json",{type:"application/json"})]}));
+  let prev=false;try{prev=!!localStorage.getItem(PREV)}catch{}
+  const p=Object.keys(S.pending).length,counts=["stops","spots","camps"].map(c=>Object.keys(S.docs[c]).length);
+  const status=!syncOn()?`<span class="sub">Not syncing — the plan is on this phone only.</span>`:lastErr?(missingTable(lastErr)?`<span class="errmsg">Connected, but the shared table isn't set up yet.</span>`:`<span class="errmsg">Last sync failed${lastErr.status?` (error ${lastErr.status})`:""}. It retries on its own.</span>`):`<span class="okmsg">✓ Syncing${cred.fromKea?" through your Kea database":""}${p?` · ${p} change${p>1?"s":""} waiting`:""}</span>`;
+  sheet(`<h2 id="sheet-title">Settings</h2>
+    <h3 class="group-h" style="margin:0">Share with your travel partner</h3>
+    ${status}
+    <span class="hint">Both phones use the same Supabase details as Kea. If Kea already syncs on a phone, this app picks them up by itself.</span>
+    <details ${syncOn()&&!lastErr?"":"open"}><summary class="hint" style="cursor:pointer">Connection details</summary>
+      <label style="margin-top:8px">Supabase project URL<input id="s-url" type="url" value="${esc(cred.url||"")}" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label style="margin-top:8px">Anon (publishable) key<input id="s-key" value="${esc(cred.key||"")}" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <div class="btnrow" style="margin-top:8px"><button type="button" class="btn primary" id="s-test">Save &amp; test</button>${syncOn()?`<button type="button" class="btn" id="s-off">Stop syncing</button>`:""}</div>
+      <div id="s-msg" style="margin-top:6px"></div>
+      <div id="s-sql" ${lastErr&&missingTable(lastErr)?"":"hidden"} style="margin-top:6px"><span class="hint">Run this once in Supabase → SQL Editor, then tap Save &amp; test again.</span><pre class="sql">${esc(SQL)}</pre><button type="button" class="btn small" id="s-copy" style="margin-top:6px">Copy SQL</button></div>
+    </details>
+    <hr>
+    <h3 class="group-h" style="margin:0">Backup</h3>
+    <span class="hint">${counts[0]} stops, ${counts[1]} places, ${counts[2]} campsites. Works without signal.</span>
+    <div class="btnrow">${canShare?`<button type="button" class="btn" id="s-share">Share backup file</button>`:""}<button type="button" class="btn" id="s-dl">Save backup</button></div>
+    <label>Restore from a backup file<input type="file" id="s-file" accept=".json,application/json"></label>
+    ${prev?`<button type="button" class="btn" id="s-undo">Undo last restore</button>`:""}
+    <hr>
+    <div class="actions"><a class="btn" href="../">Open Kea budget</a><button type="button" class="btn" data-cancel>Close</button></div>`,"settings");
+  $("#s-dl").onclick=downloadBackup;if($("#s-share"))$("#s-share").onclick=shareBackup;
+  $("#s-copy")?.addEventListener("click",async e=>{try{await navigator.clipboard.writeText(SQL);e.target.textContent="Copied"}catch{const r=document.createRange();r.selectNodeContents($(".sql"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected — copy it from the menu")}});
+  $("#s-test").onclick=async()=>{const url=$("#s-url").value.trim(),key=$("#s-key").value.trim(),msg=$("#s-msg");
+    if(!/^https:\/\/.+/.test(url)||!key){msg.innerHTML=`<span class="errmsg">Fill in both the URL and the key.</span>`;return}
+    msg.innerHTML=`<span class="sub">Testing…</span>`;
+    try{await api("trip_docs?select=id&limit=1",{},{url,key});
+      const changed=url!==cred.url||key!==cred.key;cred={url,key};try{localStorage.setItem(LS_CRED,JSON.stringify(cred))}catch{}
+      if(changed){S.synced=false;S.lastPull=""}lastErr=null;persist();
+      msg.innerHTML=`<span class="okmsg">✓ Connected. Syncing now.</span>`;$("#s-sql").hidden=true;sync(true)}
+    catch(e){if(missingTable(e)){cred={url,key};try{localStorage.setItem(LS_CRED,JSON.stringify(cred))}catch{}msg.innerHTML=`<span class="errmsg">Connected, but the table is missing.</span>`;$("#s-sql").hidden=false}
+      else msg.innerHTML=`<span class="errmsg">${e.status===401||e.status===403?"The key was rejected — use the anon / publishable key.":"Couldn't reach Supabase — check the URL and your signal."}</span>`}};
+  $("#s-off")?.addEventListener("click",()=>{cred={off:true};try{localStorage.setItem(LS_CRED,JSON.stringify(cred))}catch{}S.synced=false;S.lastPull="";persist();setChip();closeSheet();toast("Sync off — plan stays on this phone")});
+  $("#s-file").onchange=async e=>{const file=e.target.files[0];if(!file)return;
+    try{const d=JSON.parse(await file.text());if(!d||typeof d.stops!=="object")throw 0;replaceAll(d);closeSheet();toast(syncOn()?"Restored and shared":"Plan restored")}catch{toast("That file isn't a South Island Loop plan")}};
+  armed($("#s-undo"),"Tap again to undo",()=>{try{replaceAll(JSON.parse(localStorage.getItem(PREV)));localStorage.removeItem(PREV);closeSheet();toast("Previous plan restored")}catch{toast("Nothing to undo")}});
 }
 
-/* ---------- events ---------- */
+/* ================= events ================= */
 document.addEventListener("click",e=>{
-  const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.tab){state.tab=b.dataset.tab;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t===b));
+  const b=e.target.closest("button");if(!b||b.closest("#form")&&b.type==="submit")return;
+  const ds=b.dataset;
+  if(ds.tab){state.tab=ds.tab;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t===b));
     ["route","nights","spots","camps"].forEach(s=>$("#"+s).hidden=s!==state.tab);
     $("#fab").textContent={route:"+ Add stop",nights:"+ Add stop",spots:"+ Add place",camps:"+ Add campsite"}[state.tab];
-    try{localStorage.setItem("tab",state.tab)}catch{} window.scrollTo(0,0);}
-  else if(b.hasAttribute("data-closeday")){closeDay()}
-  else if(b.dataset.day){openDay(b.dataset.day)}
-  else if(b.dataset.plan){const [op,id]=b.dataset.plan.split(":");planAct(op,id)}
-  else if(b.hasAttribute("data-showdone")){state.showDone=!state.showDone;renderRoute()}
-  else if(b.hasAttribute("data-ideaall")){state.ideaAll=true;renderIdeas()}
-  else if(b.dataset.night){openNight(b.dataset.night)}
-  else if(b.hasAttribute("data-showpast")){state.showPast=!state.showPast;renderNights()}
-  else if(b.dataset.f){state[b.dataset.f]=b.dataset.v;render()}
-  else if(b.dataset.edit){const [t,id]=b.dataset.edit.split(":");openSheet(t,state[COLL[t]].find(x=>x.id===id))}
-  else if(b.dataset.tog){const [f,id]=b.dataset.tog.split(":");toggle("spots",id,f)}
-  else if(b.dataset.ctog){const [f,id]=b.dataset.ctog.split(":");toggle("camps",id,f)}
+    try{localStorage.setItem("sil-tab",state.tab)}catch{}window.scrollTo(0,0)}
+  else if("closeday" in ds)closeDay();
+  else if(ds.day)openDay(ds.day);
+  else if(ds.plan){const [op,id]=ds.plan.split(":");planAct(op,id)}
+  else if(ds.open){const [t,id]=ds.open.split(":");const it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:openCamp)({id,...it})}
+  else if(ds.edit){const [t,id]=ds.edit.split(":");const it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
+  else if(ds.tog){const [c,f,id]=ds.tog.split(":");const it=S.docs[c][id];if(it)patch(c,id,{[f]:!it[f]})}
+  else if(ds.night)openNight(ds.night);
+  else if("showpast" in ds){state.showPast=!state.showPast;renderNights()}
+  else if("showdone" in ds){state.showDone=!state.showDone;renderRoute()}
+  else if("ideaall" in ds){state.ideaAll=true;renderIdeas()}
+  else if(ds.f){state[ds.f]=ds.v;render()}
 });
-$("#fab").onclick=()=>openSheet({route:"stop",nights:"stop",spots:"spot",camps:"camp"}[state.tab]);
+$("#fab").onclick=()=>({route:openStop,nights:openStop,spots:openSpot,camps:openCamp})[state.tab]();
+$("#menu").onclick=openSettings;
+$("#sync").onclick=()=>{if(!syncOn()||lastErr)openSettings();else sync(true)};
+$("#scrim").onclick=closeSheet;
+$("#mapbox").addEventListener("toggle",()=>{try{localStorage.setItem("sil-map",$("#mapbox").open?"1":"0")}catch{}if($("#mapbox").open)drawMap()});
 $("#q-spots").oninput=e=>{state.qS=e.target.value;renderSpots()};
 $("#q-camps").oninput=e=>{state.qC=e.target.value;renderCamps()};
-try{const t=localStorage.getItem("tab");if(t&&t!=="route")document.querySelector(`[data-tab="${t}"]`)?.click()}catch{}
+$("#r-spots").onchange=e=>{state.regS=e.target.value;renderSpots()};
+$("#r-camps").onchange=e=>{state.regC=e.target.value;renderCamps()};
+document.addEventListener("input",e=>{if(e.target.id==="q-ideas"){state.ideaQ=e.target.value;state.ideaAll=false;renderIdeas()}});
+document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preventDefault();
+  const name=$("#f-act").value.trim();if(!name)return;const d=state.day;$("#f-act").value="";
+  add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});toast("Added to the day")});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(state.day)closeDay()});
+window.addEventListener("online",()=>sync(false));window.addEventListener("offline",()=>setChip());
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){render();sync(false)}});
+setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
-render();
-
-/* ---------- local storage (this phone only) ---------- */
-const KEY="sil-plan-v1",PREV="sil-plan-prev";
-function localDB(){
-  let data=null;try{data=JSON.parse(localStorage.getItem(KEY))}catch{}
-  const subs={};
-  const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast("Couldn't save on this phone — storage may be full")}};
-  const snap=c=>({docs:Object.entries(data?.[c]||{}).map(([id,v])=>({id,data:()=>v}))});
-  const emit=c=>(subs[c]||[]).forEach(f=>f(snap(c)));
-  const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  const clone=v=>JSON.parse(JSON.stringify(v));
-  const ensure=c=>{data??={};data[c]??={};return data[c]};
-  return {
-    hasData:()=>!!data&&Object.keys(data.stops||{}).length>0,
-    dump:()=>({stops:{},spots:{},camps:{},nights:{},...clone(data||{})}),
-    replace(d){try{if(data)localStorage.setItem(PREV,JSON.stringify(data))}catch{}data={stops:d.stops||{},spots:d.spots||{},camps:d.camps||{},nights:d.nights||{}};persist();["stops","spots","camps","nights"].forEach(emit)},
-    collection(c){return{
-      onSnapshot(f){(subs[c]??=[]).push(f);setTimeout(()=>f(snap(c)),0);return()=>{}},
-      doc(id){id=id||newId();return{
-        set:async v=>{ensure(c)[id]=clone(v);persist();emit(c)},
-        update:async v=>{const o=ensure(c)[id];if(!o)throw{code:"invalid_argument"};Object.assign(o,clone(v));persist();emit(c)},
-        delete:async()=>{delete ensure(c)[id];persist();emit(c)}}},
-      add:async v=>{const id=newId();ensure(c)[id]=clone(v);persist();emit(c);return{id}}
-    }}
-  };
-}
-async function fetchPlan(){const r=await fetch("plan.json",{cache:"no-store"});if(!r.ok)throw new Error("not found");return r.json()}
-const validPlan=d=>d&&typeof d==="object"&&d.stops&&typeof d.stops==="object";
+/* ================= start ================= */
+try{if(localStorage.getItem("sil-map")==="1")$("#mapbox").open=true}catch{}
+try{const t=localStorage.getItem("sil-tab");if(t&&t!=="route")document.querySelector(`[data-tab="${t}"]`)?.click()}catch{}
+refresh();setChip();
 (async()=>{
-  db=localDB();
   try{navigator.storage?.persist?.()}catch{}
-  if(!db.hasData()){try{db.replace(await fetchPlan())}catch{toast("Couldn't load the starting plan — connect once and reopen")}}
-  ["stops","spots","camps","nights"].forEach(listen);
+  if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
+  if(syncOn())sync(false);
 })();
-
-/* ---------- backup & settings ---------- */
-function backupBlob(){return new Blob([JSON.stringify({version:1,exported:new Date().toISOString(),...db.dump()})],{type:"application/json"})}
-function downloadBackup(){const a=document.createElement("a");a.href=URL.createObjectURL(backupBlob());a.download=`south-island-loop-${today()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Backup saved to Downloads")}
-async function shareBackup(){const f=new File([backupBlob()],`south-island-loop-${today()}.json`,{type:"application/json"});
-  try{await navigator.share({files:[f],title:"South Island Loop backup"})}catch(e){if(e&&e.name!=="AbortError")downloadBackup()}}
-function armed(btn,label,fn){btn.onclick=()=>{if(btn.dataset.armed){fn()}else{btn.dataset.armed=1;btn.textContent=label}}}
-function openSettings(){
-  const f=$("#form"),canShare=!!(navigator.canShare&&navigator.canShare({files:[new File(["{}"],"x.json",{type:"application/json"})]}));
-  let prev=false;try{prev=!!localStorage.getItem(PREV)}catch{}
-  const counts=["stops","spots","camps"].map(c=>Object.keys(db?.dump()[c]||{}).length);
-  f.dataset.type="settings";f.dataset.id="";
-  f.innerHTML=`<h2 id="sheet-title">Backup &amp; settings</h2>
-   <span class="hint">Your plan is saved on this phone only and works without signal: ${counts[0]} stops, ${counts[1]} places, ${counts[2]} campsites.</span>
-   <div class="actions" style="justify-content:flex-start">
-     ${canShare?`<button type="button" class="btn primary" id="s-share">Share backup file</button>`:""}
-     <button type="button" class="btn ${canShare?"":"primary"}" id="s-dl">Save backup to phone</button></div>
-   <span class="hint">Make a backup now and then, and send it to Claude when you want the plan changed for you.</span>
-   <label>Restore from a backup or plan file<input type="file" id="s-file" accept=".json,application/json"></label>
-   <button type="button" class="btn" id="s-latest">Load the latest plan from Claude</button>
-   <span class="hint">Replaces everything on this phone with the version Claude last published. Your current plan is kept so you can undo once.</span>
-   ${prev?`<button type="button" class="btn" id="s-undo">Undo last restore</button>`:""}
-   <a class="lk" href="../" style="justify-self:start">Open Kea budget →</a>
-   <div class="actions"><span></span><button type="button" class="btn" id="cancel">Close</button></div>`;
-  $("#scrim").hidden=false;$("#sheet").hidden=false;
-  $("#cancel").onclick=closeSheet;
-  $("#s-dl").onclick=downloadBackup;
-  if($("#s-share"))$("#s-share").onclick=shareBackup;
-  $("#s-file").onchange=async e=>{const file=e.target.files[0];if(!file)return;
-    try{const d=JSON.parse(await file.text());if(!validPlan(d))throw 0;db.replace(d);closeSheet();toast("Plan restored")}catch{toast("That file isn't a South Island Loop plan")}};
-  armed($("#s-latest"),"Tap again to replace this phone's plan",async()=>{try{db.replace(await fetchPlan());closeSheet();toast("Latest plan loaded")}catch{toast("Couldn't reach GitHub — try again with signal")}});
-  if($("#s-undo"))armed($("#s-undo"),"Tap again to undo",()=>{try{const p=JSON.parse(localStorage.getItem(PREV));db.replace(p);localStorage.removeItem(PREV);closeSheet();toast("Restored previous plan")}catch{toast("Nothing to undo")}});
-}
-$("#menu").onclick=openSettings;
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>
-
 </body>
 </html>

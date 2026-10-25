@@ -235,17 +235,45 @@ old file.
 
 # South Island Loop — trip planner (`/trip`)
 
-Our route, campsites and day plans for the South Island, as an offline phone app.
-Lives in the `trip/` folder and is served at **https://draumbear.github.io/vanlife/trip/**.
+Our route, nights, campsites and day plans for the South Island, as an offline phone app
+that syncs between both phones. Served at **https://draumbear.github.io/vanlife/trip/**.
 
 | File | What it is |
 |---|---|
-| `trip/index.html` | The whole app. Data is stored on the phone (localStorage), no account or server. |
-| `trip/plan.json` | The plan as Claude last published it. Loaded on first open, or from **⋯ → Load the latest plan from Claude**. |
-| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v2`…) when you change `index.html`. |
+| `trip/index.html` | The whole app. Works offline; syncs through the same Supabase project as Kea. |
+| `trip/plan.json` | Starting plan, used the first time a phone opens the app with nothing shared yet. |
+| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v4`…) when you change `index.html`. |
 | `trip/manifest.json`, `trip/icon-*.png` | Home-screen install. |
 
 **Install:** open the URL in Chrome → ⋮ → **Add to Home screen / Install app**.
 
-**Backups:** ⋯ → *Share backup file* / *Save backup to phone*. Restore with *Restore from a backup*.
-The data only lives on that phone, so back up now and then.
+**Sync:** the app reads Kea's saved Supabase URL + key from the same phone, so if Kea already
+syncs, there's nothing to type. It needs one extra table — run this once in Supabase → SQL Editor
+(the app also shows it under ⋯ → Settings if it's missing):
+
+```sql
+create table if not exists trip_docs (
+  coll text not null, id text not null,
+  data jsonb not null default '{}'::jsonb,
+  deleted boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (coll, id));
+create index if not exists trip_docs_updated on trip_docs (updated_at);
+create or replace function trip_docs_touch() returns trigger
+  language plpgsql set search_path = '' as $$
+  begin new.updated_at := now(); return new; end $$;
+drop trigger if exists trip_docs_touch on trip_docs;
+create trigger trip_docs_touch before insert or update on trip_docs
+  for each row execute function trip_docs_touch();
+alter table trip_docs enable row level security;
+drop policy if exists trip_docs_all on trip_docs;
+create policy trip_docs_all on trip_docs for all to anon using (true) with check (true);
+grant select, insert, update, delete on trip_docs to anon;
+```
+
+The first phone to sync uploads its plan; every phone after that downloads the shared one
+(its old copy is kept for one *Undo last restore* in Settings). Edits made offline sync as soon
+as there's signal; if you both change the same thing, the last one to sync wins.
+Same caveat as Kea: anyone with the URL + anon key can read and write this table.
+
+**Backups:** ⋯ → *Share backup file* / *Save backup*; restore under *Restore from a backup file*.

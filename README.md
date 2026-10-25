@@ -230,3 +230,22 @@ expense, which is the right call when two people are rarely editing the same rec
 **Settings → Backup → Export** writes a `.json` of everything. Worth doing once a month
 onto Google Drive. Import merges rather than overwrites, so it's safe to re-import an
 old file.
+
+---
+
+# South Island Loop — trip planner (`/trip`)
+
+Our route, campsites and day plans for the South Island, as an offline phone app.
+Lives in the `trip/` folder and is served at **https://draumbear.github.io/vanlife/trip/**.
+
+| File | What it is |
+|---|---|
+| `trip/index.html` | The whole app. Data is stored on the phone (localStorage), no account or server. |
+| `trip/plan.json` | The plan as Claude last published it. Loaded on first open, or from **⋯ → Load the latest plan from Claude**. |
+| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v2`…) when you change `index.html`. |
+| `trip/manifest.json`, `trip/icon-*.png` | Home-screen install. |
+
+**Install:** open the URL in Chrome → ⋮ → **Add to Home screen / Install app**.
+
+**Backups:** ⋯ → *Share backup file* / *Save backup to phone*. Restore with *Restore from a backup*.
+The data only lives on that phone, so back up now and then.

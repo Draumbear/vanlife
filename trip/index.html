@@ -111,6 +111,14 @@ textarea{min-height:72px;resize:vertical}
 .day.past{opacity:.55}
 .day.flex{border:1.5px dashed color-mix(in srgb,var(--muted) 55%,transparent);background:transparent}
 .day .fx{display:block;font-size:.72rem;color:var(--muted)}
+.day.flex{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.grip{display:grid;place-items:center;width:34px;height:34px;margin:-6px -6px -6px 0;border-radius:10px;color:var(--muted);font-size:1.1rem;touch-action:none;cursor:grab}
+.dragging .day.flex.src{opacity:.35}
+.drop-on{outline:2px solid var(--fern);outline-offset:2px;border-radius:14px}
+.stop-h.drop-on{background:var(--fern-soft)}
+.dghost{position:fixed;left:16px;right:16px;z-index:60;pointer-events:none;background:var(--card);border:1.5px dashed var(--fern);border-radius:14px;padding:10px 14px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.25);transform:translateY(-50%)}
+.dghost small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.flexbox{border:1.5px dashed var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px;font-size:.88rem}
 .cpick{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 10px}
 .cpick button{font-size:.8rem}
 .more{display:block;width:100%;margin-top:18px;background:none;border:1px dashed var(--line);border-radius:14px;padding:12px;color:var(--muted);font-weight:700;cursor:pointer}
@@ -431,13 +439,14 @@ function renderToday(){
 function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   const what=plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
-  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}"><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
-    <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night</span>`:""}</span>
-    <span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span></button>`}
+  const fx=n.flex&&d>t;
+  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
+    <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night${fx?" · drag to another stop":""}</span>`:""}</span>
+    ${fx?`<span class="grip" aria-hidden="true">⠿</span>`:`<span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span>`}</button>`}
 function stopBlock(s,days,t,L,i,showLeg){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ~${L[i]} km</div>`:"")+
-   `<div class="stop-h"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    days.map(d=>dayRow(d,t)).join("")}
 function renderDays(){
   const t=today(),st=sortStops(),L=legs(),el=$("#daylist");
@@ -495,6 +504,8 @@ function renderDay(){
       <div class="sleep"><span class="nm">${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></span>
         ${n.camp?goBtns(camp,"camp"):""}<button class="ib" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></div>
       ${n.notes?`<div class="muted" style="font-size:.85rem">${esc(n.notes)}</div>`:""}</div>
+    ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
+      <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
     <div class="card"><span class="label">Plan</span>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
@@ -612,6 +623,61 @@ function openNight(d){const n=nightInfo(d),multi=n.stop&&stopDays(n.stop).length
   const c=$("#form [name=camp]"),sync=()=>{const m=state.camps.find(x=>x.name===c.value);if(m)$("#form [name=campType]").value=m.type||"unknown"};c.addEventListener("change",sync);
   $("#form").querySelectorAll("[data-pickcamp]").forEach(b=>b.onclick=()=>{c.value=b.dataset.pickcamp;sync()});
   const r=$("#reset");if(r)r.onclick=()=>{del("nights",d);closeSheet();toast("Reset")}}
+/* move one night (date d) to another stop; every stop in between shifts a day, with its plans and campsite picks */
+function moveNight(d,toId,force){
+  const t=today(),st=sortStops(),i=st.findIndex(s=>stopDays(s).includes(d)),j=st.findIndex(s=>s.id===toId);
+  if(i<0||j<0||i===j)return false;
+  const A=st[i],B=st[j],lo=Math.min(i,j),hi=Math.max(i,j);
+  if(d<=t)return toast("Only nights from tomorrow on can move"),false;
+  if(stopDays(A).length<2)return toast(`${A.name} needs at least one night`),false;
+  if(j<i&&B.end<=t)return toast(`${B.name} is already behind you`),false;
+  for(let k=lo;k<hi;k++)if(st[k].end!==st[k+1].start)return toast("There's a gap between those stops, change dates by hand"),false;
+  const booked=st.slice(lo,hi+1).filter(s=>s.campType==="booked");
+  if(booked.length&&!force){confirmMove(d,toId,booked);return false}
+  const D=S.docs,mark=(c,id)=>S.pending[c+"/"+id]=1,setS=(id,p)=>{D.stops[id]={...D.stops[id],...p};mark("stops",id)};
+  Object.entries(D.spots).forEach(([id,x])=>{if(x.day===d){D.spots[id]={...x,day:null,order:null};mark("spots",id)}});
+  const fx=D.nights[d];if(fx){delete D.nights[d];mark("nights",d)}
+  const moveDate=(x,y)=>{Object.entries(D.spots).forEach(([id,o])=>{if(o.day===x){D.spots[id]={...o,day:y};mark("spots",id)}});
+    if(D.nights[x]){D.nights[y]=D.nights[x];delete D.nights[x];mark("nights",x);mark("nights",y)}};
+  let nd;
+  if(j>i){setS(A.id,{end:addDays(A.end,-1)});for(let k=i+1;k<j;k++)setS(st[k].id,{start:addDays(st[k].start,-1),end:addDays(st[k].end,-1)});
+    for(let x=addDays(d,1);x<B.start;x=addDays(x,1))moveDate(x,addDays(x,-1));
+    nd=addDays(B.start,-1);setS(B.id,{start:nd})}
+  else{const oldEnd=B.end;setS(B.id,{end:addDays(B.end,1)});for(let k=j+1;k<i;k++)setS(st[k].id,{start:addDays(st[k].start,1),end:addDays(st[k].end,1)});
+    for(let x=addDays(d,-1);x>=oldEnd;x=addDays(x,-1))moveDate(x,addDays(x,1));
+    setS(A.id,{start:addDays(A.start,1)});nd=oldEnd}
+  D.nights[nd]={camp:null,campType:"",notes:"",flex:true};mark("nights",nd);
+  persist();refresh();scheduleSync();
+  toast(`${A.name} ${stopDays(D.stops[A.id]).length} · ${B.name} ${stopDays(D.stops[B.id]).length} nights`);return true}
+function confirmMove(d,toId,booked){const B=S.docs.stops[toId];
+  sheet(head("Move a booked stop?")+`<p style="margin:0">This changes the dates of <b>${booked.map(s=>esc(s.name)).join(", ")}</b>, which is booked. Only do it if you've moved the booking too.</p>
+    <div class="end"><div><button type="button" class="btn" data-cancel>Cancel</button></div><div><button type="button" class="btn primary" id="mv-go">Move anyway</button></div></div>`,"confirm");
+  $("#mv-go").onclick=()=>{closeSheet();moveNight(d,toId,true)}}
+let drag=null,eatClick=false;
+function dragStart(row,e){const d=row.dataset.flexd;
+  drag={d,from:row.dataset.sid,y:e.clientY,target:null,ghost:document.createElement("div")};
+  drag.ghost.className="dghost";drag.ghost.innerHTML=`${wd(d)} ${fmt(d)} · flexible night<small>Drop it on another stop</small>`;
+  document.body.appendChild(drag.ghost);document.body.classList.add("dragging");row.classList.add("src");dragMove(e);
+  if(navigator.vibrate)try{navigator.vibrate(15)}catch{}
+  const loop=()=>{if(!drag)return;const m=70,h=innerHeight;if(drag.y<m)scrollBy(0,-Math.ceil((m-drag.y)/5));else if(drag.y>h-m)scrollBy(0,Math.ceil((drag.y-h+m)/5));pick();requestAnimationFrame(loop)};requestAnimationFrame(loop)}
+function pick(){if(!drag)return;drag.ghost.style.display="none";const el=document.elementFromPoint(innerWidth/2,drag.y);drag.ghost.style.display="";
+  const sid=el?.closest?.("[data-sid]")?.dataset.sid||null,tg=sid&&sid!==drag.from?sid:null;
+  if(tg!==drag.target){document.querySelectorAll(".drop-on").forEach(x=>x.classList.remove("drop-on"));drag.target=tg;
+    if(tg)document.querySelectorAll(`[data-sid="${CSS.escape(tg)}"]`).forEach(x=>x.classList.add("drop-on"))}}
+function dragMove(e){if(!drag)return;drag.y=e.clientY;drag.ghost.style.top=e.clientY+"px";pick()}
+function dragEnd(){if(!drag)return;const {d,target,ghost}=drag;drag=null;ghost.remove();document.body.classList.remove("dragging");
+  document.querySelectorAll(".drop-on,.src").forEach(x=>x.classList.remove("drop-on","src"));eatClick=true;setTimeout(()=>eatClick=false,350);
+  if(target)moveNight(d,target)}
+(()=>{let timer=null,start=null;
+  document.addEventListener("pointerdown",e=>{const row=e.target.closest?.("[data-flexd]");if(!row||e.button>0)return;
+    if(e.target.closest(".grip")){e.preventDefault();dragStart(row,e);return}
+    start={x:e.clientX,y:e.clientY};timer=setTimeout(()=>{timer=null;dragStart(row,{clientY:start.y})},380)});
+  document.addEventListener("pointermove",e=>{if(drag)return dragMove(e);if(timer&&start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>8){clearTimeout(timer);timer=null}});
+  const end=()=>{if(timer){clearTimeout(timer);timer=null}dragEnd()};
+  document.addEventListener("pointerup",end);document.addEventListener("pointercancel",end);
+  document.addEventListener("touchmove",e=>{if(drag)e.preventDefault()},{passive:false});
+  document.addEventListener("contextmenu",e=>{if(drag||e.target.closest?.("[data-flexd]"))e.preventDefault()});
+  document.addEventListener("click",e=>{if(eatClick){e.stopPropagation();e.preventDefault();eatClick=false}},true)})();
 function setNight(d,camp,type,notes,flex){const s=stopFor(d);
   if(s&&s.camp===camp&&(s.campType||"unknown")===type&&!notes&&!flex){if(S.docs.nights[d])del("nights",d)}
   else put("nights",d,{camp,campType:type,notes:notes||"",...(flex?{flex:true}:{})})}
@@ -720,6 +786,7 @@ $("#sync").onclick=()=>{if(syncOn()&&!lastErr){sync(true)}else openSettings()};
 $("#scrim").onclick=closeSheet;
 $("#q").oninput=e=>{state.q=e.target.value;renderPlaces()};
 $("#region").onchange=e=>{state.region=e.target.value;renderPlaces()};
+document.addEventListener("change",e=>{if(e.target.id!=="mv-to"||!e.target.value)return;const v=e.target.value;e.target.value="";if(moveNight(state.day,v))closeDay()});
 document.addEventListener("input",e=>{if(e.target.id==="q-ideas"){state.ideaQ=e.target.value;state.ideaAll=false;renderIdeas()}});
 document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preventDefault();
   const name=$("#f-act").value.trim();if(!name)return;const d=state.day;$("#f-act").value="";

@@ -227,7 +227,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 <script>
 /* ================= constants & helpers ================= */
 const REGIONS=["Marlborough","Nelson/Tasman","West Coast","Otago","Fiordland","Southland","Canterbury"];
-const KINDS={place:"Sight",hike:"Hike",bike:"Bike"};
+const KINDS={place:"Sight",hike:"Hike",bike:"Bike",disc:"Disc golf"};
 const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
 const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
@@ -439,8 +439,8 @@ function renderPlaces(){
   const reg=state.region||"all";
   const sel=$("#region");sel.innerHTML=`<option value="all">All regions</option>`+REGIONS.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join("");sel.value=reg;
   const q=state.q.toLowerCase(),base=allPlaces().filter(x=>q||reg==="all"||x.region===reg);
-  const f={all:x=>x._c==="spot",fav:x=>x.fav,hike:x=>x._c==="spot"&&x.kind==="hike",place:x=>x._c==="spot"&&x.kind==="place",bike:x=>x._c==="spot"&&x.kind==="bike",camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
-  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["hike","Hikes"],["place","Sights"],["bike","Bike"]];
+  const f={all:x=>x._c==="spot",fav:x=>x.fav,hike:x=>x._c==="spot"&&x.kind==="hike",place:x=>x._c==="spot"&&x.kind==="place",bike:x=>x._c==="spot"&&x.kind==="bike",disc:x=>x._c==="spot"&&x.kind==="disc",camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
+  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["hike","Hikes"],["place","Sights"],["bike","Bike"],["disc","Disc golf"]];
   $("#kinds").innerHTML=`<button class="pill sgp" type="button" aria-pressed="${state.showSug}" data-sug>✦ Claude</button>`+labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
   const items=base.filter(x=>visSug(x)&&f[state.kind](x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
     .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));

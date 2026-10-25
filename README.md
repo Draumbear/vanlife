@@ -235,14 +235,15 @@ old file.
 
 # South Island Loop — trip planner (`/trip`)
 
-Our route, nights, campsites and day plans for the South Island, as an offline phone app
-that syncs between both phones. Served at **https://draumbear.github.io/vanlife/trip/**.
+Two tabs: **Days** (today's card, then every day grouped by stop) and **Places** (sights, hikes and
+campsites). The map sits behind the map button; the coloured dot shows sync status.
+Works offline and syncs between both phones. Served at **https://draumbear.github.io/vanlife/trip/**.
 
 | File | What it is |
 |---|---|
 | `trip/index.html` | The whole app. Works offline; syncs through the same Supabase project as Kea. |
 | `trip/plan.json` | Starting plan, used the first time a phone opens the app with nothing shared yet. |
-| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v4`…) when you change `index.html`. |
+| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v5`…) when you change `index.html`. |
 | `trip/manifest.json`, `trip/icon-*.png` | Home-screen install. |
 
 **Install:** open the URL in Chrome → ⋮ → **Add to Home screen / Install app**.

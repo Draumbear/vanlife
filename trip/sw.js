@@ -1,6 +1,6 @@
 /* South Island Loop — offline shell.
    Bump CACHE when you change index.html so the phone picks up the new version. */
-const CACHE = 'loop-v39';
+const CACHE = 'loop-v40';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './plan.json', '../icon-192.png', './contour.svg'];
 const FONTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 

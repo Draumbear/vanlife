@@ -233,6 +233,8 @@ textarea{min-height:72px;resize:vertical}
 .bars i{display:block;height:8px;border-radius:4px;background:var(--fern)}
 .openideas{width:100%;justify-content:space-between}
 .openideas span{white-space:nowrap}
+.wxlinks{margin-left:auto;display:flex;gap:6px}
+.wxlinks a{font-size:.8rem;font-weight:700;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--sea)}
 .card.wxline{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:.88rem}
 .wxline .big{font:800 1.25rem var(--display)}
 .day .dt b{display:block;font-weight:500;color:var(--muted);font-size:.72rem}
@@ -1024,9 +1026,9 @@ async function pullWx(){if(wxBusy||!navigator.onLine)return;wxBusy=true;const t=
     Object.keys(wx).forEach(k=>{if(Date.now()-wx[k].at>14*864e5)delete wx[k]});
     if(changed){try{localStorage.setItem(WXK,JSON.stringify(wx))}catch{}render()}}finally{wxBusy=false}}
 const wxShort=w=>w?`${WMO(w.c)} ${Math.round(w.hi)}°`:"";
-function wxCard(d){const w=wxFor(d);if(!w)return "";
+function wxCard(d,links=""){const w=wxFor(d);if(!w)return "";
   return `<div class="card wxline"><span class="big">${WMO(w.c)} ${Math.round(w.hi)}°</span><span class="muted">low ${Math.round(w.lo)}°</span>
-    <span>${w.p>=0.5?`💧 ${Math.round(w.p)} mm`:"dry"}</span><span>💨 ${Math.round(w.w)} km/h</span>${w.sr?`<span>🌅 ${w.sr}</span><span>🌇 ${w.ss}</span>`:""}</div>`}
+    <span>${w.p>=0.5?`💧 ${Math.round(w.p)} mm`:"dry"}</span><span>💨 ${Math.round(w.w)} km/h</span>${w.sr?`<span>🌅 ${w.sr}</span><span>🌇 ${w.ss}</span>`:""}${links}</div>`}
 /* ---- things to book: plans and stop campsites flagged "needs booking" ---- */
 const LEADS=[[3,"3 days"],[7,"1 week"],[14,"2 weeks"],[30,"1 month"],[60,"2 months"]];
 function bookItems(){const t=today(),out=[];
@@ -1126,7 +1128,7 @@ function renderDay(){
      <button class="ib" type="button" data-day="${addDays(d,-1)}" aria-label="Previous day">${icon("back")}</button>
      <button class="ib" type="button" data-day="${addDays(d,1)}" aria-label="Next day">${icon("next")}</button></div></div>
    <div class="wrap vbody">
-    ${d>=t?wxCard(d):""}
+    ${(()=>{const L=s?`<span class="wxlinks">${A(safeUrl(s.weather)||MS_INDEX,"MetService")}${hasLL(s)?A(windyUrl(s),"Windy"):""}</span>`:"";const w=d>=t?wxCard(d,L):"";return w||(L?`<div class="card wxline">${L}</div>`:"")})()}
     <div class="card"><span class="label">Sleeping</span>
       <div class="sleep"><span class="nm">${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></span>
         ${n.camp?goBtns(camp,"camp"):""}<button class="ib" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></div>
@@ -1144,7 +1146,6 @@ function renderDay(){
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       </div>
     <div class="card" id="ideas-card"></div>
-    ${s?`<div class="links">${A(safeUrl(s.weather)||MS_INDEX,"MetService")}${hasLL(s)?A(windyUrl(s),"Windy"):""}</div>`:""}
    </div>`;
   renderIdeas();
   el.scrollTop=scroll;hydratePhotos(el)}

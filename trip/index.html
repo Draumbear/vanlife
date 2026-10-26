@@ -183,6 +183,7 @@ textarea{min-height:72px;resize:vertical}
 .sg .nm,.nm.sg{color:var(--tussock)}
 .item.sg{box-shadow:inset 3px 0 0 var(--tussock);padding-left:10px}
 .srcseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:3px;border-radius:12px;margin:2px 0 8px}
+#q-kea:empty{display:none}
 .bookopts{display:grid;gap:10px;padding-left:14px;border-left:2px solid var(--line)}
 .costrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}
 .pick.sm{margin:0;gap:4px;flex-wrap:nowrap}.pick.sm span{padding:9px 14px;font-size:.85rem}
@@ -347,14 +348,21 @@ function campsNear(st){const ref=st&&hasLL(st)?st:null;
     .sort((a,b)=>(a._km??1e6+(a.region===st?.region?0:1e5))-(b._km??1e6+(b.region===st?.region?0:1e5))||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""))}
 const campList=st=>`<datalist id="camp-names">${campsNear(st).map(c=>`<option value="${esc(c.name)}">${c._km!=null?(c._km<5?"right here":c._km+" km"):""}</option>`).join("")}</datalist>`;
 const campChips=st=>{const n=campsNear(st).filter(c=>c._km!=null&&c._km<=120).slice(0,6);return n.length?`<div class="cpick">${n.map(c=>`<button type="button" class="pill" data-pickcamp="${esc(c.name)}">${esc(c.name)} · ${c._km<5?"here":c._km+" km"}</button>`).join("")}</div>`:""};
+/* the place a thing is near: the stop of its planned day, else the nearest stop to its coordinates, else its region */
+const shortStop=n=>(n||"").split(/\s*(?:&|–|\/|,)\s*/)[0].trim();
+function ctxName(x){let s=x.day?stopFor(x.day):null;
+  if(!s){const p=ptOf(x);if(p){let bd=1e9;sortStops().forEach(st=>{if(hasLL(st)){const d=hav(st,p);if(d<bd){bd=d;s=st}}});if(bd>40)s=null}}
+  return s?shortStop(s.name):(x.region||"")}
+const kindLabel=x=>x.kind&&KINDS[x.kind]?KINDS[x.kind]:x.kind==="plan"||x.cat?kcat(x.cat||"activity")[1]:"Sight";
 function dest(x,kind){
   if(hasLL(x))return {ll:x.lat+","+x.lng};
   const m=LLRE.exec(x.loc||"");if(m)return {ll:m[1]+","+m[2]};
-  const base=x.loc||((x.name||"")+(kind==="camp"&&!/camp/i.test(x.name||"")?" campsite":"")+(x.region?", "+x.region:""));
+  const c=kind==="camp"?(x.region||""):ctxName(x);
+  const base=x.loc||((x.name||"")+(kind==="camp"&&!/camp/i.test(x.name||"")?" campsite":"")+(c?", "+c:""));
   return {q:base+", New Zealand"}}
 function gUrl(x,kind){const t=dest(x,kind);return "https://www.google.com/maps/dir/?api=1&destination="+(t.ll||encodeURIComponent(t.q))}
 function wazeUrl(x,kind){const t=dest(x,kind);return t.ll?`https://waze.com/ul?ll=${t.ll}&navigate=yes`:`https://waze.com/ul?q=${encodeURIComponent(t.q)}&navigate=yes`}
-function infoUrl(x,kind){return safeUrl(x.url)||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(x.region||"")+" New Zealand"+(kind==="hike"||(kind==="camp"&&x.type==="doc")?" DOC":""))}
+function infoUrl(x,kind){return safeUrl(x.url)||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(kind==="camp"?(x.region||""):ctxName(x))+" New Zealand"+(kind==="hike"||(kind==="camp"&&x.type==="doc")?" DOC":""))}
 const A=(href,label)=>`<a href="${esc(href)}" target="_blank" rel="noopener">${label}</a>`;
 const navLinks=(x,kind)=>`<div class="links">${A(gUrl(x,kind),"Maps")}${A(wazeUrl(x,kind),"Waze")}${A(infoUrl(x,kind),"Info")}</div>`;
 const goBtns=(x,kind)=>`<div class="go"><a href="${esc(gUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Google Maps">Maps</a><a href="${esc(wazeUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Waze">Waze</a></div>`;
@@ -523,7 +531,7 @@ function spendCats(list,k=3){const by={};list.forEach(e=>by[e.c]=(by[e.c]||0)+e.
   return Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,k).map(([c,v])=>`${kcat(c)[0]} ${nzd(v)}`).join(" · ")}
 function keaNote(x){if(!(+x.price>0))return "";
   if(x.keaId||x.paid){const m=x.keaMeta;return `✓ Paid · in Kea${m?` · ${PEOPLE[m.payer]||""}${m.account?" · "+esc(m.account):""}${m.personal?" · just "+(PEOPLE[m.personal]||""):""}`:""}`}
-  return x.day?`Planned cost in Kea for ${wd(x.day)} ${fmt(x.day)}. Tick Done when paid to log it.`:"Pick a day and it shows in Kea's planned costs."}
+  return ""}
 function spendCard(d){const list=spentOn(d).sort((a,b)=>b.a-a.a),pd=keaPerDay(),tot=sumA(list);
   return `<div class="card"><span class="label">Spent${d===today()?" so far":""}</span>
     ${list.length?`<div class="spend">${list.map(e=>`<div class="r"><span>${kcat(e.c)[0]}</span><span class="clamp1">${esc(e.n||kcat(e.c)[1])}</span><span class="mono">${nzd(e.a)}</span></div>`).join("")}
@@ -723,7 +731,7 @@ function renderPlaces(){
   const by={};items.forEach(x=>(by[x.region||"Other"]??=[]).push(x));
   const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
   $("#plist").innerHTML=items.length?order.map(r=>(order.length>1?`<div class="reg">${esc(r)}</div>`:"")+by[r].map(x=>{
-    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(KINDS[x.kind]||"Sight")}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
+    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(kindLabel(x))}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
     return `<div class="item ${x.done?"done":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
       <button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
@@ -782,7 +790,7 @@ function renderIdeas(){
   if(!state.ideasOpen){$("#ideas-h").textContent=`${ideas.length} nearby${wet?" · ☔ rain-proof first":""}`;return}
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:wet?`Wet day · rain-proof first`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
-  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(KINDS[x.kind]||"")}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}${wet&&rainOK(x)?` <span class="rainok">☔ good in rain</span>`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
+  $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(kindLabel(x))}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}${wet&&rainOK(x)?` <span class="rainok">☔ good in rain</span>`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
     +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"")}
 
 function render(){renderHeader();renderToday();renderExtras();renderDays();renderPlaces();renderDay()}
@@ -798,7 +806,7 @@ const head=(title,close=true)=>`<div style="display:flex;align-items:flex-start;
 const saveRow=(isNew)=>`<div class="end"><div>${isNew?"":`<button type="button" class="btn danger" id="del">Delete</button>`}</div><div><button class="btn primary" type="submit">${isNew?"Add":"Save"}</button></div></div>`;
 
 function spotFields(it){return `<label>Name<input name="name" value="${esc(it.name)}"></label>
-  <div class="two"><label>Type<select name="kind">${typeOpts(KINDS,it.kind||"place")}</select></label><label>Region<select name="region">${regionOpts(it.region)}</select></label></div>
+  <div class="two"><label>Type<select name="kind">${typeOpts({...KINDS,plan:"Other (use Kea category)"},it.kind||"place")}</select></label><label>Region<select name="region">${regionOpts(it.region)}</select></label></div>
   <label>Notes<textarea name="notes" placeholder="Distance, time, tides…">${esc(it.notes)}</textarea></label>
   <label>Map location <span class="muted" style="font-weight:400">(optional)</span><input name="loc" value="${esc(it.loc)}" placeholder="Car park, or -43.43, 169.97"></label>
   <label>Info link <span class="muted" style="font-weight:400">(optional)</span><input name="url" type="url" value="${esc(it.url)}" placeholder="https://…"></label>`}
@@ -815,7 +823,7 @@ function openSpot(it,fresh){
     sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
-    <div class="muted" style="font-size:.85rem">${esc(KINDS[it.kind]||"Sight")}${it.region?" · "+esc(it.region):""}</div>
+    <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${ctxName(it)?" · "+esc(ctxName(it)):""}</div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
     <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
@@ -1053,7 +1061,9 @@ document.addEventListener("click",e=>{
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
   else if(ds.day)openDay(ds.day);
-  else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);patch("spots",ds.unplan,{day:null,order:null,done:false});toast(`Removed ${x?.name||""} from this day${had?" and from Kea":""}`)}
+  else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
+    if(x?.kind==="plan"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}
+    patch("spots",ds.unplan,{day:null,order:null,done:false});toast(`Removed ${x?.name||""} from this day${had?" and from Kea":""}`)}
   else if(ds.plan){const d=state.day;patch("spots",ds.plan,{day:d,order:planFor(d).length});toast("Added")}
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:t==="stop"?openStop:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
@@ -1082,7 +1092,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addtodo")return;e.preve
   i.value="";add("todos",{text:v,done:false,at:new Date().toISOString()});setTimeout(()=>$("#f-todo")?.focus(),0)});
 document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preventDefault();
   const name=$("#f-act").value.trim();if(!name)return;const d=state.day;$("#f-act").value="";
-  const id=add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
+  const id=add("spots",{name,kind:"plan",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
   openSpot({id,...S.docs.spots[id]},true)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());

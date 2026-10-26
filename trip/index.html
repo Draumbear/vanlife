@@ -192,7 +192,15 @@ textarea{min-height:72px;resize:vertical}
 .memnote{margin:0;font-size:.95rem;font-style:italic}
 .mem .btn input{display:none}
 .card.alert{border-color:var(--tussock);background:color-mix(in srgb,var(--tussock-soft) 70%,var(--card))}
-.card.alert .sub{display:block;font-size:.8rem;color:var(--muted)}
+.card.slim{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;font-size:.9rem}
+.card.alert{gap:0;padding:4px 14px}
+.card.alert details{padding:8px 0}.card.alert details+details{border-top:1px solid color-mix(in srgb,var(--tussock) 35%,transparent)}
+.card.alert summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.card.alert summary::-webkit-details-marker{display:none}
+.card.alert summary::after{content:"▾";color:var(--muted);transition:transform .2s}
+.card.alert details[open] summary::after{transform:rotate(180deg)}
+.card.alert .sub{display:block;font-size:.8rem;color:var(--muted);font-weight:400}
+.card.alert p.sub{margin:6px 0 8px}
 .talert{background:color-mix(in srgb,var(--on-fern) 16%,transparent);border:0;border-radius:10px;padding:7px 10px;color:inherit;font:700 .85rem var(--body);text-align:left;cursor:pointer}
 .sub.tide{color:var(--sea)!important;display:block;font-size:.8rem}
 .tn .tsub{display:block;font:500 .76rem var(--body);opacity:.85}
@@ -710,9 +718,14 @@ function alertsFor(d){const t=today();if(d<t||d>addDays(t,3)||!roadx.events.leng
   const seg=here.length===2&&here[0]!==here[1]?here:null;
   return roadx.events.filter(e=>e.pts.some(q=>pts.some(p=>near(p,q,30))||(seg&&segNear(seg[1],seg[0],q))))}
 function segNear(a,b,q){for(let i=0;i<=10;i++){const t=i/10,p={lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t};if(hav(p,{lat:q[0],lng:q[1]})<=12)return true}return false}
-function alertCard(d){const a=alertsFor(d);if(!a.length)return "";
-  return `<div class="card alert"><span class="label">⚠️ Road alerts</span>${a.slice(0,3).map(e=>`<div><b>${esc(e.name.replace(/^(Road Closure|Area Warning|Road Work):\s*/,""))}</b><span class="sub">${esc(e.impact)}${e.until?` · ${esc(e.until)}`:""}</span>${e.note?`<span class="sub clamp2">${esc(e.note)}</span>`:""}</div>`).join("")}
-    <a class="pill" href="https://www.journeys.nzta.govt.nz/" target="_blank" rel="noopener" style="justify-self:start">NZTA road info</a></div>`}
+/* alerts start folded; "Hide" dismisses one for good (until NZTA changes it) */
+const HIDK="sil-alert-hide";const hiddenAlerts=()=>{try{return JSON.parse(localStorage.getItem(HIDK)||"{}")}catch{return {}}};
+const akey=e=>e.id+"|"+(e.until||"")+"|"+(e.impact||"");
+const shownAlerts=d=>{const h=hiddenAlerts();return alertsFor(d).filter(e=>!h[akey(e)])};
+const shortAlert=e=>e.name.replace(/^(Road Closure|Area Warning|Road Work|Road Works|Delays?):\s*/,"");
+function alertCard(d){const a=shownAlerts(d);if(!a.length)return "";
+  return `<div class="card alert">${a.slice(0,3).map(e=>`<details><summary><span>⚠️ <b>${esc(shortAlert(e))}</b><span class="sub">${esc(e.impact)}${e.until?` · ${esc(e.until)}`:""}</span></span></summary>
+      ${e.note?`<p class="sub">${esc(e.note)}</p>`:""}<div class="row2"><a class="pill" href="https://www.journeys.nzta.govt.nz/" target="_blank" rel="noopener">NZTA road info</a><button type="button" class="pill" data-hidealert="${esc(akey(e))}">Hide</button></div></details>`).join("")}</div>`}
 
 /* ================= Kea (the budget app on this same site) ================= */
 const KEA_LS="vanbudget.v1",KEA_CACHE="sil-kea";
@@ -748,6 +761,7 @@ function keaNote(x){if(!(+x.price>0))return "";
   if(x.keaId||x.paid){const m=x.keaMeta;return `✓ Paid · in Kea${m?` · ${PEOPLE[m.payer]||""}${m.account?" · "+esc(m.account):""}${m.personal?" · just "+(PEOPLE[m.personal]||""):""}`:""}`}
   return ""}
 function spendCard(d){const list=spentOn(d).sort((a,b)=>b.a-a.a),pd=keaPerDay(),tot=sumA(list);
+  if(!list.length)return `<div class="card slim"><span class="muted">💸 Nothing logged in Kea${d===today()?" yet today":""}</span><a class="pill" href="../">Open Kea</a></div>`;
   return `<div class="card"><span class="label">Spent${d===today()?" so far":""}</span>
     ${list.length?`<div class="spend">${list.map(e=>`<div class="r"><span>${kcat(e.c)[0]}</span><span class="clamp1">${esc(e.n||kcat(e.c)[1])}</span><span class="mono">${nzd(e.a)}</span></div>`).join("")}
       <div class="tot"><span>Total</span><span>${moneyTag(tot)}${pd?` <span class="muted" style="font-weight:400;font-size:.78rem">/ ${nzd(pd)} a day</span>`:""}</span></div></div>`
@@ -820,7 +834,7 @@ function renderToday(){
       <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button>${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}</div></div>
     <div class="tnight"><span>⛺ <span class="s">Tonight</span> <b>${n.camp?esc(n.camp):"no campsite yet"}</b></span>
       <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
-    ${alertsFor(d).length?`<button type="button" class="talert" data-day="${d}">⚠️ ${alertsFor(d).length} road alert${alertsFor(d).length>1?"s":""} near you</button>`:""}
+    ${shownAlerts(d).length?`<button type="button" class="talert" data-day="${d}">⚠️ ${shownAlerts(d).length} road alert${shownAlerts(d).length>1?"s":""} near you</button>`:""}
     ${here&&(tot||pd)?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""}
   </div>`}
 /* little decorations on special days */
@@ -841,7 +855,7 @@ function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
   const fx=n.flex&&d>t;
   const w=wxFor(d);
-  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}${alertsFor(d).length?" ⚠️":""}</i>`:alertsFor(d).length?`<i class="wx">⚠️</i>`:""}</span>
+  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}${shownAlerts(d).length?" ⚠️":""}</i>`:shownAlerts(d).length?`<i class="wx">⚠️</i>`:""}</span>
     <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night${fx?" · drag to another stop":""}</span>`:""}</span>
     ${fx?`<span class="grip" aria-hidden="true">⠿</span>`:`<span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span>`}</button>`}
 /* how the planned nights compare with the ideal range set on the stop (imin–imax) */
@@ -1432,6 +1446,7 @@ document.addEventListener("click",e=>{
   else if(ds.close==="map")closeMap();
   else if("newplan" in ds)openNewPlan(ds.newplan||state.day);
   else if(ds.memedit)openMemNote(ds.memedit);
+  else if(ds.hidealert){const h=hiddenAlerts();h[ds.hidealert]=1;try{localStorage.setItem(HIDK,JSON.stringify(h))}catch{}render();toast("Alert hidden")}
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}

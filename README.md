@@ -233,7 +233,7 @@ old file.
 
 ---
 
-# South Island Loop — trip planner (`/trip`)
+# Aotearoa Loop — trip planner (`/trip`)
 
 Two tabs: **Days** (today's card, then every day grouped by stop) and **Places** (sights, hikes and
 campsites). The map sits behind the map button; the coloured dot shows sync status.
@@ -243,7 +243,7 @@ Works offline and syncs between both phones. Served at **https://draumbear.githu
 |---|---|
 | `trip/index.html` | The whole app. Works offline; syncs through the same Supabase project as Kea. |
 | `trip/plan.json` | Starting plan, used the first time a phone opens the app with nothing shared yet. |
-| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v41`…) when you change `index.html`. |
+| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v42`…) when you change `index.html`. |
 | `trip/manifest.json`, `trip/icon-*.png` | Home-screen install. |
 
 **Install:** open the URL in Chrome → ⋮ → **Add to Home screen / Install app**.

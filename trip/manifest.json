@@ -1,7 +1,7 @@
 {
-  "name": "South Island Loop",
+  "name": "Aotearoa Loop",
   "short_name": "Loop",
-  "description": "Our South Island campervan route, campsites and day plans",
+  "description": "Our New Zealand campervan trip: route, campsites, day plans and the way home",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

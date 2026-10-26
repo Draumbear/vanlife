@@ -655,11 +655,21 @@ const P=(lat,lng)=>[10+(lng-LNG0)*kx*scale,10+(LAT0-lat)*scale];
 /* road distance between consecutive stops: real driving km from OSRM once fetched, a rough estimate until then */
 const RK="sil-roads";let roads={};try{roads=JSON.parse(localStorage.getItem(RK))||{}}catch{}
 const legKey=(a,b)=>`${(+a.lat).toFixed(3)},${(+a.lng).toFixed(3)};${(+b.lat).toFixed(3)},${(+b.lng).toFixed(3)}`;
-function legs(){const st=sortStops();return st.map((s,i)=>!i||!hasLL(s)||!hasLL(st[i-1])?0:roads[legKey(st[i-1],s)]??Math.round(hav(st[i-1],s)*ROAD))}
-function legReal(i){const st=sortStops();return i>0&&hasLL(st[i])&&hasLL(st[i-1])&&legKey(st[i-1],st[i]) in roads}
+/* where we sleep each night, in order: the campsite when we know where it is, else the stop.
+   The route and the km follow these, so side hops (Elaine Bay → French Pass) count too. */
+function nightPts(){const r=tripRange();if(!r)return [];const out=[];let d=r.first,g=0;
+  while(d<r.last&&g++<400){const n=nightInfo(d),c=n.camp?state.camps.find(x=>sameCamp(x.name,n.camp)&&hasLL(x)):null,p=c||(hasLL(n.stop||{})?n.stop:null);
+    if(p){const q={d,lat:+p.lat,lng:+p.lng,sid:n.stop?.id};const l=out[out.length-1];if(!l||l.lat!==q.lat||l.lng!==q.lng)out.push(q)}d=addDays(d,1)}
+  // the last stop (no night there) closes the route
+  const st=sortStops().filter(hasLL),z=st[st.length-1];if(z&&!out.some(q=>q.sid===z.id))out.push({d:z.start,lat:+z.lat,lng:+z.lng,sid:z.id});
+  return out}
+const hopKm=(a,b)=>roads[legKey(a,b)]??Math.round(hav(a,b)*ROAD);
+function legs(){const st=sortStops(),pts=nightPts(),idx={};st.forEach((s,i)=>idx[s.id]=i);const out=st.map(()=>0);
+  pts.forEach((q,j)=>{if(j&&q.sid in idx)out[idx[q.sid]]+=hopKm(pts[j-1],q)});return out}
+function legReal(i){const st=sortStops(),pts=nightPts();return pts.every((q,j)=>!j||q.sid!==st[i]?.id||legKey(pts[j-1],q) in roads)}
 let roadBusy=false;
 async function pullRoads(){if(roadBusy||!navigator.onLine)return;roadBusy=true;let changed=false;
-  try{const st=sortStops().filter(hasLL);
+  try{const st=nightPts();
     for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i],k=legKey(a,b);if(k in roads)continue;
       try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`);
         if(!r.ok)break;const j=await r.json();if(j.routes&&j.routes[0]){roads[k]=Math.round(j.routes[0].distance/1000);changed=true}}catch{break}
@@ -669,7 +679,7 @@ async function pullRoads(){if(roadBusy||!navigator.onLine)return;roadBusy=true;l
 function mapSvg(){
   const t=today(),stops=sortStops().filter(hasLL),cur=currentStop();
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of your route"><rect width="${W}" height="${H}" fill="var(--water)"/><polygon points="${COAST.map(c=>P(...c).map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="var(--land)" stroke="var(--line)" stroke-width="1.2" stroke-linejoin="round"/>`;
-  if(stops.length>1){const past=[],fut=[];stops.forEach(st=>(isPastStop(st,t)?past:fut).push(P(st.lat,st.lng)));
+  if(stops.length>1){const past=[],fut=[];nightPts().forEach(q=>(q.d<t?past:fut).push(P(q.lat,q.lng)));
     if(past.length&&fut.length)fut.unshift(past[past.length-1]);
     if(past.length>1)s+=`<polyline points="${past.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round"/>`;
     if(fut.length>1)s+=`<polyline points="${fut.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--tussock)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`}
@@ -702,7 +712,9 @@ function buildMap(L){const el=$("#lmap");el.innerHTML="";
   const zc=()=>el.classList.toggle("named",lmap.getZoom()>=11);lmap.on("zoomend",zc);zc();
   // the route between stops, and the stops themselves
   const st=sortStops().filter(hasLL),t=today(),cur=currentStop();
-  L.polyline(st.map(s=>[s.lat,s.lng]),{color:"#2f6b4f",weight:3,opacity:.55,dashArray:"6 8"}).addTo(lmap);
+  {const pts=nightPts(),pa=pts.filter(q=>q.d<t),fu=pts.filter(q=>q.d>=t);if(pa.length&&fu.length)fu.unshift(pa[pa.length-1]);
+    if(pa.length>1)L.polyline(pa.map(q=>[q.lat,q.lng]),{color:"#7b8a80",weight:3,opacity:.7}).addTo(lmap);
+    if(fu.length>1)L.polyline(fu.map(q=>[q.lat,q.lng]),{color:"#2f6b4f",weight:3,opacity:.55,dashArray:"6 8"}).addTo(lmap)}
   st.forEach((s,i)=>L.marker([s.lat,s.lng],{icon:L.divIcon({className:"",html:`<div class="mstop ${s===cur?"cur":""} ${isPastStop(s,t)?"past":""}">${i+1}</div>`,iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:-500})
     .bindPopup(`<b>${esc(s.name)}</b><br><span class="muted">${s.start?`${wd(s.start)} ${fmt(s.start)}`:""}${s.end?` → ${wd(s.end)} ${fmt(s.end)}`:""}</span>`).addTo(lmap));
   lyr=L.layerGroup().addTo(lmap);drawMarkers();

@@ -53,7 +53,7 @@ header .wrap{padding-block:10px 0}
 .top{display:flex;align-items:center;gap:6px}
 .ttl{flex:1;min-width:0}
 h1{font:800 clamp(1rem,4.4vw,1.2rem)/1.1 var(--display);letter-spacing:-.01em;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dayline{font:500 .74rem var(--mono);color:var(--muted)}
+.dayline{font:500 .74rem var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;padding:0}
 .dot{width:26px;height:40px;border:0;background:none;display:grid;place-items:center;cursor:pointer;padding:0;flex:none}
 .dot i{width:11px;height:11px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 4px var(--line)}
@@ -451,7 +451,20 @@ const COAST=[[-40.5,172.65],[-40.68,172.7],[-40.8,173.0],[-41.05,173.05],[-41.27
 const LAT0=-40.35,LAT1=-46.85,LNG0=166.3,LNG1=174.6,W=400,H=470,kx=Math.cos(43.6*Math.PI/180);
 const scale=Math.min((W-20)/((LNG1-LNG0)*kx),(H-20)/(LAT0-LAT1));
 const P=(lat,lng)=>[10+(lng-LNG0)*kx*scale,10+(LAT0-lat)*scale];
-function legs(){const st=sortStops();return st.map((s,i)=>!i||!hasLL(s)||!hasLL(st[i-1])?0:Math.round(hav(st[i-1],s)*ROAD))}
+/* road distance between consecutive stops: real driving km from OSRM once fetched, a rough estimate until then */
+const RK="sil-roads";let roads={};try{roads=JSON.parse(localStorage.getItem(RK))||{}}catch{}
+const legKey=(a,b)=>`${(+a.lat).toFixed(3)},${(+a.lng).toFixed(3)};${(+b.lat).toFixed(3)},${(+b.lng).toFixed(3)}`;
+function legs(){const st=sortStops();return st.map((s,i)=>!i||!hasLL(s)||!hasLL(st[i-1])?0:roads[legKey(st[i-1],s)]??Math.round(hav(st[i-1],s)*ROAD))}
+function legReal(i){const st=sortStops();return i>0&&hasLL(st[i])&&hasLL(st[i-1])&&legKey(st[i-1],st[i]) in roads}
+let roadBusy=false;
+async function pullRoads(){if(roadBusy||!navigator.onLine)return;roadBusy=true;let changed=false;
+  try{const st=sortStops().filter(hasLL);
+    for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i],k=legKey(a,b);if(k in roads)continue;
+      try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`);
+        if(!r.ok)break;const j=await r.json();if(j.routes&&j.routes[0]){roads[k]=Math.round(j.routes[0].distance/1000);changed=true}}catch{break}
+      await new Promise(r=>setTimeout(r,250))}}
+  finally{roadBusy=false}
+  if(changed){try{localStorage.setItem(RK,JSON.stringify(roads))}catch{}render()}}
 function mapSvg(){
   const t=today(),stops=sortStops().filter(hasLL),cur=currentStop();
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of your route"><rect width="${W}" height="${H}" fill="var(--water)"/><polygon points="${COAST.map(c=>P(...c).map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="var(--land)" stroke="var(--line)" stroke-width="1.2" stroke-linejoin="round"/>`;
@@ -469,7 +482,7 @@ function openMap(){const t=today(),st=sortStops(),L=legs();let km=0,left=0;st.fo
   v.innerHTML=`<div class="vhead"><div class="wrap"><button class="ib" type="button" data-close="map" aria-label="Close">${icon("back")}</button><h2>Route</h2><span style="width:40px"></span></div></div>
    <div class="wrap vbody"><div class="mapwrap">${mapSvg()}</div>
    <div class="stats card"><div><span class="label">Stops</span><b class="mono">${st.length}</b></div><div><span class="label">Km to go</span><b class="mono">~${left.toLocaleString("en-NZ")}</b></div><div><span class="label">Fuel + RUC</span><b class="mono">~$${Math.round(left*KM_COST).toLocaleString("en-NZ")}</b></div></div>
-   <p class="muted" style="margin:0;font-size:.82rem">Straight-line distance × 1.3, at about 38c per km for diesel and RUC.</p></div>`}
+   <p class="muted" style="margin:0;font-size:.82rem">Road distance between stops (side trips not counted), at about 38c per km for diesel and RUC.</p></div>`}
 function closeMap(){$("#mapview").hidden=true;$("#mapview").innerHTML="";if(!state.day)document.body.style.overflow=""}
 
 /* ================= days ================= */
@@ -582,7 +595,7 @@ function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   if(d<t){const sp=spentOn(d),tot=sumA(sp);
     return `<button type="button" class="day past" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
       <span class="what"><span class="clamp2">${sp.length?spendCats(sp):plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`}</span></span>
-      ${sp.length?moneyTag(tot):`<span class="n"></span>`}</button>`}
+      ${sp.length||kea.set||Object.keys(kea.ex).length?moneyTag(tot):`<span class="n"></span>`}</button>`}
   const what=plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
   const fx=n.flex&&d>t;
@@ -597,7 +610,7 @@ function fitOf(s){const n=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):
 const fitTag=s=>{const f=fitOf(s);return f?`<span class="fit ${f.c}">${f.l}</span>`:""};
 function stopBlock(s,days,t,L,i,showLeg){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
-  return (showLeg&&L[i]?`<div class="leg">↓ ~${L[i]} km</div>`:"")+
+  return (showLeg&&L[i]?`<div class="leg">↓ ${legReal(i)?"":"~"}${L[i]} km</div>`:"")+
    `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    days.map(d=>dayRow(d,t)).join("")}
 /* ---- the road down the side of the day list, with our van driving along it as you scroll ---- */
@@ -662,14 +675,15 @@ function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="pa
 /* ---- trip so far, at the top of Past ---- */
 function recapHTML(){const t=today(),st=sortStops(),L=legs();let km=0;st.forEach((s,i)=>{if(s.start&&s.start<=t)km+=L[i]||0});
   const r=tripRange();if(!r)return "";const nights=[];for(let d=r.first;d<t;d=addDays(d,1))nights.push(d);
-  const by={};nights.forEach(d=>{const ty=nightInfo(d).type;by[ty]=(by[ty]||0)+1});
-  const free=(by.doc||0)+(by.free||0);
+  const stayCats=["camp","stay"],paidN=nights.filter(d=>spentOn(d).some(e=>stayCats.includes(e.c))),paidSum=sumA(nights.flatMap(d=>spentOn(d).filter(e=>stayCats.includes(e.c))));
+  const free=nights.length-paidN.length,allReal=st.every((s,i)=>!(s.start&&s.start<=t)||!L[i]||legReal(i));
   const reg={};let tot=0;nights.concat([t]).forEach(d=>{const s=stopFor(d),a=sumA(spentOn(d));if(a){tot+=a;const k=s?.region||"Other";reg[k]=(reg[k]||0)+a}});
   const regs=Object.entries(reg).sort((a,b)=>b[1]-a[1]),mx=regs[0]?.[1]||1;
   const doneN=state.spots.filter(x=>x.done).length,favs=state.spots.filter(x=>x.done&&x.fav).map(x=>x.name);
   return `<div class="card"><span class="label">Trip so far</span>
-    <div class="recap"><div><b>${nights.length}</b><span>nights</span></div><div><b>~${km.toLocaleString("en-NZ")}</b><span>km driven</span></div><div><b>${doneN}</b><span>things done</span></div>
-      <div><b>${free}</b><span>nights free or DOC</span></div><div><b>${by.paid||0}${by.booked?`+${by.booked}`:""}</b><span>paid nights</span></div><div><b>${tot?nzd(tot/Math.max(1,nights.length+1)):"–"}</b><span>a day</span></div></div>
+    <div class="recap"><div><b>${nights.length}</b><span>nights</span></div><div><b>${allReal?"":"~"}${km.toLocaleString("en-NZ")}</b><span>km stop to stop</span></div><div><b>${doneN}</b><span>things done</span></div>
+      <div><b>${free}</b><span>free nights</span></div><div><b>${paidN.length}</b><span>paid nights${paidSum?` · ${nzd(paidSum)}`:""}</span></div><div><b>${tot?nzd(tot/Math.max(1,nights.length+1)):"–"}</b><span>a day</span></div></div>
+    <div class="muted" style="font-size:.75rem">km: road distance between your stops, without side trips or day drives. Paid nights: nights with a Campsites or Stays expense in Kea.</div>
     ${regs.length?`<span class="label" style="margin-top:4px">Spent by region · ${nzd(tot)}</span><div class="bars">${regs.map(([k,v])=>`<div class="r"><span class="clamp1">${esc(k)}</span><i style="width:${Math.max(4,v/mx*100)}%"></i><span class="mono">${nzd(v)}</span></div>`).join("")}</div>`:""}
     ${favs.length?`<span class="label" style="margin-top:4px">Favourites</span><div style="font-size:.9rem">♥ ${favs.slice(0,8).map(esc).join(" · ")}</div>`:""}</div>`}
 function renderDays(){
@@ -1078,7 +1092,7 @@ refresh();setChip();
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
-  pullKea();pullWx();
+  pullKea();pullWx();pullRoads();
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>

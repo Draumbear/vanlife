@@ -121,6 +121,23 @@ textarea{min-height:72px;resize:vertical}
 .leg{font:500 .72rem var(--mono);color:var(--muted);margin-top:16px}
 .day{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-top:6px;cursor:pointer}
 .day .dt{font:500 .8rem/1.2 var(--mono)}
+#splash{position:fixed;inset:0;z-index:200;background:var(--fern);display:grid;place-items:center;align-content:center;gap:14px;animation:spOut .45s ease 1.75s forwards}
+@keyframes spOut{to{opacity:0;visibility:hidden}}
+.sp-scene{position:relative;width:250px;height:160px;overflow:visible}
+.sp-van{position:absolute;left:24px;bottom:16px;width:206px;animation:spBob .28s ease-in-out infinite alternate}
+@keyframes spBob{to{transform:translateY(-2.5px)}}
+.sp-wheel{transform-box:fill-box;transform-origin:center;animation:spSpin .45s linear infinite}
+@keyframes spSpin{to{transform:rotate(-360deg)}}
+.sp-road{position:absolute;left:-60px;right:-60px;bottom:12px;height:4px;border-radius:2px;background:repeating-linear-gradient(90deg,var(--on-fern) 0 26px,transparent 26px 52px);opacity:.55;animation:spRoad .35s linear infinite}
+@keyframes spRoad{to{background-position:-52px 0}}
+.sp-puffs i{position:absolute;left:22px;bottom:42px;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb,var(--on-fern) 75%,transparent);opacity:0;animation:spPuff .9s ease-out infinite}
+.sp-puffs i:nth-child(2){animation-delay:.3s}.sp-puffs i:nth-child(3){animation-delay:.6s}
+@keyframes spPuff{0%{opacity:.85;transform:translate(0,0) scale(.35)}100%{opacity:0;transform:translate(-48px,-26px) scale(1.7)}}
+.sp-light{animation:spBlink 1s steps(2) infinite}
+@keyframes spBlink{50%{opacity:.6}}
+.sp-title{color:var(--on-fern);font:800 1.45rem var(--display);opacity:0;transform:translateY(6px);animation:spUp .5s ease .35s forwards}
+@keyframes spUp{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#splash{animation-delay:.6s}.sp-van,.sp-wheel,.sp-road,.sp-puffs i,.sp-light{animation:none}.sp-title{animation-delay:0s}}
 #bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--contour);opacity:.7;
   -webkit-mask:url(contour.svg) 0 0/520px 520px repeat;mask:url(contour.svg) 0 0/520px 520px repeat}
 #daylist{position:relative;padding-left:30px}
@@ -204,6 +221,8 @@ textarea{min-height:72px;resize:vertical}
 .srcseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:3px;border-radius:12px;margin:2px 0 8px}
 #q-kea:empty{display:none}
 .bookopts{display:grid;gap:10px;padding-left:14px;border-left:2px solid var(--line)}
+.chorechips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chorechips .pill{font-size:.88rem;padding:8px 12px;color:var(--ink)}
 .costrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}
 .pick.sm{margin:0;gap:4px;flex-wrap:nowrap}.pick.sm span{padding:9px 14px;font-size:.85rem}
 .pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
@@ -284,6 +303,16 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="sp-scene"><div class="sp-road"></div><div class="sp-puffs"><i></i><i></i><i></i></div><svg class="sp-van" viewBox="80 140 370 270" aria-hidden="true">
+ <g stroke="#1b1f1c" stroke-width="7" stroke-linecap="round"><line x1="116" y1="176" x2="382" y2="176"/><line x1="130" y1="176" x2="130" y2="196"/><line x1="196" y1="176" x2="196" y2="196"/><line x1="262" y1="176" x2="262" y2="196"/><line x1="328" y1="176" x2="328" y2="196"/><line x1="372" y1="176" x2="372" y2="196"/></g>
+ <path d="M104 352 L104 212 Q104 196 120 196 L372 196 Q386 196 390 208 L410 272 Q420 278 420 294 L420 346 Q420 358 408 358 L116 358 Q104 358 104 352Z" fill="#d6a63c"/>
+ <path d="M104 300 L420 300 L420 314 L104 314Z" fill="#b8861f"/>
+ <path d="M336 212 L376 212 L396 270 L336 270Z" fill="#1f3a2d"/><rect x="124" y="212" width="58" height="52" rx="6" fill="#1f3a2d"/><rect x="196" y="212" width="58" height="52" rx="6" fill="#1f3a2d"/>
+ <line x1="270" y1="206" x2="270" y2="350" stroke="#a57818" stroke-width="4"/><line x1="324" y1="206" x2="324" y2="350" stroke="#a57818" stroke-width="4"/>
+ <rect x="404" y="282" width="16" height="12" rx="3" fill="#fff6d8" class="sp-light"/><rect x="396" y="336" width="30" height="16" rx="5" fill="#2a2e2b"/><rect x="98" y="336" width="20" height="16" rx="5" fill="#2a2e2b"/>
+ <g class="sp-wheel"><circle cx="164" cy="358" r="34" fill="#1b1f1c"/><circle cx="164" cy="358" r="14" fill="#c9cfca"/><path d="M164 330v56M136 358h56" stroke="#c9cfca" stroke-width="5"/></g>
+ <g class="sp-wheel"><circle cx="360" cy="358" r="34" fill="#1b1f1c"/><circle cx="360" cy="358" r="14" fill="#c9cfca"/><path d="M360 330v56M332 358h56" stroke="#c9cfca" stroke-width="5"/></g>
+</svg></div><div class="sp-title">South Island Loop</div></div>
 <div id="bg" aria-hidden="true"></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
@@ -378,7 +407,7 @@ const shortStop=n=>(n||"").split(/\s*(?:&|–|\/|,)\s*/)[0].trim();
 function ctxName(x){let s=x.day?stopFor(x.day):null;
   if(!s){const p=ptOf(x);if(p){let bd=1e9;sortStops().forEach(st=>{if(hasLL(st)){const d=hav(st,p);if(d<bd){bd=d;s=st}}});if(bd>40)s=null}}
   return s?shortStop(s.name):(x.region||"")}
-const kindLabel=x=>x.kind&&KINDS[x.kind]?KINDS[x.kind]:+x.price>0?kcat(x.cat||"activity")[1]:x.kind==="plan"?"Plan":"Sight";
+const kindLabel=x=>x.kind==="chore"?"Van chore":x.kind&&KINDS[x.kind]?KINDS[x.kind]:+x.price>0?kcat(x.cat||"activity")[1]:x.kind==="plan"?"Plan":"Sight";
 function dest(x,kind){
   if(hasLL(x))return {ll:x.lat+","+x.lng};
   const m=LLRE.exec(x.loc||"");if(m)return {ll:m[1]+","+m[2]};
@@ -629,7 +658,7 @@ function renderToday(){
       <span class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</span></button>
     <div class="tplan">${shown.map(x=>`<div class="trow ${x.done?"done":""}">
         <button class="chk tw ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}</button>
+        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}</button>
         <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
       ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
       <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button>${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}</div></div>
@@ -717,7 +746,7 @@ function todoCard(){const open=state.todos.filter(x=>!x.done).sort((a,b)=>(a.at|
     <form class="addrow" id="addtodo"><input id="f-todo" placeholder="${open.length?"Add":"Water, dump station, laundry…"}" autocomplete="off" aria-label="Add a to-do"><button class="btn" type="submit">Add</button></form></div>`}
 function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="past"){el.innerHTML="";return}
   const keep=$("#f-todo")?.value||"",focus=document.activeElement?.id==="f-todo";
-  el.innerHTML=bookCard()+todoCard();if(keep)$("#f-todo").value=keep;if(focus)$("#f-todo").focus()}
+  el.innerHTML=bookCard()}
 /* ---- trip so far, at the top of Past ---- */
 function recapHTML(){const t=today(),st=sortStops(),L=legs();let km=0;st.forEach((s,i)=>{if(s.start&&s.start<=t)km+=L[i]||0});
   const r=tripRange();if(!r)return "";const nights=[];for(let d=r.first;d<t;d=addDays(d,1))nights.push(d);
@@ -752,7 +781,7 @@ function renderDays(){
   el.innerHTML=html;requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */
-function allPlaces(){return [...state.spots.map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
+function allPlaces(){return [...state.spots.filter(x=>x.kind!=="chore").map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
 function renderPlaces(){
   if(state.region===null&&state.stops.length)state.region=currentStop()?.region||"all";
   const reg=state.region||"all";
@@ -801,7 +830,7 @@ function renderDay(){
     <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></div>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       </div>
@@ -821,7 +850,7 @@ function renderIdeas(){
   const st=stopFor(d),region=st?.region,q=state.ideaQ.toLowerCase(),ref=st&&hasLL(st)?st:null;
   const pt=ptOf,wet=isWet(wxFor(d));
   const dist=x=>{const p=ref&&pt(x);return p?Math.round(hav(ref,p)*ROAD):null};
-  const ideas=state.spots.filter(x=>!x.day&&!x.done&&visSug(x)).map(x=>({...x,_km:dist(x)}))
+  const ideas=state.spots.filter(x=>!x.day&&!x.done&&x.kind!=="chore"&&visSug(x)).map(x=>({...x,_km:dist(x)}))
     .filter(x=>q?(x.name+" "+(x.notes||"")+" "+(KINDS[x.kind]||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
     .sort((a,b)=>(wet?(rainOK(b)?1:0)-(rainOK(a)?1:0):0)||(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   if(!state.ideasOpen){$("#ideas-h").textContent=`${ideas.length} nearby${wet?" · ☔":""}`;return}
@@ -855,10 +884,12 @@ function campFields(it){return `<label>Name<input name="name" value="${esc(it.na
 
 const sgBox=it=>it.suggested?`<div class="sgbox"><span><b>✦ Claude's suggestion</b></span><div class="row2"><button type="button" class="btn sm" id="sg-keep">Keep it</button><button type="button" class="btn sm" id="sg-drop">Not for us</button></div></div>`:"";
 function sgWire(c,it){if(!it.suggested)return;$("#sg-keep").onclick=()=>{patch(c,it.id,{suggested:false});closeSheet();toast("Kept")};$("#sg-drop").onclick=()=>{del(c,it.id);closeSheet();toast("Removed")}}
+const CHORES={water:["🚰","Fill water","utility"],dump:["🚽","Dump station","utility"],laundry:["🧺","Laundry","utility"],shower:["🚿","Showers","utility"],groceries:["🛒","Groceries","grocery"],fuel:["⛽","Fuel","fuel"]};
+function addChore(d,k){const [ic,name,cat]=CHORES[k];add("spots",{name,kind:"chore",chore:k,cat,region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});toast(`${ic} ${name} added`)}
 function openNewPlan(d){
-  sheet(head(`Add to ${wd(d)} ${fmt(d)}`)+`<label>What<input name="name" placeholder="Swimming pool, dump station…" autocomplete="off" enterkeyhint="done"></label>
-    <div class="end"><div></div><div><button class="btn primary" type="submit">Add</button></div></div>`,"newplan",d);
-  setTimeout(()=>$("#form [name=name]")?.focus(),60)}
+  sheet(head(`Add to ${wd(d)} ${fmt(d)}`)+`<div><span class="label">Van chores</span><div class="chorechips">${Object.entries(CHORES).map(([k,[i,l]])=>`<button type="button" class="pill" data-chore="${k}">${i} ${l}</button>`).join("")}</div></div>
+    <label>Or something else<input name="name" placeholder="Swimming pool, hike…" autocomplete="off" enterkeyhint="done"></label>
+    <div class="end"><div></div><div><button class="btn primary" type="submit">Add</button></div></div>`,"newplan",d);}
 function openSpot(it,fresh){
   if(!it){const r=stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
     sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
@@ -1106,10 +1137,11 @@ document.addEventListener("click",e=>{
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
   else if("newplan" in ds)openNewPlan(ds.newplan||state.day);
+  else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}
   else if(ds.day)openDay(ds.day);
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
-    if(x?.kind==="plan"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}
+    if(x?.kind==="plan"||x?.kind==="chore"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}
     patch("spots",ds.unplan,{day:null,order:null,done:false});toast(`Removed ${x?.name||""} from this day${had?" and from Kea":""}`)}
   else if(ds.plan){const d=state.day;patch("spots",ds.plan,{day:d,order:planFor(d).length});toast("Added")}
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:t==="stop"?openStop:openCamp)({id,...it})}
@@ -1149,6 +1181,7 @@ setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 /* ================= start ================= */
 try{if(localStorage.getItem("sil-tab")==="places")document.querySelector('[data-tab="places"]').click()}catch{}
 refresh();setChip();
+setTimeout(()=>$("#splash")?.remove(),2400);
 (async()=>{
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}

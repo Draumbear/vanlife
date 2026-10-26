@@ -56,6 +56,16 @@ header h1{margin:0;font-family:var(--serif);font-size:20px;font-weight:600;
 .chip.off{color:var(--warn);border-color:#574a1f;background:#2c2611}
 .chip.err{color:var(--bad);border-color:#56241f;background:#2c1613}
 main{padding:14px 16px 20px;max-width:620px;margin:0 auto}
+#ksplash{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;align-content:center;gap:10px;overflow:hidden;animation:ksOut .45s ease 1.75s forwards}
+@keyframes ksOut{to{opacity:0;visibility:hidden}}
+.ks-sky{position:relative;width:100vw;height:140px}
+.kb{position:absolute;left:0;top:20px;width:150px;animation:ksFly 1.9s cubic-bezier(.3,.1,.4,1) forwards}
+@keyframes ksFly{0%{transform:translate(-140px,60px) rotate(-14deg)}35%{transform:translate(18vw,-6px) rotate(-6deg)}60%{transform:translate(calc(50vw - 75px),10px) rotate(0)}80%{transform:translate(calc(50vw - 75px),4px) rotate(0)}100%{transform:translate(calc(50vw - 75px),8px) rotate(0)}}
+.kb-wing{transform-box:fill-box;transform-origin:bottom center;animation:ksFlap .2s ease-in-out 7 alternate}
+@keyframes ksFlap{from{transform:scaleY(1)}to{transform:scaleY(-.75)}}
+.ks-title{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:.5px;color:var(--accent);opacity:0;animation:ksUp .5s ease .9s forwards}
+@keyframes ksUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#ksplash{animation-delay:.5s}.kb{animation:none;transform:translateX(calc(50vw - 75px))}.kb-wing{animation:none}.ks-title{animation-delay:0s}}
 header .loop{flex:none;display:block;width:30px;height:30px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
 header .loop img{width:100%;height:100%;display:block}
 .logit{flex:none;font-size:12px;font-weight:700;padding:7px 10px;border-radius:6px;border:1px solid var(--accent);color:var(--accent)}
@@ -254,6 +264,14 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 </style>
 </head>
 <body>
+<div id="ksplash" aria-hidden="true"><div class="ks-sky"><svg class="kb" viewBox="0 0 120 80" aria-hidden="true">
+  <path d="M8 46 L32 39 L32 51 Z" fill="#55692d"/>
+  <ellipse cx="48" cy="45" rx="23" ry="14" fill="#6f8a3c"/>
+  <circle cx="73" cy="37" r="11.5" fill="#7d9a45"/>
+  <path d="M81 32 C93 30 99 38 95 47 C93 51 89 50 89 46 C89 42 86 40 81 41 Z" fill="#3a3f3b"/>
+  <circle cx="76" cy="35" r="2.2" fill="#111"/>
+  <g class="kb-wing"><path d="M40 42 C34 22 46 6 70 0 C62 16 60 30 58 42 Z" fill="#5f7a31"/><path d="M44 42 C42 28 50 16 62 9 C58 22 57 32 55 42 Z" fill="#e8833a"/></g>
+</svg></div><div class="ks-title">Kea</div></div>
 
 <header>
   <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
@@ -1907,6 +1925,7 @@ function reprobeColumns(){
 }
 
 /* ---- boot ---- */
+setTimeout(() => { const k = document.getElementById('ksplash'); if (k) k.remove(); }, 2400);
 keepStorage();
 reprobeColumns();
 show('home');

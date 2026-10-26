@@ -2,3 +2,8 @@
 *.local
 Thumbs.db
 .DS_Store
+
+# test screenshots
+*.png
+!icon-*.png
+!trip/icon-*.png

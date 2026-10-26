@@ -70,6 +70,12 @@ main{padding:14px 16px 20px;max-width:620px;margin:0 auto}
 @media (prefers-reduced-motion:reduce){#ksplash{animation-delay:.5s}.kb{animation:none;transform:translateX(calc(50vw - 75px))}.kb-wing{animation:none}.ks-title{animation-delay:0s}}
 header .loop{flex:none;display:block;width:30px;height:30px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
 header .loop img{width:100%;height:100%;display:block}
+.feed{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid #ffffff10;font-size:13.5px}
+.feed:first-child{border-top:0}.feed .w{flex:1;min-width:0}.feed .when{flex:none;font-size:11.5px;color:var(--dim)}
+.feed .who{font-weight:700}.feed.new .who::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:5px;vertical-align:middle}
+.feed.del .what{text-decoration:line-through;text-decoration-color:#ffffff55}
+.feedmore summary{list-style:none;cursor:pointer;font-size:12px;color:var(--dim);padding-top:6px}.feedmore summary::-webkit-details-marker{display:none}
+.tag.loop{color:var(--dim);background:#ffffff0d;font-weight:600}
 .logit{flex:none;font-size:12px;font-weight:700;padding:7px 10px;border-radius:6px;border:1px solid var(--accent);color:var(--accent)}
 
 nav{
@@ -332,6 +338,11 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     <div class="card hide" id="loop-card">
       <div class="row" style="display:flex;justify-content:space-between;align-items:baseline"><h2>Planned activities</h2><a href="trip/" style="font-size:12px;color:var(--dim)">in the trip planner ›</a></div>
       <div id="loop-list"></div>
+    </div>
+
+    <div class="card hide" id="feed-card">
+      <div class="row" style="display:flex;justify-content:space-between;align-items:baseline"><h2>Lately in Loop</h2><a href="trip/" style="font-size:12px;color:var(--dim)">open ›</a></div>
+      <div id="feed-list"></div>
     </div>
 
     <div class="card hide" id="each-card">
@@ -855,7 +866,7 @@ function renderLoop(){
   card.classList.remove('hide');
   document.getElementById('loop-list').innerHTML = items.map(x =>
     '<div class="item"><div class="m"><div class="t">' + esc(x.name) + '</div>' +
-    '<div class="s">' + fmtDay(x.day) + (x.day <= t ? ' · paid yet?' : ' · set aside') + '</div></div>' +
+    '<div class="s">' + fmtDay(x.day) + (x.day <= t ? ' · paid yet?' : ' · set aside') + (x.data.by ? ' · planned by ' + esc(byName(x.data.by)) : '') + '</div></div>' +
     '<div class="v"><b>' + nz(x.price) + '</b></div>' +
     (x.day <= t ? '<button class="logit" data-logloop="' + esc(x.id) + '">Log it</button>' : '') + '</div>').join('') +
     '<div class="sub" style="margin-top:10px"><span>Held back from your allowance</span><b>' + nz(loopOwed()) + '</b></div>';
@@ -867,12 +878,12 @@ async function logLoop(id){
     payer: me, account: S.settings.lastAccount || '', personal: '', entered_by: me, note: x.name,
     deleted: false, updated_at: new Date().toISOString(), dirty: true };
   S.expenses[rec.id] = rec;
-  const data = Object.assign({}, x.data, { paid: true, keaId: rec.id });
+  const data = Object.assign({}, x.data, { paid: true, keaId: rec.id, by: me });
   // tick it off in the trip planner on this phone…
   try {
     const l = JSON.parse(localStorage.getItem(LOOP_LS) || 'null');
     if (l && l.docs && l.docs.spots && l.docs.spots[id]){
-      l.docs.spots[id] = Object.assign({}, l.docs.spots[id], { paid: true, keaId: rec.id });
+      l.docs.spots[id] = Object.assign({}, l.docs.spots[id], { paid: true, keaId: rec.id, by: me });
       l.pending = l.pending || {}; l.pending['spots/' + id] = 1;
       localStorage.setItem(LOOP_LS, JSON.stringify(l));
     }
@@ -896,6 +907,73 @@ async function pullLoop(){
     rows.forEach(x => { c[x.id] = x.data; });
     localStorage.setItem(LOOP_CACHE, JSON.stringify(c));
   } catch(e){}
+  await pullFeed();
+}
+/* ---- Who changed what in Loop ----
+   Every Loop change carries data.by (p1/p2); removals keep a small tombstone
+   {name, day, by}. Kea pulls the last two weeks and lists them on Home. */
+const FEED_LS = 'vanbudget.loopfeed.v1', FEED_SEEN = 'vanbudget.loopfeed.seen';
+const byName = p => p === viewer() ? 'You' : who(p);
+async function pullFeed(){
+  try {
+    const since = new Date(Date.now() - 14*864e5).toISOString();
+    const r = await fetch(sbURL('trip_docs?select=coll,id,data,deleted,updated_at&coll=in.(spots,stops,nights,journal)&data->>by=not.is.null&updated_at=gte.' + encodeURIComponent(since) + '&order=updated_at.desc&limit=60'), { headers: sbHeaders() });
+    if (!r.ok) return;
+    const rows = (await r.json()).map(x => ({ c: x.coll, id: x.id, d: x.data || {}, del: !!x.deleted, t: x.updated_at }));
+    const old = JSON.parse(localStorage.getItem(FEED_LS) || '[]');
+    localStorage.setItem(FEED_LS, JSON.stringify(rows));
+    // a quick heads-up for what the other one did since this phone last looked
+    const seen = localStorage.getItem(FEED_SEEN), me = viewer();
+    if (!seen){ localStorage.setItem(FEED_SEEN, rows[0] ? rows[0].t : new Date().toISOString()); return; }
+    const fresh = rows.filter(x => x.t > seen && x.d.by !== me);
+    if (fresh.length && JSON.stringify(old.slice(0, 3)) !== JSON.stringify(rows.slice(0, 3)))
+      toast(who(fresh[0].d.by) + ' ' + feedText(fresh[0]).replace(/<[^>]+>/g, '') + (fresh.length > 1 ? ' (+' + (fresh.length - 1) + ' more in Loop)' : ''));
+  } catch(e){}
+}
+function feedText(x){
+  const d = x.d, nm = '<span class="what">' + esc(d.name || (x.c === 'journal' ? 'a memory' : 'a plan')) + '</span>';
+  const on = d.day ? ' for ' + fmtDay(d.day) : '';
+  if (x.c === 'spots'){
+    if (x.del) return 'removed ' + nm;
+    if (d.paid && d.keaId) return 'paid ' + nm + (d.price ? ' (' + nz(+d.price) + ')' : '');
+    if (d.done) return 'ticked off ' + nm;
+    if (d.day) return 'planned ' + nm + on + (+d.price > 0 ? ' · ' + nz(+d.price) : '');
+    return 'saved ' + nm + ' as an idea';
+  }
+  if (x.c === 'stops') return (x.del ? 'removed ' : 'changed the stay at ') + nm;
+  if (x.c === 'nights') return x.del ? 'cleared a campsite' : 'set the campsite for ' + fmtDay(x.id);
+  if (x.c === 'journal') return x.del ? 'removed a memory' : 'wrote a memory for ' + fmtDay(d.date || x.id);
+  return 'changed the plan';
+}
+function ago(ts){
+  const m = Math.round((Date.now() - new Date(ts)) / 60000);
+  return m < 1 ? 'now' : m < 60 ? m + 'm' : m < 1440 ? Math.round(m/60) + 'h' : Math.round(m/1440) + 'd';
+}
+function renderFeed(){
+  const card = document.getElementById('feed-card');
+  let rows = []; try { rows = JSON.parse(localStorage.getItem(FEED_LS) || '[]'); } catch(e){}
+  if (!rows.length){ card.classList.add('hide'); return; }
+  card.classList.remove('hide');
+  const seen = localStorage.getItem(FEED_SEEN) || '', me = viewer();
+  const line = x => '<div class="feed' + (x.del ? ' del' : '') + (x.t > seen && x.d.by !== me ? ' new' : '') + '"><div class="w"><span class="who">' +
+    esc(byName(x.d.by)) + '</span> ' + feedText(x) + '</div><div class="when">' + ago(x.t) + '</div></div>';
+  document.getElementById('feed-list').innerHTML = rows.slice(0, 4).map(line).join('') +
+    (rows.length > 4 ? '<details class="feedmore"><summary>Show ' + (Math.min(rows.length, 20) - 4) + ' more</summary>' + rows.slice(4, 20).map(line).join('') + '</details>' : '');
+}
+// looking at Home counts as having seen it
+function markFeedSeen(){
+  let rows = []; try { rows = JSON.parse(localStorage.getItem(FEED_LS) || '[]'); } catch(e){}
+  if (rows[0]) setTimeout(() => localStorage.setItem(FEED_SEEN, rows[0].t), 4000);
+}
+// expenses that came from a Loop plan: keaId -> who planned it
+let _ll = null, _llT = 0;
+function loopLinks(){
+  if (_ll && Date.now() - _llT < 1500) return _ll;
+  const m = _ll = {}; _llT = Date.now();
+  const add = d => { if (d && d.keaId) m[d.keaId] = d.by || ''; };
+  try { Object.values(JSON.parse(localStorage.getItem(LOOP_CACHE) || '{}')).forEach(add); } catch(e){}
+  try { const l = JSON.parse(localStorage.getItem(LOOP_LS) || 'null'); if (l && l.docs) Object.values(l.docs.spots || {}).forEach(add); } catch(e){}
+  return m;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-logloop]');
@@ -999,7 +1077,7 @@ function renderHome(){
     pl.innerHTML = '<b>' + nz(s.planned) + '</b> of that is set aside for planned costs' + each() + '.';
   } else pl.classList.add('hide');
 
-  renderLoop();
+  renderLoop(); renderFeed(); markFeedSeen();
   renderEach(full);
   renderSplit();
   renderTrend();
@@ -1125,8 +1203,11 @@ function itemHTML(e, inDay){
   if (inDay !== true) bits.push(fmtShort(e.spent_on));
   bits.push(esc(who(e.payer)) + ' paid');
   if (e.account) bits.push(esc(e.account));
-  const tag = e.personal
-    ? '<span class="tag ' + (e.personal === 'p1' ? 'pa' : 'pb') + '">' + esc(who(e.personal)) + '</span>' : '';
+  const lp = loopLinks();
+  const tag = (e.personal
+    ? '<span class="tag ' + (e.personal === 'p1' ? 'pa' : 'pb') + '">' + esc(who(e.personal)) + '</span>' : '') +
+    (e.id in lp ? '<span class="tag loop">Loop</span>' : '');
+  if (e.id in lp && e.entered_by) bits.push('added by ' + esc(byName(e.entered_by)));
   return '<div class="item" data-id="' + e.id + '">' +
     '<div class="ic" style="background:' + c.c + '22">' + c.icon + '</div>' +
     '<div class="m"><div class="t">' + esc(e.note || c.name) + tag + '</div>' +

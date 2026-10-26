@@ -554,7 +554,7 @@ const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function strip(v){const o={...v};delete o.id;return o}
 function put(c,id,v){S.docs[c][id]={...strip(v),by:keaMe()};S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
 function patch(c,id,p){const o=S.docs[c][id];if(!o)return;put(c,id,{...o,...p})}
-function del(c,id){delete S.docs[c][id];S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
+function del(c,id){const o=S.docs[c][id];S.tomb=S.tomb||{};S.tomb[c+"/"+id]={name:o?.name||"",day:o?.day||"",by:keaMe()};delete S.docs[c][id];S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
 function add(c,v){const id=newId();put(c,id,v);return id}
 function replaceAll(docs){
   try{localStorage.setItem(PREV,JSON.stringify(S.docs))}catch{}
@@ -609,15 +609,15 @@ async function sync(manual){
     const keys=Object.keys(S.pending);
     for(let i=0;i<keys.length;i+=200){
       const chunk=keys.slice(i,i+200),sent={};
-      const body=chunk.map(k=>{const j=k.indexOf("/"),c=k.slice(0,j),id=k.slice(j+1),v=S.docs[c]?.[id];sent[k]=JSON.stringify(v??null);return {coll:c,id,data:v||{},deleted:!v}});
+      const body=chunk.map(k=>{const j=k.indexOf("/"),c=k.slice(0,j),id=k.slice(j+1),v=S.docs[c]?.[id];sent[k]=JSON.stringify(v??null);return {coll:c,id,data:v||S.tomb?.[k]||{by:keaMe()},deleted:!v}});
       await api("trip_docs?on_conflict=coll,id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(body)});
-      chunk.forEach(k=>{const j=k.indexOf("/");if(JSON.stringify(S.docs[k.slice(0,j)]?.[k.slice(j+1)]??null)===sent[k])delete S.pending[k]});
+      chunk.forEach(k=>{const j=k.indexOf("/");if(JSON.stringify(S.docs[k.slice(0,j)]?.[k.slice(j+1)]??null)===sent[k]){delete S.pending[k];if(S.tomb)delete S.tomb[k]}});
       persist();
     }
     const rows=await pullAll(S.lastPull);let changed=false;
     const me=keaMe(),theirs=[];
     rows.forEach(r=>{const k=r.coll+"/"+r.id;if(S.pending[k]||!S.docs[r.coll])return;
-      if(r.deleted){if(r.id in S.docs[r.coll]){const o=S.docs[r.coll][r.id];delete S.docs[r.coll][r.id];changed=true;if(o?.by&&o.by!==me)theirs.push({by:o.by,c:r.coll,d:o,del:true})}}
+      if(r.deleted){if(r.id in S.docs[r.coll]){const o=S.docs[r.coll][r.id],by=r.data?.by;delete S.docs[r.coll][r.id];changed=true;if(by&&by!==me)theirs.push({by,c:r.coll,d:o,del:true})}}
       else if(JSON.stringify(S.docs[r.coll][r.id])!==JSON.stringify(r.data)){const was=S.docs[r.coll][r.id];S.docs[r.coll][r.id]=r.data;changed=true;if(r.data.by&&r.data.by!==me)theirs.push({by:r.data.by,c:r.coll,d:r.data,was})}});
     const m=maxTs(rows);if(m)S.lastPull=m;persist();if(changed)refresh();
     if(theirs.length&&S.lastPull&&!manual)tellChanges(theirs);

@@ -114,7 +114,19 @@ textarea{min-height:72px;resize:vertical}
 .today .btn.ghost{background:transparent;color:var(--on-fern);border-color:color-mix(in srgb,var(--on-fern) 45%,transparent)}
 
 /* days list */
-.stop-h{display:flex;align-items:flex-end;gap:8px;margin:22px 0 4px}
+.stop-h{display:flex;align-items:flex-end;gap:8px;margin:22px 0 4px;position:relative}
+.stop-h .t{position:relative;z-index:1}
+.lm{position:absolute;right:4px;bottom:-30px;width:96px;height:72px;color:var(--muted);opacity:.85;z-index:0;pointer-events:none}
+.day{position:relative;z-index:1}
+.deco{position:absolute;pointer-events:none}
+.deco.hat{left:-6px;top:-17px;width:40px;height:32px;transform:rotate(-16deg)}
+.deco.cake{right:46px;top:-18px;width:34px;height:34px}
+.deco .flame{animation:flick .5s ease-in-out infinite alternate;transform-origin:center bottom;transform-box:fill-box}
+@keyframes flick{to{transform:scaleY(.8) translateY(1px)}}
+.deco.fw{right:24px;bottom:-34px;width:100px;height:44px;z-index:2}
+.deco.fw svg{position:absolute;width:38px;height:38px;animation:burst 1.4s ease-out infinite;opacity:0}
+@keyframes burst{0%{transform:scale(.2);opacity:0}25%{opacity:1}70%{transform:scale(1);opacity:.9}100%{transform:scale(1.15);opacity:0}}
+@media (prefers-reduced-motion:reduce){.deco.fw svg{animation:none;opacity:1}.deco .flame{animation:none}}
 .stop-h .t{flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;cursor:pointer}
 .stop-h b{display:block;font:800 1.1rem/1.2 var(--display)}
 .stop-h small{font-size:.82rem;color:var(--muted)}
@@ -145,8 +157,12 @@ textarea{min-height:72px;resize:vertical}
 .road .asph{stroke:var(--road);stroke-width:11;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .road .mid{stroke:var(--paper);stroke-width:1.6;fill:none;stroke-dasharray:6 9}
 .road .pin{fill:var(--fern);stroke:var(--paper);stroke-width:2.5}
-.fly-panel{position:relative;z-index:0;height:430px;margin:26px 0 0 -30px;border-radius:18px;overflow:hidden;background:linear-gradient(#cfe0e8,var(--sea-soft))}
-.fly-panel .fcap{top:auto;bottom:18px;left:16px}
+.fly-panel{position:relative;z-index:0;height:1400px;margin:26px 0 0 -30px;border-radius:18px;overflow:hidden;
+  background:radial-gradient(60px 22px at 22% 700px,#fff8 98%,#0000),radial-gradient(80px 26px at 76% 1010px,#fff8 98%,#0000),radial-gradient(70px 20px at 30% 1120px,#fff6 98%,#0000),linear-gradient(#cfe0e8 0,#9fc6dd 520px,#7fb2d4 1000px,#b9d6e6 1400px)}
+.fly-panel .fcap.ftop{left:auto;right:14px;top:28px;bottom:auto;text-align:right}
+.skylab{position:absolute;display:grid;gap:1px;opacity:.55;transition:opacity .3s,transform .3s;transform:translateY(4px)}
+.skylab.r{text-align:right}
+.skylab.on{opacity:1;transform:none}.skylab b{font:800 1rem var(--display);color:#1d2621}.skylab span{font-size:.8rem;color:#33424a}
 #people{position:absolute;left:0;top:0;z-index:3;display:flex;gap:3px;transition:opacity .2s;pointer-events:none}
 #people i{width:9px;height:9px;border-radius:50%;background:#e8833a;border:2px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
 #people i+i{background:#2b6f86}
@@ -702,16 +718,23 @@ function renderToday(){
       <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
     ${here&&(tot||pd)?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""}
   </div>`}
+/* little decorations on special days */
+const HAT=`<svg viewBox="0 0 44 34" class="deco hat"><path d="M4 26C10 10 24 2 34 6c4 2 4 10 2 14L30 14C24 12 14 18 10 28z" fill="#d23a2e"/><rect x="2" y="24" width="30" height="8" rx="4" fill="#fff" transform="rotate(-12 17 28)"/><circle cx="37" cy="21" r="4.5" fill="#fff"/></svg>`;
+const MITRE=`<svg viewBox="0 0 34 40" class="deco hat"><path d="M5 36L3 14C7 6 12 3 17 1c5 2 10 5 14 13l-2 22z" fill="#c8102e"/><path d="M3 30h28" stroke="#e7b93e" stroke-width="3"/><path d="M17 8v16M11 14h12" stroke="#e7b93e" stroke-width="3" stroke-linecap="round"/><path d="M8 36l-4 4M26 36l4 4" stroke="#e7b93e" stroke-width="2"/></svg>`;
+const CAKE=`<svg viewBox="0 0 40 40" class="deco cake"><rect x="6" y="20" width="28" height="14" rx="3" fill="#f6c7d3"/><path d="M6 25c4 3 8-3 12 0s8 3 12 0 4-2 4-2" stroke="#fff" stroke-width="3" fill="none"/><rect x="3" y="33" width="34" height="4" rx="2" fill="#e7b93e"/><path d="M13 20v-8M20 20v-8M27 20v-8" stroke="#7d8be0" stroke-width="2.5"/><path class="flame" d="M13 6c2 2 2 4 0 5-2-1-2-3 0-5zM20 6c2 2 2 4 0 5-2-1-2-3 0-5zM27 6c2 2 2 4 0 5-2-1-2-3 0-5z" fill="#f0a23a"/></svg>`;
+const FIREWORKS=`<span class="deco fw" aria-hidden="true">${[["#e8833a",0,0],["#7d8be0",34,-14],["#e7b93e",64,4]].map(([c,x,y],i)=>`<svg viewBox="-20 -20 40 40" style="left:${x}px;top:${y}px;animation-delay:${i*.45}s;color:${c}"><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round">${Array.from({length:10},(_,k)=>{const a=k/10*Math.PI*2;return `<path d="M${(6*Math.cos(a)).toFixed(1)} ${(6*Math.sin(a)).toFixed(1)}L${(16*Math.cos(a)).toFixed(1)} ${(16*Math.sin(a)).toFixed(1)}"/>`}).join("")}</g></svg>`).join("")}</span>`;
+const DECO={"11-20":CAKE,"12-06":MITRE,"12-25":HAT,"12-31":FIREWORKS};
+const deco=d=>DECO[d.slice(5)]||"";
 function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   if(d<t){const sp=spentOn(d),tot=sumA(sp);
-    return `<button type="button" class="day past" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
+    return `<button type="button" class="day past" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
       <span class="what"><span class="clamp2">${sp.length?spendCats(sp):plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`}</span></span>
       ${sp.length||kea.set||Object.keys(kea.ex).length?moneyTag(tot):`<span class="n"></span>`}</button>`}
   const what=plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
   const fx=n.flex&&d>t;
   const w=wxFor(d);
-  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}</i>`:""}</span>
+  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}</i>`:""}</span>
     <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night${fx?" · drag to another stop":""}</span>`:""}</span>
     ${fx?`<span class="grip" aria-hidden="true">⠿</span>`:`<span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span>`}</button>`}
 /* how the planned nights compare with the ideal range set on the stop (imin–imax) */
@@ -722,7 +745,7 @@ const fitTag=s=>{const f=fitOf(s);return f?`<span class="fit ${f.c}">${f.l}</spa
 function stopBlock(s,days,t,L,i,showLeg){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ${legReal(i)?"":"~"}${L[i]} km</div>`:"")+
-   `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   `<div class="stop-h" data-sid="${esc(s.id)}">${lmFor(s)}<button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    days.map(d=>dayRow(d,t)).join("")}
 /* ---- the road down the side of the day list, with our van driving along it as you scroll ---- */
 const VAN=`<svg viewBox="-2 0 22 28" width="18" height="28"><g fill="#1b1f1c"><rect x="-1.5" y="5" width="3" height="5" rx="1"/><rect x="16.5" y="5" width="3" height="5" rx="1"/><rect x="-1.5" y="18" width="3" height="5" rx="1"/><rect x="16.5" y="18" width="3" height="5" rx="1"/></g>
@@ -742,10 +765,46 @@ const FERRY=`<g class="bob">
 const PLANE=`<svg viewBox="-60 -55 120 110" width="120" height="110"><g><g fill="#f4f5f2" stroke="#9aa3a6" stroke-width="1.5">
   <path d="M-6 -44 Q0 -50 6 -44 L7 40 Q0 52 -7 40 Z"/><path d="M-7 0 L-56 -16 L-56 -8 L-7 16 Z"/><path d="M7 0 L56 -16 L56 -8 L7 16 Z"/><path d="M-5 -40 L-20 -46 L-20 -40 L-5 -32 Z"/><path d="M5 -40 L20 -46 L20 -40 L5 -32 Z"/></g>
   <rect x="-2" y="-46" width="4" height="12" rx="2" fill="#28507a"/><path d="M-4 34 Q0 30 4 34 L3 40 L-3 40 Z" fill="#2b6f86"/><circle cx="-28" cy="0" r="3" fill="#9aa3a6"/><circle cx="28" cy="0" r="3" fill="#9aa3a6"/></g></svg>`;
+/* ---- little landmark drawings beside each stop, and for the flight home ---- */
+const LMS=`fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"`;
+const W2="var(--sea-soft)",G2="var(--fern-soft)",T2="var(--tussock-soft)";
+const LMI={
+ tree:`<path d="M6 40h52M12 44h40" ${LMS}/><path d="M32 40V22" ${LMS}/><path d="M32 24c-10 0-14-8-10-14 2 6 6 6 10 2 4 4 8 4 10-2 4 6 0 14-10 14z" fill="${G2}" ${LMS}/><path d="M30 40c-3 2-8 2-12 1" ${LMS}/>`,
+ gondola:`<path d="M2 42l16-24 10 12 12-22 22 34z" fill="${G2}" ${LMS}/><path d="M36 14l12 6 10 6" ${LMS}/><path d="M6 2L62 22" ${LMS}/><path d="M34 10v5" ${LMS}/><rect x="29" y="15" width="10" height="8" rx="2" fill="${T2}" ${LMS}/>`,
+ fruit:`<circle cx="22" cy="30" r="10" fill="#f2c4b8" ${LMS}/><path d="M42 18c6 0 8 6 6 10 6 4 4 16-6 16s-12-12-6-16c-2-4 0-10 6-10z" fill="#e7e2a8" ${LMS}/><path d="M22 20c0-4 2-6 4-7M42 18c0-4 2-6 4-6" ${LMS}/><circle cx="34" cy="38" r="5" fill="#c9b4e0" ${LMS}/>`,
+ peaks:`<path d="M2 40l14-20 8 9 12-21 26 32z" fill="${G2}" ${LMS}/><path d="M30 18l6-10 6 10-4-2-2 3-2-3z" fill="#fff" ${LMS}/><path d="M6 44c8-3 16 3 24 0s16 3 26 0" stroke="var(--sea)" fill="none" stroke-width="1.8" stroke-linecap="round"/>`,
+ mitre:`<path d="M10 40L28 6l8 16 4-6 14 24z" fill="${G2}" ${LMS}/><path d="M24 14l4-8 4 8-4-2z" fill="#fff" ${LMS}/><path d="M4 40h56M8 44h48" stroke="var(--sea)" fill="none" stroke-width="1.8" stroke-linecap="round"/>`,
+ sign:`<path d="M32 44V6" ${LMS}/><path d="M32 10h18l4 3-4 3H32M32 20H14l-4 3 4 3h18M32 30h16l3 3-3 3H32" fill="${T2}" ${LMS}/>`,
+ lighthouse:`<path d="M26 40l3-26h6l3 26z" fill="#fff" ${LMS}/><path d="M27.5 26h9M28.6 18h6.8" stroke="var(--rust)" stroke-width="3"/><path d="M27 14h10l-2-5h-6z" fill="${T2}" ${LMS}/><path d="M4 44c6-6 14-6 20-4h16c6-2 14-2 20 4" fill="${G2}" ${LMS}/><path d="M38 10l14-4M38 12l14 2" stroke="var(--tussock)" stroke-width="1.5"/>`,
+ albatross:`<path d="M4 24c10-6 20-6 28 2 8-8 18-8 28-2-10-2-20 0-28 8-8-8-18-10-28-8z" fill="#fff" ${LMS}/><path d="M30 26l2 4 2-4" ${LMS}/><path d="M4 44h56" stroke="var(--sea)" stroke-width="1.8"/>`,
+ penguin:`<path d="M32 8c6 0 9 6 9 14 0 10-3 18-9 18s-9-8-9-18c0-8 3-14 9-14z" fill="#5f7d96" ${LMS}/><path d="M32 18c4 0 5 4 5 10s-2 10-5 10-5-4-5-10 1-10 5-10z" fill="#fff" stroke="none"/><circle cx="30" cy="13" r="1.3" fill="currentColor"/><path d="M33 14l4 1-4 1" fill="var(--tussock)" stroke="none"/><path d="M26 42h4M34 42h4" ${LMS}/>`,
+ lupins:`<path d="M2 44h60" stroke="var(--sea)" stroke-width="1.8"/><path d="M14 42V18M30 42V10M46 42V20" ${LMS}/><path d="M14 18c-3 0-4 4-3 8M14 18c3 0 4 4 3 8" stroke="#b26fd0" stroke-width="5" stroke-linecap="round"/><path d="M30 10c-3 0-4 6-3 12M30 10c3 0 4 6 3 12" stroke="#e58fb3" stroke-width="5" stroke-linecap="round"/><path d="M46 20c-3 0-4 4-3 8M46 20c3 0 4 4 3 8" stroke="#7d8be0" stroke-width="5" stroke-linecap="round"/>`,
+ aoraki:`<path d="M2 42L24 8l6 8 6-6 26 32z" fill="${G2}" ${LMS}/><path d="M18 18l6-10 6 8-4-2-3 4-2-3z" fill="#fff" ${LMS}/>`,
+ church:`<path d="M14 42V24l10-8 10 8v18z" fill="${T2}" ${LMS}/><path d="M34 42V28h16v14" fill="${T2}" ${LMS}/><path d="M24 10v6M21 12h6" ${LMS}/><path d="M22 42v-8h4v8" ${LMS}/><path d="M48 10l1 2 2 .4-1.6 1.3.5 2-1.9-1-1.9 1 .5-2L44 12.4l2-.4z" fill="var(--tussock)" stroke="none"/><path d="M4 44h56" stroke="var(--sea)" stroke-width="1.8"/>`,
+ hill:`<path d="M2 42c8-2 14-14 30-14s22 12 30 14z" fill="${G2}" ${LMS}/><path d="M32 28v-12" ${LMS}/><path d="M32 16l8 3-8 3" fill="var(--rust)" stroke="none"/><path d="M8 12l6-8 8 8M44 10l6-6 8 8" ${LMS}/>`,
+ tram:`<rect x="10" y="12" width="44" height="24" rx="5" fill="#b8403a" ${LMS}/><path d="M14 18h8v8h-8zM26 18h8v8h-8zM38 18h8v8h-8z" fill="#fff" ${LMS}/><path d="M32 12V4l-6-2" ${LMS}/><circle cx="20" cy="40" r="3" ${LMS}/><circle cx="44" cy="40" r="3" ${LMS}/><path d="M2 44h60" ${LMS}/>`,
+ kea:`<path d="M10 30c6-12 22-14 32-8l8-4c4 2 4 6 0 8l-4 2c-2 8-14 12-26 10l-8 4z" fill="#7d9a45" ${LMS}/><path d="M50 18c4 0 6 3 4 6-1 1-2 0-2-1" ${LMS}/><circle cx="46" cy="21" r="1.3" fill="currentColor"/><path d="M22 28c6-2 12 0 14 4-6 2-12 2-14-4z" fill="#e8833a" stroke="none"/>`,
+ lamp:`<path d="M32 44V12" ${LMS}/><path d="M24 12h16l-3-6h-10z" fill="${T2}" ${LMS}/><path d="M28 12l-2 5h12l-2-5" fill="#fff3c4" ${LMS}/><path d="M26 44h12" ${LMS}/><path d="M10 40c4-4 10-4 14 0" stroke="var(--tussock)" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+ spring:`<path d="M6 40c0-6 10-10 26-10s26 4 26 10-10 4-26 4-26 2-26-4z" fill="${W2}" ${LMS}/><path d="M20 26c-3-4 3-6 0-10M32 24c-3-4 3-6 0-10M44 26c-3-4 3-6 0-10" ${LMS}/>`,
+ whale:`<path d="M32 40c0-10-2-16-12-22 6 0 10 2 12 6 2-4 6-6 12-6-10 6-12 12-12 22z" fill="#5f7d96" ${LMS}/><path d="M6 42c8-3 14 3 22 0M36 42c8-3 14 3 22 0" stroke="var(--sea)" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M26 14l-2-6M38 14l2-6M32 12V6" stroke="var(--sea)" stroke-width="1.6"/>`,
+ boat:`<path d="M6 30h52l-8 10H14z" fill="#fff" ${LMS}/><path d="M16 30v-8h28v8M22 22v-6h14v6" fill="${T2}" ${LMS}/><path d="M2 44c8-3 16 3 24 0s16 3 24 0 8 2 12 1" stroke="var(--sea)" stroke-width="1.8" fill="none"/>`,
+ cablecar:`<path d="M4 40L60 8" ${LMS}/><path d="M18 34l26-15" ${LMS} stroke-width="1"/><path d="M24 30l12-7 4 7-12 7z" fill="#c0392b" ${LMS}/><path d="M28 30l6-3" stroke="#fff" stroke-width="2"/>`,
+ skytower:`<path d="M30 44l1-26h2l1 26z" fill="#fff" ${LMS}/><path d="M26 18h12l-2-4h-8z" fill="${W2}" ${LMS}/><path d="M32 14V2" ${LMS}/><path d="M18 44V34h6v10M40 44V30h8v14M50 44v-8h6v8" fill="${G2}" ${LMS}/>`,
+ glacier:`<path d="M2 42L22 10l10 10 10-12 20 34z" fill="#fff" ${LMS}/><path d="M24 16l6 12 4-6 6 10" stroke="var(--sea)" stroke-width="1.6" fill="none"/>`,
+ rocks:`<path d="M14 42V24h14v18M32 42V18h16v24" fill="${T2}" ${LMS}/><path d="M14 28h14M14 32h14M14 36h14M32 22h16M32 26h16M32 30h16M32 34h16M32 38h16" stroke="currentColor" stroke-width=".9"/><path d="M28 14c2-6 6-6 6-10" stroke="var(--sea)" stroke-width="1.6" fill="none"/>`,
+ arch:`<path d="M6 42V22c0-10 10-16 22-16s20 8 20 18v18h-8V26c0-6-4-10-12-10s-14 4-14 10v16z" fill="${T2}" ${LMS}/><path d="M2 44h60" stroke="var(--sea)" stroke-width="1.8"/>`,
+ kayak:`<path d="M8 32c14 4 34 4 48 0-14-3-34-3-48 0z" fill="#e8833a" ${LMS}/><path d="M20 20l24 20" ${LMS}/><path d="M18 18l4 0 0 4zM46 42l-4 0 0-4z" fill="currentColor"/><path d="M4 42c8-3 16 3 24 0s16 3 24 0" stroke="var(--sea)" stroke-width="1.8" fill="none"/>`,
+ tent:`<path d="M10 40L28 12l18 28z" fill="${T2}" ${LMS}/><path d="M28 12v28M24 40l4-10 4 10" ${LMS}/><path d="M46 40h14M50 44h10" stroke="var(--sea)" stroke-width="1.8"/>`,
+ road:`<path d="M24 44l6-36M40 44l-6-36" ${LMS}/><path d="M32 40v-4M32 30v-4M32 20v-3" ${LMS}/><path d="M30 10c0-4 4-4 4 0" ${LMS}/>`};
+const LM_RULES=[[/wānaka|wanaka/i,"tree"],[/hāwea|hawea|kidds/i,"tent"],[/queenstown|arrowtown/i,"gondola"],[/cromwell/i,"fruit"],[/glenorchy/i,"peaks"],[/te anau|milford/i,"mitre"],[/invercargill|bluff/i,"sign"],[/catlins/i,"lighthouse"],[/dunedin/i,"albatross"],[/oamaru|moeraki/i,"penguin"],[/twizel|pukaki/i,"lupins"],[/aoraki|mt cook|mount cook/i,"aoraki"],[/tekapo/i,"church"],[/hakatere|rakaia/i,"hill"],[/christchurch|akaroa/i,"tram"],[/arthur/i,"kea"],[/reefton/i,"lamp"],[/lewis|hanmer/i,"spring"],[/kaik/i,"whale"],[/picton|ferry|momorangi/i,"boat"],[/wellington/i,"cablecar"],[/auckland/i,"skytower"],[/franz|fox/i,"glacier"],[/greymouth|punakaiki/i,"rocks"],[/golden bay|kōhaihai|kohaihai|oparara/i,"arch"],[/abel|mārahau|marahau|french pass/i,"kayak"],[/rotoiti|nelson|motueka|westport/i,"tent"],[/tbd|north island/i,"road"]];
+const lmFor=s=>{const r=LM_RULES.find(([re])=>re.test(s.name||""));return r?`<svg class="lm" viewBox="0 0 64 48" aria-hidden="true">${LMI[r[1]]}</svg>`:""};
+const LM={mbs:`<g transform="translate(-34 -46)" stroke="#33424a" stroke-width="1.6" stroke-linejoin="round"><path d="M10 46V14h10v32M29 46V14h10v32M48 46V14h10v32" fill="#f4f5f2"/><path d="M4 12c20-4 40-4 62 0v4H4z" fill="#dfe7ea"/><path d="M0 46h68" stroke="#33424a"/></g>`,
+ atomium:`<g transform="translate(-30 -60)" stroke="#33424a" stroke-width="1.5"><path d="M30 6L30 54M8 20L52 40M52 20L8 40M14 10L46 50M46 10L14 50" opacity=".7"/>${[[30,6],[30,30],[30,54],[8,20],[52,20],[8,40],[52,40],[14,10],[46,50]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5.5" fill="#e6eaec"/>`).join("")}<path d="M24 54l-6 6M36 54l6 6" /></g>`};
 let road={x:RX,max:null,ferry:null,fly:null,sell:null};
 function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".fly-panel"),g={zones:[]};
   if(sp){const P0=sp.offsetTop,P1=P0+sp.offsetHeight;g.ferry={P0,P1,fa:P0+124,fb:P1-120-246};g.zones.push([P0,P1])}
-  if(fp){const A0=fp.offsetTop;g.fly={A0,A1:A0+fp.offsetHeight,park:A0+150};g.zones.push([A0,Infinity])}
+  if(fp){const A0=fp.offsetTop,W=el.clientWidth,PX=Math.min(W-70,260);
+    g.fly={A0,A1:A0+fp.offsetHeight,park:A0+150,PX,lift:A0+470,SG:{x:Math.round(W*.3),y:A0+860},BR:{x:Math.round(W*.6),y:A0+1250}};g.zones.push([A0,Infinity])}
   const blend=(y,a,b)=>{const t=Math.max(0,Math.min(1,(y-a)/(b-a))),s=t*t*(3-2*t);return s};
   // the road only swings out to the ferry/airport inside their panels, never across the day cards
   g.x=y=>{for(const [z0,z1] of g.zones){if(y<z0||y>z1)continue;
@@ -753,7 +812,11 @@ function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".f
       if(z1!==Infinity&&y>z1-110)return FX+(RX(y)-FX)*blend(y,z1-110,z1);
       return FX}
     return RX(y)};
-  g.max=g.fly?g.fly.park:null;return g}
+  g.max=g.fly?g.fly.park:null;
+  if(g.fly){const f=g.fly,pts=[[f.PX,f.lift],[f.SG.x,f.SG.y],[f.BR.x,f.BR.y]];
+    f.x=y=>{if(y<=pts[0][1])return f.PX;for(let i=1;i<pts.length;i++){const [x0,y0]=pts[i-1],[x1,y1]=pts[i];if(y<=y1){const t=(y-y0)/(y1-y0),s=(1-Math.cos(Math.PI*t))/2;return x0+(x1-x0)*s}}return f.BR.x};
+    f.end=f.BR.y}
+  return g}
 function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.querySelectorAll(".road,#van,#people,#plane").forEach(n=>n.remove());
   const H=el.scrollHeight;if(H<60||el.querySelector(".empty"))return;
   road=geo(el);const X=road.x,end=road.fly?road.fly.park+6:H;
@@ -764,8 +827,12 @@ function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.qu
     if(water){pen=false;continue}d+=(pen?" L":" M")+X(y).toFixed(1)+" "+y;pen=true}
   const pins=[...el.querySelectorAll(".stop-h")].map(h=>{const y=h.offsetTop+12;return `<circle class="pin" cx="${X(y).toFixed(1)}" cy="${y}" r="5.5"/>`}).join("");
   const W=el.clientWidth,PX=Math.min(W-70,260);road.px=PX;
-  const fly=road.fly?`<rect x="${PX-24}" y="${road.fly.park-40}" width="48" height="${road.fly.A1-road.fly.park+30}" rx="6" fill="#4b5157"/><path d="M${PX} ${road.fly.park-30}V${road.fly.A1-16}" stroke="#f3f3ee" stroke-width="2" stroke-dasharray="10 10"/>
-    <rect x="${FX-26}" y="${road.fly.park-30}" width="${PX-FX+4}" height="60" rx="8" fill="#4b5157" opacity=".55"/>`:"";
+  const F=road.fly;let fly="";
+  if(F){const PXr=F.PX;let fp="";for(let y=F.lift;y<=F.end;y+=6)fp+=(fp?" L":"M")+F.x(y).toFixed(1)+" "+y;
+    fly=`<rect x="${PXr-24}" y="${F.park-40}" width="48" height="${F.lift-F.park+70}" rx="6" fill="#4b5157"/><path d="M${PXr} ${F.park-30}V${F.lift+20}" stroke="#f3f3ee" stroke-width="2" stroke-dasharray="10 10"/>
+    <rect x="${FX-26}" y="${F.park-30}" width="${PXr-FX+4}" height="60" rx="8" fill="#4b5157" opacity=".55"/>
+    <path d="${fp}" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" opacity=".9"/>
+    <g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g><g transform="translate(${F.BR.x+62} ${F.BR.y+34})">${LM.atomium}</g>`}
   el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}</svg>
     <div id="van" aria-hidden="true">${VAN}<b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
   moveVan()}
@@ -773,8 +840,8 @@ function moveVan(){const el=$("#daylist"),v=$("#van");
   const bg=$("#bg");if(bg)bg.style.maskPosition=bg.style.webkitMaskPosition=`0 ${-Math.round(scrollY*.25)}px`;
   if(!el||!v||!el.offsetParent)return;const r=el.getBoundingClientRect(),H=el.scrollHeight,X=road.x;
   let y=innerHeight*.45-r.top;const left=Math.max(0,document.documentElement.scrollHeight-innerHeight-scrollY);
-  if(road.max!=null){const y200=y+Math.max(0,left-220),extra=road.max-y200,k=left<=220?1:Math.max(0,1-(left-220)/360);if(extra>0)y+=extra*k*k}
-  y=Math.max(14,Math.min(road.max??H-16,y));
+  if(road.fly){const extra=road.fly.end-(y+left),k=Math.max(0,1-left/520);if(extra>0)y+=extra*k*k}
+  const ptr=y;y=Math.max(14,Math.min(road.max??H-16,y));
   // ferry: carry the van across
   const f=road.ferry,fg=$("#ferryg");
   if(f&&fg){const top=Math.max(f.fa,Math.min(f.fb,y-110));fg.setAttribute("transform",`translate(${FX} ${top})`)}
@@ -782,14 +849,18 @@ function moveVan(){const el=$("#daylist"),v=$("#van");
   v.classList.toggle("aboard",!!(f&&y>f.fa+20&&y<f.fb+236));
   v.classList.toggle("sold",!!((road.sell!=null&&y>=road.sell)||(road.fly&&y>=road.fly.A0)));
   v.style.transform=`translate(${(X(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`;
-  // the flight home: walk to the plane, then it rolls down the runway and lifts off
+  // the flight home, driven by the same scroll pointer: walk to the plane, roll, lift off, Singapore, Brussels
   const fl=road.fly,pe=$("#people"),pl=$("#plane");if(!fl||!pe||!pl)return;
-  const parked=y>=fl.park-1,q=parked?Math.max(0,Math.min(1,1-left/200)):0,PX=road.px;
-  const w=Math.min(1,q/.45),px=FX+20+(PX-34-FX-20)*w,py=fl.park+2-6*Math.sin(w*Math.PI);
-  pe.style.opacity=q>0&&q<.5?1:0;pe.style.transform=`translate(${px.toFixed(1)}px,${py.toFixed(1)}px)`;pe.classList.toggle("walk",q>0&&q<.45);
-  const t=Math.max(0,(q-.5)/.5),lift=Math.max(0,(t-.45)/.55),sc=1+lift*.7;
-  pl.style.transform=`translate(${PX-60}px,${(fl.park-40+t*t*(fl.A1-fl.park-60)).toFixed(1)}px) scale(${sc.toFixed(3)})`;
-  pl.style.opacity=t>.92?Math.max(0,1-(t-.92)/.08*.6):1;pl.style.filter=`drop-shadow(${(lift*10).toFixed(1)}px ${(4+lift*18).toFixed(1)}px ${(2+lift*6).toFixed(1)}px rgba(0,0,0,${(.3-lift*.15).toFixed(2)}))`}
+  const P=ptr,PX=fl.PX,gate=fl.park+20;
+  const w=Math.max(0,Math.min(1,(P-fl.park)/110)),px=FX+20+(PX-34-FX-20)*w,py=fl.park+2-6*Math.sin(w*Math.PI);
+  pe.style.opacity=P>fl.park&&P<fl.park+125?1:0;pe.style.transform=`translate(${px.toFixed(1)}px,${py.toFixed(1)}px)`;pe.classList.toggle("walk",w>0&&w<1);
+  const roll=P-(fl.park+130);let py2=gate,px2=PX,sc=1,ang2=0;
+  if(roll>0){py2=Math.min(fl.end,gate+roll*(fl.end-gate)/Math.max(1,fl.end-(fl.park+130)));px2=fl.x(py2);const a=Math.max(0,Math.min(1,(py2-(fl.lift-120))/120)),land=Math.max(0,Math.min(1,(py2-(fl.end-160))/160));
+    sc=1+.55*a-.55*land;const dxp=(fl.x(py2+4)-fl.x(py2-4))/8;ang2=-Math.atan(dxp)*57.3}
+  const air=Math.max(0,sc-1)/.55;
+  pl.style.transform=`translate(${(px2-60).toFixed(1)}px,${(py2-55).toFixed(1)}px) rotate(${ang2.toFixed(1)}deg) scale(${sc.toFixed(3)})`;
+  pl.style.filter=`drop-shadow(${(air*12).toFixed(1)}px ${(4+air*20).toFixed(1)}px ${(2+air*6).toFixed(1)}px rgba(0,0,0,${(.3-air*.12).toFixed(2)}))`;
+  $("#sg-l")?.classList.toggle("on",py2>=fl.SG.y-40);$("#br-l")?.classList.toggle("on",py2>=fl.end-10)}
 addEventListener("scroll",moveVan,{passive:true});
 addEventListener("resize",()=>requestAnimationFrame(drawRoad));
 document.fonts?.ready?.then(()=>drawRoad());
@@ -866,7 +937,9 @@ function renderDays(){
     el.innerHTML=recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
       past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("");requestAnimationFrame(drawRoad);return}
   if(!html)html=`<p class="empty">No days ahead.</p>`;
-  else{const last=st[st.length-1],fd=last?.flight||last?.end||last?.start;if(fd)html+=`<div class="fly-panel"><div class="fcap"><b>✈️ Flight home</b><span>${wd(fd)} ${fmt(fd)} · the end of the loop</span></div></div>`}
+  else{const last=st[st.length-1],fd=last?.flight||last?.end||last?.start;if(fd){const ar=addDays(fd,1);html+=`<div class="fly-panel"><div class="fcap ftop"><b>✈️ Flight home</b><span>${wd(fd)} ${fmt(fd)} · Auckland</span></div>
+    <div class="skylab" id="sg-l" style="top:830px;left:calc(30% + 46px)"><b>🇸🇬 Singapore</b><span>transit</span></div>
+    <div class="skylab r" id="br-l" style="top:1236px;right:calc(40% + 44px)"><b>🇧🇪 Brussels</b><span>${wd(ar)} ${fmt(ar)} · home</span></div></div>`}}
   el.innerHTML=html;requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */

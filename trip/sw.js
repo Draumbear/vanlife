@@ -1,7 +1,7 @@
 /* South Island Loop — offline shell.
    Bump CACHE when you change index.html so the phone picks up the new version. */
-const CACHE = 'loop-v15';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './plan.json'];
+const CACHE = 'loop-v16';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './plan.json', '../icon-192.png'];
 const FONTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', e => {

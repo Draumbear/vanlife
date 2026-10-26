@@ -50,12 +50,12 @@ a{color:var(--sea)}
 /* header */
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper)}
 header .wrap{padding-block:10px 0}
-.top{display:flex;align-items:center;gap:10px}
+.top{display:flex;align-items:center;gap:6px}
 .ttl{flex:1;min-width:0}
-h1{font:800 1.2rem/1.1 var(--display);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h1{font:800 clamp(1rem,4.4vw,1.2rem)/1.1 var(--display);letter-spacing:-.01em;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dayline{font:500 .74rem var(--mono);color:var(--muted)}
 .ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;padding:0}
-.dot{width:40px;height:40px;border:0;background:none;display:grid;place-items:center;cursor:pointer;padding:0;flex:none}
+.dot{width:26px;height:40px;border:0;background:none;display:grid;place-items:center;cursor:pointer;padding:0;flex:none}
 .dot i{width:11px;height:11px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 4px var(--line)}
 .dot.on i{background:var(--fern);box-shadow:0 0 0 4px var(--fern-soft)}
 .dot.wait i{background:var(--tussock);box-shadow:0 0 0 4px var(--tussock-soft)}
@@ -109,6 +109,13 @@ textarea{min-height:72px;resize:vertical}
 .day .camp{display:block;font-size:.78rem;color:var(--tussock);font-weight:700}
 .day .n{font:500 .78rem var(--mono);color:var(--muted)}
 .day.past{opacity:.55}
+.ib.kea img{width:26px;height:26px;border-radius:7px;display:block}
+.money{font:700 .8rem var(--mono);color:var(--muted);white-space:nowrap}
+.money.over{color:var(--rust)}.money.under{color:var(--fern)}
+.spend{display:grid;gap:2px}
+.spend .r{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:.92rem}
+.spend .r:first-child{border-top:0}
+.spend .tot{display:flex;justify-content:space-between;align-items:baseline;font-weight:800;padding-top:8px;border-top:2px solid var(--line)}
 .fit{display:inline-block;font:700 .7rem var(--body);padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:1px;letter-spacing:.02em}
 .fit.short{background:var(--rust-soft);color:var(--rust)}
 .fit.ok{background:var(--fern-soft);color:var(--fern)}
@@ -224,6 +231,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
   <div class="top">
     <div class="ttl"><h1>South Island Loop</h1><div class="dayline" id="dayline"></div></div>
     <button class="dot" id="sync" type="button" aria-label="Sync status"><i></i></button>
+    <a class="ib kea" id="keabtn" href="../" aria-label="Open Kea, the budget app"><img src="../icon-192.png" alt="" width="26" height="26"></a>
     <button class="ib" id="mapbtn" type="button" aria-label="Map"><svg class="svg"><use href="#i-map"/></svg></button>
     <button class="ib" id="menu" type="button" aria-label="Settings"><svg class="svg"><use href="#i-more"/></svg></button>
   </div>
@@ -428,6 +436,43 @@ function renderHeader(){const r=tripRange(),t=today();if(!r)return;
   const total=Math.max(1,daysBetween(r.first,r.last)),n=Math.min(total,Math.max(0,daysBetween(r.first,t)+1));
   $("#bar").style.width=(n/total*100)+"%";
   $("#dayline").textContent=t<r.first?`Starts ${fmt(r.first)}`:t>=r.last?"Trip done":`Day ${n} of ${total} · ${total-n} to go`}
+/* ================= Kea (the budget app on this same site) ================= */
+const KEA_LS="vanbudget.v1",KEA_CACHE="sil-kea";
+const KCAT={fuel:["⛽","Fuel"],grocery:["🛒","Groceries"],eatout:["🍔","Eating out"],camp:["🏕️","Campsites"],stay:["🛏️","Stays"],activity:["🪂","Activities"],van:["🔧","Van"],transport:["⛴️","Transport"],utility:["🚿","Showers & laundry"],phone:["📱","Phone"],gear:["🎒","Gear"],health:["💊","Health"],gift:["🎁","Gifts"],drinks:["🍻","Drinks"],other:["✨","Other"]};
+const kcat=c=>KCAT[c]||KCAT.other;
+let kea={ex:{},set:null};
+function loadKea(){let c={};try{c=JSON.parse(localStorage.getItem(KEA_CACHE))||{}}catch{}
+  const ex={...(c.ex||{})};let set=c.set||null;
+  try{const k=JSON.parse(localStorage.getItem(KEA_LS));if(k){
+    Object.values(k.expenses||{}).forEach(e=>{const o=ex[e.id];if(!o||(e.updated_at||"")>=(o.u||""))ex[e.id]={a:+e.amount||0,c:e.category,d:e.spent_on,n:e.note||"",x:!!e.deleted,u:e.updated_at||""}});
+    if(k.settings&&(!set||(k.settings.updated_at||"")>=(set.updated_at||"")))set=k.settings}}catch{}
+  kea={ex,set}}
+function keaCred(){try{const k=JSON.parse(localStorage.getItem(KEA_CRED)||"{}");if(k.url&&k.key)return k}catch{}return syncOn()?cred:null}
+let keaBusy=false;
+async function pullKea(){const c=keaCred();if(!c||keaBusy||!navigator.onLine)return;keaBusy=true;
+  try{const first=tripRange()?.first||"2026-01-01",out={};let off=0;
+    for(;;){const rows=await api(`van_expenses?select=id,amount,category,spent_on,note,deleted,updated_at&spent_on=gte.${first}&order=id.asc&limit=1000&offset=${off}`,{},c);
+      rows.forEach(r=>out[r.id]={a:+r.amount||0,c:r.category,d:r.spent_on,n:r.note||"",x:!!r.deleted,u:r.updated_at||""});if(rows.length<1000||off>20000)break;off+=1000}
+    let set=null;try{const sr=await api("van_settings?select=data,updated_at&id=eq.trip",{},c);if(sr&&sr[0])set={...sr[0].data,updated_at:sr[0].updated_at}}catch{}
+    try{localStorage.setItem(KEA_CACHE,JSON.stringify({ex:out,set}))}catch{}
+    const before=JSON.stringify(kea);loadKea();if(JSON.stringify(kea)!==before)render()}
+  catch(e){console.warn("kea",e)}finally{keaBusy=false}}
+const spentOn=d=>Object.values(kea.ex).filter(e=>!e.x&&e.d===d);
+const sumA=a=>a.reduce((t,e)=>t+e.a,0);
+const nzd=n=>"$"+Math.round(n).toLocaleString("en-NZ");
+/* the even per-day share of the whole budget, as Kea sets it up */
+function keaPerDay(){const st=kea.set;if(!st||!st.start||!st.end)return null;const days=Math.max(1,daysBetween(st.start,st.end)+1);
+  const m={daily:days,weekly:days/7,monthly:days/30.4375}[st.budgetMode]??1;const b=(+st.budgetValue||0)*m*(+st.budgetFor===1?2:1);return b>0?b/days:null}
+const moneyTag=v=>{const pd=keaPerDay();return `<span class="money ${pd?(v>pd*1.15?"over":v<pd*.85?"under":""):""}">${nzd(v)}</span>`};
+function spendCats(list,k=3){const by={};list.forEach(e=>by[e.c]=(by[e.c]||0)+e.a);
+  return Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,k).map(([c,v])=>`${kcat(c)[0]} ${nzd(v)}`).join(" · ")}
+function spendCard(d){const list=spentOn(d).sort((a,b)=>b.a-a.a),pd=keaPerDay(),tot=sumA(list);
+  return `<div class="card"><span class="label">Spent${d===today()?" so far":""}</span>
+    ${list.length?`<div class="spend">${list.map(e=>`<div class="r"><span>${kcat(e.c)[0]}</span><span class="clamp1">${esc(e.n||kcat(e.c)[1])}</span><span class="mono">${nzd(e.a)}</span></div>`).join("")}
+      <div class="tot"><span>Total</span><span>${moneyTag(tot)}${pd?` <span class="muted" style="font-weight:400;font-size:.78rem">/ ${nzd(pd)} a day</span>`:""}</span></div></div>`
+      :`<div class="muted" style="font-size:.9rem">Nothing logged in Kea${d===today()?" yet today":""}.</div>`}
+    <a class="btn" href="../" style="margin-top:10px"><img src="../icon-192.png" alt="" width="20" height="20" style="border-radius:5px"> Open Kea</a></div>`}
+loadKea();
 function renderToday(){
   const el=$("#todaycard"),t=today(),cur=currentStop();
   if(!cur){el.innerHTML="";return}
@@ -438,9 +483,14 @@ function renderToday(){
     <h2>${n.camp?esc(n.camp):"No campsite yet"}</h2>
     <div class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</div>
     ${plan.length?`<div class="bar" aria-hidden="true"><span style="width:${done/plan.length*100}%"></span></div><div class="s">${done} of ${plan.length} done</div>`:""}
+    ${here?(()=>{const tot=sumA(spentOn(t)),pd=keaPerDay();return tot||pd?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""})():""}
     <div class="row2"><button class="btn" type="button" data-day="${d}">Plan</button>${n.camp?`<a class="btn ghost" href="${esc(gUrl(campOf(n),"camp"))}" target="_blank" rel="noopener">Navigate</a>`:`<button class="btn ghost" type="button" data-night="${d}">Pick campsite</button>`}</div>
   </div>`}
 function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
+  if(d<t){const sp=spentOn(d),tot=sumA(sp);
+    return `<button type="button" class="day past" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
+      <span class="what"><span class="clamp2">${sp.length?spendCats(sp):plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`}</span></span>
+      ${sp.length?moneyTag(tot):`<span class="n"></span>`}</button>`}
   const what=plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
   const fx=n.flex&&d>t;
@@ -455,7 +505,7 @@ const fitTag=s=>{const f=fitOf(s);return f?`<span class="fit ${f.c}">${f.l}</spa
 function stopBlock(s,days,t,L,i,showLeg){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ~${L[i]} km</div>`:"")+
-   `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    days.map(d=>dayRow(d,t)).join("")}
 function renderDays(){
   const t=today(),st=sortStops(),L=legs(),el=$("#daylist");
@@ -513,6 +563,7 @@ function renderDay(){
       <div class="sleep"><span class="nm">${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></span>
         ${n.camp?goBtns(camp,"camp"):""}<button class="ib" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></div>
       ${n.notes?`<div class="muted" style="font-size:.85rem">${esc(n.notes)}</div>`:""}</div>
+    ${d<=t?spendCard(d):""}
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
       <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
     <div class="card"><span class="label">Plan</span>
@@ -803,7 +854,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preven
   add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length})});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>sync(false));window.addEventListener("offline",()=>setChip());
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){render();sync(false)}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea()}});
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
 /* ================= start ================= */
@@ -813,6 +864,7 @@ refresh();setChip();
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
+  pullKea();
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>

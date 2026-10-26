@@ -354,11 +354,11 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
  <path d="M44 210 L472 210" stroke="#b5ae94" stroke-width="2"/>
  <path d="M41 98 L384 98" stroke="#b9b298" stroke-width="2"/>
  <!-- windows -->
- <rect x="92" y="114" width="138" height="64" rx="15" fill="#3d454b"/>
- <rect x="242" y="114" width="138" height="64" rx="15" fill="#3d454b"/>
+ <rect x="58" y="114" width="152" height="64" rx="15" fill="#3d454b"/>
+ <rect x="222" y="114" width="154" height="64" rx="15" fill="#3d454b"/>
  <path d="M392 120 L412 120 Q422 122 430 138 L450 178 L392 178 Z" fill="#3d454b"/>
  <path d="M390 117 L413 116 Q424 119 432 134" fill="none" stroke="#7b4a2b" stroke-width="5" stroke-linecap="round"/>
- <path d="M104 122 L130 122" stroke="#5d676e" stroke-width="3" stroke-linecap="round"/><path d="M254 122 L280 122" stroke="#5d676e" stroke-width="3" stroke-linecap="round"/>
+ <path d="M70 122 L96 122" stroke="#5d676e" stroke-width="3" stroke-linecap="round"/><path d="M234 122 L260 122" stroke="#5d676e" stroke-width="3" stroke-linecap="round"/>
  <!-- door, handle, mirror -->
  <path d="M386 104 L386 252" stroke="#a9a28a" stroke-width="2"/>
  <rect x="396" y="190" width="16" height="6" rx="3" fill="#6d6a5c"/>
@@ -862,7 +862,8 @@ function moveVan(){const el=$("#daylist"),v=$("#van");
   const dx=(X(y+3)-X(y-3))/6,ang=Math.atan(dx)*57.3;
   v.classList.toggle("aboard",!!(f&&y>f.fa+20&&y<f.fb+236));
   v.classList.toggle("sold",!!((road.sell!=null&&y>=road.sell)||(road.fly&&y>=road.fly.A0)));
-  v.style.transform=`translate(${(X(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`;
+  // Past lists newest first, so there the van drives up the page (back towards today)
+  v.style.transform=`translate(${(X(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang+(state.dview==="past"?180:0)).toFixed(1)}deg)`;
   // the flight home, driven by the same scroll pointer: walk to the plane, roll, lift off, Singapore, Brussels
   const fl=road.fly,pe=$("#people"),pl=$("#plane");if(!fl||!pe||!pl)return;
   const P=ptr,PX=fl.PX,gate=fl.park+20;

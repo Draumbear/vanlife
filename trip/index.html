@@ -353,7 +353,7 @@ const shortStop=n=>(n||"").split(/\s*(?:&|–|\/|,)\s*/)[0].trim();
 function ctxName(x){let s=x.day?stopFor(x.day):null;
   if(!s){const p=ptOf(x);if(p){let bd=1e9;sortStops().forEach(st=>{if(hasLL(st)){const d=hav(st,p);if(d<bd){bd=d;s=st}}});if(bd>40)s=null}}
   return s?shortStop(s.name):(x.region||"")}
-const kindLabel=x=>x.kind&&KINDS[x.kind]?KINDS[x.kind]:x.kind==="plan"||x.cat?kcat(x.cat||"activity")[1]:"Sight";
+const kindLabel=x=>x.kind&&KINDS[x.kind]?KINDS[x.kind]:+x.price>0?kcat(x.cat||"activity")[1]:x.kind==="plan"?"Plan":"Sight";
 function dest(x,kind){
   if(hasLL(x))return {ll:x.lat+","+x.lng};
   const m=LLRE.exec(x.loc||"");if(m)return {ll:m[1]+","+m[2]};
@@ -829,7 +829,7 @@ function openSpot(it,fresh){
     <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
     <label>Cost<span class="costrow"><input id="q-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Free" value="${+it.price>0?(it.pp?Math.round(it.price/2*100)/100:it.price):""}">
         <span class="pick sm"><label><input type="radio" name="q-pp" value="0" ${it.pp?"":"checked"}><span>both</span></label><label><input type="radio" name="q-pp" value="1" ${it.pp?"checked":""}><span>each</span></label></span></span></label>
-    <label>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label>
+    <label id="q-catwrap" ${+it.price>0?"":"hidden"}>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label>
     <div class="muted" id="q-kea" style="font-size:.82rem;margin-top:-4px">${keaNote(it)}</div>
     ${it.day?"":`<label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>`}
     <label class="check"><input type="checkbox" id="q-book" ${it.book?"checked":""}> Needs booking</label>
@@ -848,6 +848,7 @@ function openSpot(it,fresh){
   const savePrice=()=>{const v=parseFloat(String($("#q-price").value).replace(",",".")),pp=$("#form [name=q-pp]:checked")?.value==="1";
     const price=v>0?Math.round(v*(pp?2:1)*100)/100:null;patch("spots",it.id,{price,pp});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});
     if(price)toast(pp?`${nzd(v)} each · ${nzd(price)} for both`:`${nzd(price)} for both`)};
+  $("#q-price").addEventListener("input",e=>{$("#q-catwrap").hidden=!(parseFloat(String(e.target.value).replace(",","."))>0)});
   $("#form").querySelectorAll("[name=q-pp]").forEach(r=>r.onchange=()=>{if($("#q-price").value)savePrice()});
   $("#q-price").onchange=e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(v>0)return savePrice();const price=null;
     patch("spots",it.id,{price});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});toast(price?`Price ${nzd(price)}`:"Marked free")};

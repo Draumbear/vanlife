@@ -466,6 +466,9 @@ function keaPerDay(){const st=kea.set;if(!st||!st.start||!st.end)return null;con
 const moneyTag=v=>{const pd=keaPerDay();return `<span class="money ${pd?(v>pd*1.15?"over":v<pd*.85?"under":""):""}">${nzd(v)}</span>`};
 function spendCats(list,k=3){const by={};list.forEach(e=>by[e.c]=(by[e.c]||0)+e.a);
   return Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,k).map(([c,v])=>`${kcat(c)[0]} ${nzd(v)}`).join(" · ")}
+function keaNote(x){if(!(+x.price>0))return "";
+  if(x.paid)return "✓ Logged in Kea";
+  return x.day?`Kea holds ${nzd(x.price)} back for ${wd(x.day)} ${fmt(x.day)} until you log it there.`:"Pick a day and Kea will hold the money back for it."}
 function spendCard(d){const list=spentOn(d).sort((a,b)=>b.a-a.a),pd=keaPerDay(),tot=sumA(list);
   return `<div class="card"><span class="label">Spent${d===today()?" so far":""}</span>
     ${list.length?`<div class="spend">${list.map(e=>`<div class="r"><span>${kcat(e.c)[0]}</span><span class="clamp1">${esc(e.n||kcat(e.c)[1])}</span><span class="mono">${nzd(e.a)}</span></div>`).join("")}
@@ -537,7 +540,7 @@ function renderPlaces(){
   const by={};items.forEach(x=>(by[x.region||"Other"]??=[]).push(x));
   const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
   $("#plist").innerHTML=items.length?order.map(r=>(order.length>1?`<div class="reg">${esc(r)}</div>`:"")+by[r].map(x=>{
-    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(KINDS[x.kind]||"Sight")}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
+    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(KINDS[x.kind]||"Sight")}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
     return `<div class="item ${x.done?"done":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
       <button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
@@ -569,8 +572,9 @@ function renderDay(){
     <div class="card"><span class="label">Plan</span>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${nzd(x.price)}${x.paid?" ✓":""}</span>`:""}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
+      ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Paid activities: ${nzd(c)}, shown in Kea</div>`:""})()}
       <form class="addrow" id="addact"><input id="f-act" placeholder="Add something" autocomplete="off" aria-label="Add an activity"><button class="btn primary" type="submit">Add</button></form></div>
     <div class="card"><span class="label" id="ideas-h">Ideas</span>
       <input id="q-ideas" type="search" placeholder="Search your places" value="${esc(state.ideaQ)}" aria-label="Search ideas">
@@ -625,12 +629,16 @@ function openSpot(it){
     <div class="muted" style="font-size:.85rem">${esc(KINDS[it.kind]||"Sight")}${it.region?" · "+esc(it.region):""}</div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
-    <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
+    <div class="two"><label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
+      <label>Price for both<input id="q-price" type="number" inputmode="decimal" min="0" step="1" placeholder="Free" value="${it.price??""}"></label></div>
+    <div class="muted" id="q-kea" style="font-size:.82rem;margin-top:-4px">${keaNote(it)}</div>
     <label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>
     <details><summary>Edit details</summary><div>${spotFields(it)}${saveRow(false)}</div></details>`,"spot",it.id);
   sgWire("spots",it);
   $("#q-day").onchange=e=>{const d=e.target.value||null;patch("spots",it.id,{day:d,order:d?planFor(d).length:0});toast(d?`Planned for ${wd(d)} ${fmt(d)}`:"Back to ideas")};
   $("#q-done").onchange=e=>{patch("spots",it.id,{done:e.target.checked});toast(e.target.checked?"Done ✓":"Not done")};
+  $("#q-price").onchange=e=>{const v=parseFloat(String(e.target.value).replace(",","."));const price=v>0?Math.round(v*100)/100:null;
+    patch("spots",it.id,{price});const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});toast(price?`Price ${nzd(price)}`:"Marked free")};
   armed($("#del"),"Tap again",()=>{del("spots",it.id);closeSheet();toast("Deleted")})}
 function openCamp(it){
   if(!it){sheet(head("New campsite")+campFields({region:state.region!=="all"?state.region:""})+saveRow(true),"camp");return}

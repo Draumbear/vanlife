@@ -56,6 +56,9 @@ header h1{margin:0;font-family:var(--serif);font-size:20px;font-weight:600;
 .chip.off{color:var(--warn);border-color:#574a1f;background:#2c2611}
 .chip.err{color:var(--bad);border-color:#56241f;background:#2c1613}
 main{padding:14px 16px 20px;max-width:620px;margin:0 auto}
+header .loop{flex:none;display:block;width:30px;height:30px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+header .loop img{width:100%;height:100%;display:block}
+.logit{flex:none;font-size:12px;font-weight:700;padding:7px 10px;border-radius:6px;border:1px solid var(--accent);color:var(--accent)}
 
 nav{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
@@ -263,6 +266,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
     <circle cx="52" cy="43" r="4" fill="var(--bg)"/>
   </svg>
   <h1 id="ttl">Kea</h1>
+  <a class="loop" href="trip/" aria-label="Open the trip planner"><img src="trip/icon-192.png" alt="" width="28" height="28"></a>
   <button class="chip" id="sync">local</button>
 </header>
 
@@ -303,6 +307,11 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
         <div class="n" id="h-avg">—</div>
         <div class="e" id="h-avg-e"></div>
       </div>
+    </div>
+
+    <div class="card hide" id="loop-card">
+      <div class="row" style="display:flex;justify-content:space-between;align-items:baseline"><h2>Planned activities</h2><a href="trip/" style="font-size:12px;color:var(--dim)">in the trip planner ›</a></div>
+      <div id="loop-list"></div>
     </div>
 
     <div class="card hide" id="each-card">
@@ -756,7 +765,7 @@ function stats(viewed){
   const spent = (viewed ? vsum(live()) : sum(live())) + (+st.preSpent || 0) / div;
   const left  = budget - spent;
   // money already spoken for by bookings you know are coming
-  const planned = (st.planned || []).reduce((t, p) => t + (+p.amount || 0), 0) / div;
+  const planned = ((st.planned || []).reduce((t, p) => t + (+p.amount || 0), 0) + loopOwed()) / div;
   const avail = left - planned;
 
   return {
@@ -796,6 +805,83 @@ const toneC = r => r > 1 ? 'var(--bad)' : r > .9 ? 'var(--warn)' : 'var(--ok)';
 /* ============================================================
    RENDER — HOME
    ============================================================ */
+/* ---- Paid activities planned in the trip planner (trip/, same site) ----
+   An activity with a price and a day is held back from the allowance until
+   it's logged here; logging it adds a normal expense and ticks it off there. */
+const LOOP_LS = 'sil-v2', LOOP_CACHE = 'vanbudget.loop.v1';
+function loopItems(){
+  let remote = {}, local = null;
+  try { remote = JSON.parse(localStorage.getItem(LOOP_CACHE) || '{}') || {}; } catch(e){}
+  try { local = JSON.parse(localStorage.getItem(LOOP_LS) || 'null'); } catch(e){}
+  const out = {};
+  Object.entries(remote).forEach(([id, d]) => { out[id] = d; });
+  if (local && local.docs && local.docs.spots){
+    const pend = local.pending || {};
+    Object.entries(local.docs.spots).forEach(([id, d]) => {
+      if (!(id in out) || pend['spots/' + id] || !local.synced) out[id] = d;
+    });
+    // a spot removed on this phone but not pushed yet
+    Object.keys(out).forEach(id => { if (pend['spots/' + id] && !local.docs.spots[id]) delete out[id]; });
+  }
+  return Object.entries(out)
+    .filter(([id, d]) => d && +d.price > 0 && d.day && !d.paid)
+    .map(([id, d]) => ({id, name: d.name || 'Activity', price: +d.price, day: d.day, data: d}))
+    .sort((a, b) => a.day.localeCompare(b.day));
+}
+const loopOwed = () => loopItems().reduce((t, x) => t + x.price, 0);
+function renderLoop(){
+  const items = loopItems(), card = document.getElementById('loop-card'), t = todayISO();
+  if (!items.length){ card.classList.add('hide'); return; }
+  card.classList.remove('hide');
+  document.getElementById('loop-list').innerHTML = items.map(x =>
+    '<div class="item"><div class="m"><div class="t">' + esc(x.name) + '</div>' +
+    '<div class="s">' + fmtDay(x.day) + (x.day <= t ? ' · paid yet?' : ' · set aside') + '</div></div>' +
+    '<div class="v"><b>' + nz(x.price) + '</b></div>' +
+    (x.day <= t ? '<button class="logit" data-logloop="' + esc(x.id) + '">Log it</button>' : '') + '</div>').join('') +
+    '<div class="sub" style="margin-top:10px"><span>Held back from your allowance</span><b>' + nz(loopOwed()) + '</b></div>';
+}
+async function logLoop(id){
+  const x = loopItems().find(i => i.id === id); if (!x) return;
+  const me = S.settings.me || 'p1';
+  const rec = { id: uid(), amount: Math.round(x.price*100)/100, category: 'activity', spent_on: x.day,
+    payer: me, account: S.settings.lastAccount || '', personal: '', entered_by: me, note: x.name,
+    deleted: false, updated_at: new Date().toISOString(), dirty: true };
+  S.expenses[rec.id] = rec;
+  const data = Object.assign({}, x.data, { paid: true, keaId: rec.id });
+  // tick it off in the trip planner on this phone…
+  try {
+    const l = JSON.parse(localStorage.getItem(LOOP_LS) || 'null');
+    if (l && l.docs && l.docs.spots && l.docs.spots[id]){
+      l.docs.spots[id] = Object.assign({}, l.docs.spots[id], { paid: true, keaId: rec.id });
+      l.pending = l.pending || {}; l.pending['spots/' + id] = 1;
+      localStorage.setItem(LOOP_LS, JSON.stringify(l));
+    }
+    const c = JSON.parse(localStorage.getItem(LOOP_CACHE) || '{}'); c[id] = data;
+    localStorage.setItem(LOOP_CACHE, JSON.stringify(c));
+  } catch(e){}
+  save(); rerender(); toast('Logged ' + nz2(rec.amount) + ' for ' + x.name);
+  push();
+  // …and in the shared plan, so the other phone sees it too
+  if (syncOn()) try {
+    await fetch(sbURL('trip_docs?on_conflict=coll,id'), { method: 'POST',
+      headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ coll: 'spots', id, data, deleted: false }]) });
+  } catch(e){}
+}
+async function pullLoop(){
+  try {
+    const r = await fetch(sbURL('trip_docs?select=id,data&coll=eq.spots&deleted=is.false&data->>price=not.is.null&limit=2000'), { headers: sbHeaders() });
+    if (!r.ok) return;
+    const rows = await r.json(), c = {};
+    rows.forEach(x => { c[x.id] = x.data; });
+    localStorage.setItem(LOOP_CACHE, JSON.stringify(c));
+  } catch(e){}
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-logloop]');
+  if (b){ b.disabled = true; logLoop(b.dataset.logloop); }
+});
+
 function renderHome(){
   const s = stats(true), full = stats(), st = S.settings, t = todayISO();
   const $ = id => document.getElementById(id);
@@ -880,6 +966,7 @@ function renderHome(){
     pl.innerHTML = '<b>' + nz(s.planned) + '</b> of that is set aside for planned costs' + each() + '.';
   } else pl.classList.add('hide');
 
+  renderLoop();
   renderEach(full);
   renderSplit();
   renderTrend();
@@ -1496,6 +1583,7 @@ async function sync(silent){
         changed++;
       }
     }
+    await pullLoop();
     S.sync.lastPull = new Date(Date.now() - 60000).toISOString(); // 1 min overlap for clock skew
     save();
     chipIdle();
@@ -1786,6 +1874,7 @@ window.addEventListener('online',  () => sync(true));
 window.addEventListener('offline', chipIdle);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden){ if (view === 'set') captureSyncFields(); return; }
+  if (view === 'home') rerender();   // the trip planner may have changed planned activities
   sync(true); fetchRate(false);
 });
 // Backstop: a phone can close the app without ever firing 'change' on a field.

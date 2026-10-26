@@ -183,6 +183,7 @@ textarea{min-height:72px;resize:vertical}
 .sg .nm,.nm.sg{color:var(--tussock)}
 .item.sg{box-shadow:inset 3px 0 0 var(--tussock);padding-left:10px}
 .srcseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:3px;border-radius:12px;margin:2px 0 8px}
+.bookopts{display:grid;gap:10px;padding-left:14px;border-left:2px solid var(--line)}
 .costrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}
 .pick.sm{margin:0;gap:4px;flex-wrap:nowrap}.pick.sm span{padding:9px 14px;font-size:.85rem}
 .pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
@@ -822,19 +823,20 @@ function openSpot(it,fresh){
         <span class="pick sm"><label><input type="radio" name="q-pp" value="0" ${it.pp?"":"checked"}><span>both</span></label><label><input type="radio" name="q-pp" value="1" ${it.pp?"checked":""}><span>each</span></label></span></span></label>
     <label>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label>
     <div class="muted" id="q-kea" style="font-size:.82rem;margin-top:-4px">${keaNote(it)}</div>
-    <label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>
-    <div class="two"><label class="check"><input type="checkbox" id="q-book" ${it.book?"checked":""}> Needs booking</label><label class="check"><input type="checkbox" id="q-booked" ${it.booked?"checked":""}> Booked</label></div>
-    <label>Remind me to book<select id="q-lead">${LEADS.map(([v,l])=>`<option value="${v}" ${v===(+it.lead||14)?"selected":""}>${l}</option>`).join("")} before</select></label>
+    ${it.day?"":`<label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>`}
+    <label class="check"><input type="checkbox" id="q-book" ${it.book?"checked":""}> Needs booking</label>
+    <div id="q-bookopts" class="bookopts" ${it.book?"":"hidden"}><label class="check"><input type="checkbox" id="q-booked" ${it.booked?"checked":""}> Booked already</label>
+    <label>Remind me to book<select id="q-lead">${LEADS.map(([v,l])=>`<option value="${v}" ${v===(+it.lead||14)?"selected":""}>${l}</option>`).join("")} before</select></label></div>
     <label class="check"><input type="checkbox" id="q-rain" ${rainOK(it)?"checked":""}> Good on a rainy day</label>
     <details><summary>Edit details</summary><div>${spotFields(it)}${saveRow(false)}</div></details>`,"spot",it.id);
   sgWire("spots",it);
   $("#q-day").onchange=e=>{const d=e.target.value||null;if(!d)keaUnpay(it.id,true);patch("spots",it.id,{day:d,order:d?planFor(d).length:0,...(d?{}:{done:false})});keaSyncSpot(it.id);toast(d?`Planned for ${wd(d)} ${fmt(d)}`:"Back to ideas")};
-  $("#q-book").onchange=e=>{patch("spots",it.id,{book:e.target.checked});toast(e.target.checked?"Shows in To book":"No booking needed")};
+  $("#q-book").onchange=e=>{$("#q-bookopts").hidden=!e.target.checked;patch("spots",it.id,{book:e.target.checked});toast(e.target.checked?"Shows in To book":"No booking needed")};
   $("#q-booked").onchange=e=>{patch("spots",it.id,{booked:e.target.checked,...(e.target.checked?{book:true}:{})});if(e.target.checked)$("#q-book").checked=true;toast(e.target.checked?"Booked ✓":"Not booked")};
   $("#q-lead").onchange=e=>{patch("spots",it.id,{lead:+e.target.value})};
   $("#q-rain").onchange=e=>{patch("spots",it.id,{rain:e.target.checked});toast(e.target.checked?"Good in rain ☔":"Fair-weather only")};
   $("#q-cat").onchange=e=>{patch("spots",it.id,{cat:e.target.value});keaSyncSpot(it.id);toast("Category saved")};
-  $("#q-done").onchange=e=>{const on=e.target.checked;if(on&&+S.docs.spots[it.id]?.price>0&&!S.docs.spots[it.id]?.keaId){e.target.checked=false;return openPaid(it.id)}setDone(it.id,on)};
+  if($("#q-done"))$("#q-done").onchange=e=>{const on=e.target.checked;if(on&&+S.docs.spots[it.id]?.price>0&&!S.docs.spots[it.id]?.keaId){e.target.checked=false;return openPaid(it.id)}setDone(it.id,on)};
   const savePrice=()=>{const v=parseFloat(String($("#q-price").value).replace(",",".")),pp=$("#form [name=q-pp]:checked")?.value==="1";
     const price=v>0?Math.round(v*(pp?2:1)*100)/100:null;patch("spots",it.id,{price,pp});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});
     if(price)toast(pp?`${nzd(v)} each · ${nzd(price)} for both`:`${nzd(price)} for both`)};
@@ -863,8 +865,9 @@ function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)
     <div class="two"><label>Campsite<input name="camp" list="camp-names" value="${esc(it.camp)}"></label><label>Type<select name="campType">${typeOpts(CAMPTYPES,it.campType||"unknown")}</select></label></div>
     ${campList(it.lat!=null?it:null)}
     <label>Region<select name="region">${regionOpts(it.region)}</select></label>
-    <div class="two"><label class="check"><input type="checkbox" name="book" ${it.book?"checked":""}> Campsite needs booking</label><label class="check"><input type="checkbox" name="booked" ${it.booked?"checked":""}> Booked</label></div>
-    <label>Remind me to book<select name="lead">${LEADS.map(([v,l])=>`<option value="${v}" ${v===(+it.lead||14)?"selected":""}>${l}</option>`).join("")} before</select></label>
+    <label class="check"><input type="checkbox" name="book" ${it.book?"checked":""}> Campsite needs booking</label>
+    <div class="bookopts" id="s-bookopts" ${it.book?"":"hidden"}><label class="check"><input type="checkbox" name="booked" ${it.booked?"checked":""}> Booked already</label>
+    <label>Remind me to book<select name="lead">${LEADS.map(([v,l])=>`<option value="${v}" ${v===(+it.lead||14)?"selected":""}>${l}</option>`).join("")} before</select></label></div>
     <div class="two"><label>Ideal nights, at least<input name="imin" type="number" min="0" inputmode="numeric" value="${esc(it.imin??"")}"></label><label>at most<input name="imax" type="number" min="0" inputmode="numeric" value="${esc(it.imax??"")}"></label></div>
     <label>Notes<textarea name="notes">${esc(it.notes)}</textarea></label>
     <details><summary>Map position &amp; weather</summary><div>
@@ -1072,6 +1075,7 @@ $("#sync").onclick=()=>{if(syncOn()&&!lastErr){sync(true)}else openSettings()};
 $("#scrim").onclick=closeSheet;
 $("#q").oninput=e=>{state.q=e.target.value;renderPlaces()};
 $("#region").onchange=e=>{state.region=e.target.value;renderPlaces()};
+document.addEventListener("change",e=>{if(e.target.name==="book"&&$("#s-bookopts"))$("#s-bookopts").hidden=!e.target.checked;});
 document.addEventListener("change",e=>{if(e.target.id!=="mv-to"||!e.target.value)return;const v=e.target.value;e.target.value="";if(moveNight(state.day,v))closeDay()});
 document.addEventListener("input",e=>{if(e.target.id==="q-ideas"){state.ideaQ=e.target.value;state.ideaAll=false;renderIdeas()}});
 document.addEventListener("submit",e=>{if(e.target.id!=="addtodo")return;e.preventDefault();const i=$("#f-todo"),v=i.value.trim();if(!v)return;

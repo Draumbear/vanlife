@@ -339,6 +339,10 @@ textarea{min-height:72px;resize:vertical}
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .reg{font:800 .95rem var(--display);margin:18px 0 0}
 .itemr{display:flex;align-items:center;gap:2px}
+.itemr .mapgo{width:36px;height:36px;border:0;background:none;color:var(--muted);display:grid;place-items:center}
+.itemr .mapgo .svg{width:19px;height:19px}
+.meta .tw{white-space:nowrap}
+.linkbtn{display:inline-flex;align-items:center;font:700 .82rem var(--body);color:var(--fern);border:1px solid var(--fern);border-radius:999px;padding:5px 11px;background:var(--card);cursor:pointer}
 .item.done .nm{text-decoration:line-through;color:var(--muted)}
 .item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
 .item .main{background:none;border:0;padding:11px 0;text-align:left;cursor:pointer;min-width:0}
@@ -564,6 +568,11 @@ const campList=st=>`<datalist id="camp-names">${campsNear(st).map(c=>`<option va
 const campChips=st=>{const n=campsNear(st).filter(c=>c._km!=null&&c._km<=120).slice(0,6);return n.length?`<div class="cpick">${n.map(c=>`<button type="button" class="pill" data-pickcamp="${esc(c.name)}">${esc(c.name)} · ${c._km<5?"here":c._km+" km"}</button>`).join("")}</div>`:""};
 /* the place a thing is near: the stop of its planned day, else the nearest stop to its coordinates, else its region */
 const shortStop=n=>(n||"").split(/\s*(?:&|–|\/|,)\s*/)[0].trim();
+const TOWNS=[["Picton",-41.29,174.00],["Havelock",-41.28,173.77],["Blenheim",-41.51,173.96],["Renwick",-41.51,173.83],["Seddon",-41.67,174.07],["Ward",-41.83,174.13],["French Pass",-40.93,173.84],["Okiwi Bay",-41.11,173.66],["Rai Valley",-41.22,173.58],["Nelson",-41.27,173.28],["Richmond",-41.34,173.18],["Māpua",-41.25,173.10],["Motueka",-41.11,173.01],["Kaiteriteri",-41.04,173.02],["Mārahau",-41.00,173.01],["Riwaka",-41.08,173.00],["Tākaka",-40.86,172.81],["Pōhara",-40.83,172.88],["Collingwood",-40.68,172.68],["Pūponga",-40.52,172.73],["Wakefield",-41.40,173.05],["St Arnaud",-41.80,172.84],["Murchison",-41.80,172.33],["Tapawera",-41.39,172.82],["Karamea",-41.25,172.11],["Seddonville",-41.55,171.99],["Granity",-41.63,171.86],["Westport",-41.75,171.60],["Cape Foulwind",-41.75,171.47],["Charleston",-41.90,171.44],["Punakaiki",-42.11,171.33],["Runanga",-42.40,171.25],["Greymouth",-42.45,171.21],["Blackball",-42.37,171.41],["Reefton",-42.12,171.86],["Springs Junction",-42.33,172.18],["Maruia",-42.19,172.22],["Lake Brunner",-42.62,171.45],["Kumara",-42.63,171.18],["Hokitika",-42.72,170.97],["Ross",-42.90,170.81],["Harihari",-43.15,170.56],["Whataroa",-43.26,170.36],["Ōkārito",-43.22,170.16],["Franz Josef",-43.39,170.18],["Fox Glacier",-43.46,170.02],["Bruce Bay",-43.59,169.60],["Haast",-43.88,169.04],["Makarora",-44.23,169.23],["Lake Hāwea",-44.61,169.26],["Albert Town",-44.68,169.19],["Wānaka",-44.70,169.14],["Luggate",-44.74,169.28],["Glendhu Bay",-44.67,169.02],["Cardrona",-44.87,168.95],["Tarras",-44.84,169.41],["Cromwell",-45.04,169.20],["Bannockburn",-45.08,169.16],["Clyde",-45.19,169.32],["Alexandra",-45.25,169.38],["Roxburgh",-45.54,169.31],["Ophir",-45.11,169.60],["Ōmakau",-45.10,169.60],["St Bathans",-44.87,169.81],["Naseby",-45.02,170.15],["Ranfurly",-45.13,170.10],["Middlemarch",-45.51,170.12],["Arrowtown",-44.94,168.83],["Queenstown",-45.03,168.66],["Frankton",-45.02,168.73],["Arthurs Point",-44.99,168.67],["Glenorchy",-44.85,168.39],["Kingston",-45.33,168.72],["Garston",-45.47,168.68],["Lumsden",-45.74,168.44],["Mossburn",-45.67,168.24],["Te Anau",-45.41,167.72],["Manapōuri",-45.56,167.61],["Milford Sound",-44.67,167.92],["Tuatapere",-46.13,167.69],["Riverton",-46.36,168.02],["Invercargill",-46.41,168.35],["Bluff",-46.60,168.33],["Gore",-46.10,168.94],["Mataura",-46.19,168.86],["Waikawa",-46.63,169.13],["Curio Bay",-46.66,169.10],["Papatowai",-46.56,169.47],["Owaka",-46.45,169.66],["Kaka Point",-46.39,169.78],["Balclutha",-46.24,169.74],["Milton",-46.12,169.97],["Mosgiel",-45.88,170.35],["Dunedin",-45.87,170.50],["Portobello",-45.83,170.65],["Port Chalmers",-45.82,170.62],["Aramoana",-45.78,170.70],["Waikouaiti",-45.60,170.68],["Palmerston",-45.48,170.72],["Moeraki",-45.36,170.86],["Hampden",-45.33,170.82],["Oamaru",-45.10,170.97],["Kurow",-44.73,170.47],["Ōtematata",-44.61,170.19],["Omarama",-44.49,169.97],["Twizel",-44.26,170.10],["Mount Cook Village",-43.74,170.10],["Lake Tekapo",-44.00,170.48],["Fairlie",-44.10,170.83],["Geraldine",-44.10,171.24],["Timaru",-44.40,171.25],["Waimate",-44.73,171.05],["Ashburton",-43.90,171.75],["Methven",-43.63,171.65],["Mount Somers",-43.70,171.40],["Rakaia",-43.75,172.02],["Darfield",-43.49,172.11],["Springfield",-43.34,171.93],["Arthur's Pass",-42.94,171.56],["Christchurch",-43.53,172.64],["Lyttelton",-43.60,172.72],["Sumner",-43.57,172.76],["Akaroa",-43.80,172.97],["Little River",-43.77,172.79],["Rangiora",-43.30,172.60],["Kaiapoi",-43.38,172.66],["Waikari",-42.96,172.69],["Hanmer Springs",-42.52,172.83],["Culverden",-42.77,172.85],["Cheviot",-42.81,173.27],["Kaikōura",-42.40,173.68],["Wellington",-41.29,174.78],["Paraparaumu",-40.91,175.01],["Palmerston North",-40.36,175.61],["Whanganui",-39.93,175.05],["Ohakune",-39.42,175.40],["National Park",-39.18,175.40],["Tūrangi",-38.99,175.81],["Taupō",-38.69,176.07],["Rotorua",-38.14,176.25],["Tauranga",-37.69,176.17],["Mount Maunganui",-37.64,176.19],["Hamilton",-37.79,175.28],["Raglan",-37.80,174.87],["Waitomo",-38.26,175.10],["Napier",-39.49,176.91],["Hastings",-39.64,176.84],["New Plymouth",-39.06,174.08],["Thames",-37.14,175.54],["Whitianga",-36.83,175.70],["Hahei",-36.84,175.80],["Coromandel",-36.76,175.50],["Waihi",-37.39,175.84],["Auckland",-36.85,174.76],["Piha",-36.95,174.47],["Matakana",-36.35,174.72],["Whangārei",-35.73,174.32],["Paihia",-35.28,174.09]];
+/* the nearest town or village, so a place reads "Albert Town" or "8 km from Wānaka" instead of just "Otago" */
+function townOf(x){if(x.town)return x.town;const p=ptOf(x);if(!p)return "";let bd=1e9,bn="";
+  for(const [n,a,b] of TOWNS){const d=hav(p,{lat:a,lng:b});if(d<bd){bd=d;bn=n}}
+  if(bd<3)return bn;const k=Math.round(bd*1.25);return bd<45?`${k} km from ${bn}`:""}
 function ctxName(x){let s=x.day?stopFor(x.day):null;
   if(!s){const p=ptOf(x);if(p){let bd=1e9;sortStops().forEach(st=>{if(hasLL(st)){const d=hav(st,p);if(d<bd){bd=d;s=st}}});if(bd>40)s=null}}
   return s?shortStop(s.name):(x.region||"")}
@@ -586,7 +595,7 @@ function navUrl(x,kind){const ctx=kind==="camp"?(x.region||""):ctxName(x),nm=(x.
   if(nm&&!x.loc){const q=`${nm}${kind==="camp"&&!/camp|domain|reserve|holiday park/i.test(nm)?" campsite":""}${ctx&&!nm.toLowerCase().includes(ctx.toLowerCase())?", "+ctx:""}, New Zealand`;
     return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q)}
   const t=dest(x,kind);return "https://www.google.com/maps/search/?api=1&query="+(t.ll||encodeURIComponent(t.q))}
-const navLinks=(x,kind)=>`<div class="links"><a href="${esc(navUrl(x,kind))}" target="_blank" rel="noopener">Google Maps</a>${A(infoUrl(x,kind),"Info")}</div>`;
+const navLinks=(x,kind)=>`<div class="links">${x.id&&ptOf(x)?`<button type="button" class="linkbtn" data-mapfocus="${kind==="camp"?"camp":"spot"}:${esc(x.id)}">View on map</button>`:""}<a href="${esc(navUrl(x,kind))}" target="_blank" rel="noopener">Google Maps</a>${A(infoUrl(x,kind),"Info")}</div>`;
 const goBtns=(x,kind)=>`<a class="gobtn" href="${esc(navUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name||"")}">${icon("nav")}</a>`;
 
 /* ================= local store + sync ================= */
@@ -759,12 +768,14 @@ function buildMap(L){const el=$("#lmap");el.innerHTML="";
   st.forEach((s,i)=>L.marker([s.lat,s.lng],{icon:L.divIcon({className:"",html:`<div class="mstop ${s===cur?"cur":""} ${isPastStop(s,t)?"past":""}">${i+1}</div>`,iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:-500})
     .bindPopup(`<b>${esc(s.name)}</b><br><span class="muted">${s.start?`${wd(s.start)} ${fmt(s.start)}`:""}${s.end?` → ${wd(s.end)} ${fmt(s.end)}`:""}</span>`).addTo(lmap));
   lyr=L.layerGroup().addTo(lmap);drawMarkers();
-  if(cur&&hasLL(cur))lmap.setView([cur.lat,cur.lng],9);
+  if(state.mapFocus)focusMap();else if(cur&&hasLL(cur))lmap.setView([cur.lat,cur.lng],9);
   locate(false)}
 function mapItems(){const k=state.mapKind;const out=[];
+  const fo=state.mapFocus,fx=fo&&S.docs[fo.c]?.[fo.id];
   if(state.mapDay){const d=state.mapDay,n=nightInfo(d),c=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp));
     planFor(d).forEach(x=>{const p=ptOf(x);if(p)out.push({x,p,camp:false})});if(c){const p=ptOf(c);if(p)out.push({x:c,p,camp:true})}
-    return out}
+    if(fx&&!out.some(o=>o.x.id===fo.id)){const it=(fo.c==="camps"?state.camps:state.spots).find(y=>y.id===fo.id);const p=it&&ptOf(it);if(p)out.push({x:it,p,camp:fo.c==="camps"})}
+  return out}
   if(k==="all"||k==="camp")state.camps.forEach(c=>{if(visSug(c)){const p=ptOf(c);if(p)out.push({x:c,p,camp:true})}});
   if(k!=="camp")state.spots.forEach(x=>{if(x.kind==="chore"||x.kind==="task")return;if(!visSug(x))return;if(x.done&&state.mapDone===false)return;if(k!=="all"&&(x.kind||"place")!==k)return;const p=ptOf(x);if(p)out.push({x,p,camp:false})});
   return out}
@@ -779,9 +790,13 @@ function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();
       ${x.notes?`<span class="clamp2">${esc(x.notes)}</span>`:""}
       <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}" target="_blank" rel="noopener">Google Maps</a></div>
       <div class="row2">${camp?`<button type="button" class="pill ${st?"":"go"}" data-tog="camps:done:${esc(x.id)}">${st?"Undo stayed":"✓ Stayed here"}</button>`:`<button type="button" class="pill ${x.done?"":"go"}" data-mdone="${esc(x.id)}">${x.done?"Undo done":"✓ Done"}</button>`}<button type="button" class="pill warn" data-mdel="${camp?"camp":"spot"}:${esc(x.id)}">Remove</button></div></div>`,{maxWidth:260});
-    m.addTo(lyr);mks.push({m,ll:[p.lat,p.lng],len:(x.name||"").length,pri:(x.day&&x.day>=t?0:x.fav?1:camp&&st?2:x.suggested?4:x.done?5:3)+(state.mapDay?0:0)})});
+    m.addTo(lyr);mks.push({m,id:x.id,ll:[p.lat,p.lng],len:(x.name||"").length,pri:(x.day&&x.day>=t?0:x.fav?1:camp&&st?2:x.suggested?4:x.done?5:3)+(state.mapDay?0:0)})});
   if(state.mapDay){const pts=mks.map(o=>o.ll);if(pts.length>1)lmap.fitBounds(pts,{padding:[50,50],maxZoom:14});else if(pts.length)lmap.setView(pts[0],13)}
   declutter()}
+function focusMap(){const fo=state.mapFocus;if(!lmap||!fo)return;const o=mks.find(m=>m.id===fo.id);
+  if(o){lmap.setView(o.ll,14,{animate:false});declutter();setTimeout(()=>o.m.openPopup(),60)}}
+function showOnMap(c,id){state.mapFocus={c,id};state.mapDay="";state.mapKind="all";
+  if(lmap&&!$("#mapview").hidden){renderMapBar();drawMarkers();focusMap()}else{closeSheet?.();openMap()}}
 /* busy zooms: the most important pin wins its spot; nearby ones fold into a "+n" badge
    (tap it to zoom in), and names that would overlap are left off */
 function declutter(){if(!lmap)return;const z=lmap.getZoom(),named=z>=11,all=z>=16,shown=[],boxes=[];
@@ -812,7 +827,7 @@ function locate(center){const L=window.L;if(!lmap)return;
   navigator.geolocation.getCurrentPosition(show,e=>{if(center)fail(e)},{enableHighAccuracy:false,maximumAge:300000,timeout:10000});
   if(meWatch==null)meWatch=navigator.geolocation.watchPosition(show,fail,{enableHighAccuracy:true,maximumAge:15000,timeout:30000});
   if(center){if(locate.last)lmap.setView(locate.last,Math.max(lmap.getZoom(),12));else{locate.want=true;toast("Finding you…")}}}
-function closeMap(){if(meWatch!=null){navigator.geolocation.clearWatch(meWatch);meWatch=null}meDot=null;locate.want=false;if(lmap){lmap.remove();lmap=null;lyr=null}$("#mapview").hidden=true;$("#mapview").innerHTML="";if(!state.day)document.body.style.overflow=""}
+function closeMap(){state.mapFocus=null;if(meWatch!=null){navigator.geolocation.clearWatch(meWatch);meWatch=null}meDot=null;locate.want=false;if(lmap){lmap.remove();lmap=null;lyr=null}$("#mapview").hidden=true;$("#mapview").innerHTML="";if(!state.day)document.body.style.overflow=""}
 
 /* ================= days ================= */
 function renderHeader(){const r=tripRange(),t=today();if(!r)return;
@@ -1316,10 +1331,10 @@ function renderPlaces(){
   const by={};items.forEach(x=>(by[x.region||"Other"]??=[]).push(x));
   const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
   $("#plist").innerHTML=items.length?order.map(r=>(order.length>1?`<div class="reg">${esc(r)}</div>`:"")+by[r].map(x=>{
-    const st=x._c==="camp"&&isStayed(x);
-    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}</span>`:""}`:`${esc(kindLabel(x))}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
+    const st=x._c==="camp"&&isStayed(x),tw=townOf(x);
+    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}</span>`:""}`:`${esc(kindLabel(x))}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
     return `<div class="item ${x.done&&x._c==="spot"?"done":""} ${st?"stayedi":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
-      <span class="itemr">${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:`<button class="chk sm ${st?"on":""}" type="button" data-tog="camps:done:${esc(x.id)}" aria-pressed="${st}" aria-label="${st?"Not stayed":"We stayed here"}">✓</button>`}<button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></span></div>`}).join("")).join("")
+      <span class="itemr">${ptOf(x)?`<button class="ib sm mapgo" type="button" data-mapfocus="${x._c}:${esc(x.id)}" aria-label="View ${esc(x.name)} on the map">${icon("map")}</button>`:""}${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:`<button class="chk sm ${st?"on":""}" type="button" data-tog="camps:done:${esc(x.id)}" aria-pressed="${st}" aria-label="${st?"Not stayed":"We stayed here"}">✓</button>`}<button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></span></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
   $("#fab").setAttribute("aria-label",state.kind==="camp"?"Add campsite":"Add place")}
 
@@ -1416,7 +1431,7 @@ function openSpot(it,fresh){
     sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
-    <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${ctxName(it)?" · "+esc(ctxName(it)):""}</div>
+    <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${townOf(it)?" · 📍 "+esc(townOf(it)):ctxName(it)?" · "+esc(ctxName(it)):""}${it.region?" · "+esc(it.region):""}</div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
     ${it.kind==="task"?`<label>Do by<input type="date" id="q-by" value="${esc(it.by||"")}"></label>`:""}
@@ -1704,6 +1719,7 @@ function openSettings(){
 
 /* ================= events ================= */
 document.addEventListener("click",e=>{
+  const mf=e.target.closest?.("[data-mapfocus]");if(mf){e.stopPropagation();const [t,id]=mf.dataset.mapfocus.split(":");showOnMap(t==="camp"?"camps":"spots",id);return}
   const zt=e.target.closest?.("[data-zoomto]");if(zt&&lmap){e.stopPropagation();lmap.closePopup();const [a,c]=zt.dataset.zoomto.split(",").map(Number);lmap.setView([a,c],Math.min(lmap.getZoom()+2,17));return}
   const b=e.target.closest("button");if(!b||(b.closest("#form")&&b.type==="submit"))return;
   const ds=b.dataset;

@@ -6,14 +6,14 @@
 <g transform="translate(28 136) scale(0.88)"><g class="vbody">
  <!-- roof rack: aluminium, side-mounted legs -->
  <g fill="#dfe2e1" stroke="#9fa5a4" stroke-width="1.5">
-  <rect x="104" y="36" width="282" height="12" rx="2"/>
-  <rect x="114" y="46" width="9" height="56" rx="2"/><rect x="170" y="46" width="9" height="56" rx="2"/><rect x="236" y="46" width="9" height="56" rx="2"/><rect x="300" y="46" width="9" height="56" rx="2"/><rect x="360" y="46" width="9" height="56" rx="2"/>
+  <rect x="58" y="36" width="326" height="12" rx="2"/>
+  <rect x="68" y="46" width="9" height="56" rx="2"/><rect x="170" y="46" width="9" height="56" rx="2"/><rect x="236" y="46" width="9" height="56" rx="2"/><rect x="300" y="46" width="9" height="56" rx="2"/><rect x="360" y="46" width="9" height="56" rx="2"/>
  </g>
- <g stroke="#9fa5a4" stroke-width="2"><path d="M128 38l12 8M140 38l-12 8M188 38l12 8M200 38l-12 8M252 38l12 8M264 38l-12 8M318 38l12 8M330 38l-12 8"/></g>
+ <g stroke="#9fa5a4" stroke-width="2"><path d="M96 38l12 8M108 38l-12 8M128 38l12 8M140 38l-12 8M188 38l12 8M200 38l-12 8M252 38l12 8M264 38l-12 8M318 38l12 8M330 38l-12 8"/></g>
  <!-- body -->
- <path d="M40 248 L40 118 Q40 99 58 97 L74 96 Q78 72 102 70 L348 70 Q370 70 382 90 L402 110 Q418 114 430 138 L452 176 Q472 182 474 200 L476 244 Q476 258 462 258 L52 258 Q40 258 40 248 Z" fill="#cfc8ab" stroke="#a9a28a" stroke-width="2"/>
+ <path d="M40 248 L40 88 Q40 70 60 70 L348 70 Q370 70 382 90 L402 110 Q418 114 430 138 L452 176 Q472 182 474 200 L476 244 Q476 258 462 258 L52 258 Q40 258 40 248 Z" fill="#cfc8ab" stroke="#a9a28a" stroke-width="2"/>
  <path d="M44 210 L472 210" stroke="#b5ae94" stroke-width="2"/>
- <path d="M74 96 L382 96" stroke="#b9b298" stroke-width="2"/>
+ <path d="M41 98 L384 98" stroke="#b9b298" stroke-width="2"/>
  <!-- windows -->
  <rect x="92" y="114" width="138" height="64" rx="15" fill="#3d454b"/>
  <rect x="242" y="114" width="138" height="64" rx="15" fill="#3d454b"/>

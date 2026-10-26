@@ -141,10 +141,17 @@ textarea{min-height:72px;resize:vertical}
 #bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--contour);opacity:.7;
   -webkit-mask:url(contour.svg) 0 0/520px 520px repeat;mask:url(contour.svg) 0 0/520px 520px repeat}
 #daylist{position:relative;padding-left:30px}
-.road{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.road{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:1}
 .road .asph{stroke:var(--road);stroke-width:11;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .road .mid{stroke:var(--paper);stroke-width:1.6;fill:none;stroke-dasharray:6 9}
 .road .pin{fill:var(--fern);stroke:var(--paper);stroke-width:2.5}
+.ferry-end{position:relative;z-index:0;height:250px;margin:26px 0 0 -30px;border-radius:18px;overflow:hidden;
+  background:repeating-linear-gradient(170deg,transparent 0 22px,color-mix(in srgb,var(--card) 35%,transparent) 22px 24px),linear-gradient(var(--sea-soft),color-mix(in srgb,var(--sea) 30%,var(--sea-soft)))}
+.fcap{position:absolute;left:150px;right:12px;top:40px;display:grid;gap:2px}
+.fcap b{font:800 1.05rem var(--display)}.fcap span{font-size:.85rem;color:var(--muted)}
+.road .bob{animation:bob 3.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes bob{from{transform:rotate(-1.2deg) translateY(0)}to{transform:rotate(1.2deg) translateY(3px)}}
+#van.aboard{filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
 #van{position:absolute;left:0;top:0;width:18px;height:28px;pointer-events:none;will-change:transform;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
 .day .wx{display:block;font-style:normal;font-size:.72rem;margin-top:2px;color:var(--ink)}
 #extras{display:grid;gap:10px;margin-top:12px}
@@ -306,14 +313,14 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 <div id="splash" aria-hidden="true"><div class="sp-scene"><div class="sp-road"></div><div class="sp-puffs"><i></i><i></i><i></i></div><svg class="sp-van" viewBox="30 30 456 265" aria-hidden="true"><g class="vbody">
  <!-- roof rack: aluminium, side-mounted legs -->
  <g fill="#dfe2e1" stroke="#9fa5a4" stroke-width="1.5">
-  <rect x="104" y="36" width="282" height="12" rx="2"/>
-  <rect x="114" y="46" width="9" height="56" rx="2"/><rect x="170" y="46" width="9" height="56" rx="2"/><rect x="236" y="46" width="9" height="56" rx="2"/><rect x="300" y="46" width="9" height="56" rx="2"/><rect x="360" y="46" width="9" height="56" rx="2"/>
+  <rect x="58" y="36" width="326" height="12" rx="2"/>
+  <rect x="68" y="46" width="9" height="56" rx="2"/><rect x="170" y="46" width="9" height="56" rx="2"/><rect x="236" y="46" width="9" height="56" rx="2"/><rect x="300" y="46" width="9" height="56" rx="2"/><rect x="360" y="46" width="9" height="56" rx="2"/>
  </g>
- <g stroke="#9fa5a4" stroke-width="2"><path d="M128 38l12 8M140 38l-12 8M188 38l12 8M200 38l-12 8M252 38l12 8M264 38l-12 8M318 38l12 8M330 38l-12 8"/></g>
+ <g stroke="#9fa5a4" stroke-width="2"><path d="M96 38l12 8M108 38l-12 8M128 38l12 8M140 38l-12 8M188 38l12 8M200 38l-12 8M252 38l12 8M264 38l-12 8M318 38l12 8M330 38l-12 8"/></g>
  <!-- body -->
- <path d="M40 248 L40 118 Q40 99 58 97 L74 96 Q78 72 102 70 L348 70 Q370 70 382 90 L402 110 Q418 114 430 138 L452 176 Q472 182 474 200 L476 244 Q476 258 462 258 L52 258 Q40 258 40 248 Z" fill="#cfc8ab" stroke="#a9a28a" stroke-width="2"/>
+ <path d="M40 248 L40 88 Q40 70 60 70 L348 70 Q370 70 382 90 L402 110 Q418 114 430 138 L452 176 Q472 182 474 200 L476 244 Q476 258 462 258 L52 258 Q40 258 40 248 Z" fill="#cfc8ab" stroke="#a9a28a" stroke-width="2"/>
  <path d="M44 210 L472 210" stroke="#b5ae94" stroke-width="2"/>
- <path d="M74 96 L382 96" stroke="#b9b298" stroke-width="2"/>
+ <path d="M41 98 L384 98" stroke="#b9b298" stroke-width="2"/>
  <!-- windows -->
  <rect x="92" y="114" width="138" height="64" rx="15" fill="#3d454b"/>
  <rect x="242" y="114" width="138" height="64" rx="15" fill="#3d454b"/>
@@ -711,17 +718,34 @@ const VAN=`<svg viewBox="-2 0 22 28" width="18" height="28"><g fill="#1b1f1c"><r
   <rect x="0.5" y="0.5" width="17" height="27" rx="4.5" fill="#cfc8ab" stroke="#8f886f"/><rect x="2.5" y="20" width="13" height="5.5" rx="1.6" fill="#1f3a2d"/>
   <g stroke="#9fa5a4" stroke-width="1.3" stroke-linecap="round"><path d="M4 3.5V17M14 3.5V17M4 6.5H14M4 10.5H14M4 14.5H14"/></g></svg>`;
 const RX=y=>15+5*Math.sin(y/70);
+/* the road, bending at the very end onto the Cook Strait ferry, which the van drives into when you reach the bottom */
+const FX=72;let roadX=RX,vanMax=null;
+const FERRY=`<g class="ferry">
+  <path d="M-55 30 L55 30 L55 150 Q55 200 0 208 Q-55 200 -55 150 Z" fill="#f3f3ee" stroke="#9aa3a6" stroke-width="2"/>
+  <path d="M-55 118 L55 118" stroke="#28507a" stroke-width="6"/>
+  <rect x="-34" y="30" width="68" height="84" fill="#596067"/><path d="M-11 34V110M11 34V110" stroke="#c8ccc8" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <rect x="-22" y="12" width="44" height="20" rx="2" fill="#8b9297"/><path d="M-18 17H18M-18 22H18M-18 27H18" stroke="#6e757a" stroke-width="1.2"/>
+  <rect x="-42" y="128" width="84" height="44" rx="9" fill="#e4e5df" stroke="#9aa3a6" stroke-width="1.5"/>
+  <rect x="-34" y="160" width="68" height="7" rx="3" fill="#2f3a44"/><rect x="-9" y="136" width="18" height="18" rx="4" fill="#c0392b"/>
+</g>`;
 function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.querySelector(".road")?.remove();$("#van")?.remove();
   const H=el.scrollHeight;if(H<60||el.querySelector(".empty"))return;
-  let d=`M${RX(0).toFixed(1)} 0`;for(let y=8;y<=H;y+=8)d+=` L${RX(y).toFixed(1)} ${y}`;
-  const pins=[...el.querySelectorAll(".stop-h")].map(h=>{const y=h.offsetTop+12;return `<circle class="pin" cx="${RX(y).toFixed(1)}" cy="${y}" r="5.5"/>`}).join("");
-  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="30" height="${H}" viewBox="0 0 30 ${H}" aria-hidden="true"><path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}</svg><div id="van" aria-hidden="true">${VAN}</div>`);
+  const fe=el.querySelector(".ferry-end"),F0=fe?fe.offsetTop+26:null,B=F0!=null?F0-120:null;
+  roadX=F0==null?RX:y=>{if(y<=B)return RX(y);if(y>=F0)return FX;const t=(y-B)/(F0-B),s=t*t*(3-2*t);return RX(B)+(FX-RX(B))*s};
+  vanMax=F0!=null?F0+78:null;const end=F0!=null?F0+14:H;
+  let d=`M${roadX(0).toFixed(1)} 0`;for(let y=8;y<=end;y+=8)d+=` L${roadX(y).toFixed(1)} ${y}`;d+=` L${roadX(end).toFixed(1)} ${end}`;
+  const pins=[...el.querySelectorAll(".stop-h")].map(h=>{const y=h.offsetTop+12;return `<circle class="pin" cx="${roadX(y).toFixed(1)}" cy="${y}" r="5.5"/>`}).join("");
+  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="160" height="${H}" viewBox="0 0 160 ${H}" aria-hidden="true">${F0!=null?`<g transform="translate(${FX} ${F0-14})"><g class="bob">${FERRY}</g></g>`:""}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}</svg><div id="van" aria-hidden="true">${VAN}</div>`);
   moveVan()}
 function moveVan(){const el=$("#daylist"),v=$("#van");
   const bg=$("#bg");if(bg)bg.style.maskPosition=bg.style.webkitMaskPosition=`0 ${-Math.round(scrollY*.25)}px`;
   if(!el||!v||!el.offsetParent)return;const r=el.getBoundingClientRect(),H=el.scrollHeight;
-  const y=Math.max(14,Math.min(H-16,innerHeight*.45-r.top)),ang=Math.atan(5/70*Math.cos(y/70))*57.3;
-  v.style.transform=`translate(${(RX(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`}
+  let y=innerHeight*.45-r.top;
+  if(vanMax!=null){const left=Math.max(0,document.documentElement.scrollHeight-innerHeight-scrollY),yEnd=y+left,extra=vanMax-yEnd,k=Math.max(0,Math.min(1,1-left/320));if(extra>0)y+=extra*k*k}
+  y=Math.max(14,Math.min(vanMax??H-16,y));
+  const dx=(roadX(y+3)-roadX(y-3))/6,ang=Math.atan(dx)*57.3,onboard=vanMax!=null&&y>vanMax-60;
+  v.classList.toggle("aboard",onboard);
+  v.style.transform=`translate(${(roadX(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`}
 addEventListener("scroll",moveVan,{passive:true});
 addEventListener("resize",()=>requestAnimationFrame(drawRoad));
 document.fonts?.ready?.then(()=>drawRoad());
@@ -796,6 +820,7 @@ function renderDays(){
     el.innerHTML=recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
       past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("");requestAnimationFrame(drawRoad);return}
   if(!html)html=`<p class="empty">No days ahead.</p>`;
+  else{const last=st[st.length-1],fd=last?.end||last?.start;if(fd)html+=`<div class="ferry-end"><div class="fcap"><b>⛴ Cook Strait ferry</b><span>${wd(fd)} ${fmt(fd)} · on to the North Island</span></div></div>`}
   el.innerHTML=html;requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */

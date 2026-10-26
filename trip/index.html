@@ -183,6 +183,8 @@ textarea{min-height:72px;resize:vertical}
 .sg .nm,.nm.sg{color:var(--tussock)}
 .item.sg{box-shadow:inset 3px 0 0 var(--tussock);padding-left:10px}
 .srcseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:3px;border-radius:12px;margin:2px 0 8px}
+.costrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}
+.pick.sm{margin:0;gap:4px;flex-wrap:nowrap}.pick.sm span{padding:9px 14px;font-size:.85rem}
 .pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .pick label{display:inline-flex}
 .pick input{position:absolute;opacity:0;pointer-events:none}
@@ -556,7 +558,8 @@ function openPaid(id){const x=S.docs.spots[id];if(!x)return;const me=keaMe(),acc
     <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),acc.last||acc.list[0])}</div>
     <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],"")}</div>
     <div class="end"><div><button type="button" class="btn" id="pd-skip">Done, not paid</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
-  $("#pd-skip").onclick=()=>{patch("spots",id,{done:true});closeSheet();toast("Done ✓")}}
+  $("#pd-skip").onclick=()=>{patch("spots",id,{done:true});closeSheet();toast("Done ✓")};
+  if(x.pp)$("#form").querySelectorAll("[name=personal]").forEach(r=>r.onchange=()=>{$("#form [name=amount]").value=r.value?Math.round(x.price/2*100)/100:x.price})}
 function setDone(id,on){const x=S.docs.spots[id];if(!x)return;
   if(on&&+x.price>0&&!x.keaId)return openPaid(id);
   if(!on&&x.keaId){keaUnpay(id,true);patch("spots",id,{done:false});return toast("Not done · removed from Kea")}
@@ -738,7 +741,7 @@ function renderDay(){
     <div class="card"><span class="label">Plan</span>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       <form class="addrow" id="addact"><input id="f-act" placeholder="Add something" autocomplete="off" aria-label="Add an activity"><button class="btn primary" type="submit">Add</button></form></div>
@@ -792,7 +795,7 @@ function campFields(it){return `<label>Name<input name="name" value="${esc(it.na
 
 const sgBox=it=>it.suggested?`<div class="sgbox"><span><b>✦ Claude's suggestion</b></span><div class="row2"><button type="button" class="btn sm" id="sg-keep">Keep it</button><button type="button" class="btn sm" id="sg-drop">Not for us</button></div></div>`:"";
 function sgWire(c,it){if(!it.suggested)return;$("#sg-keep").onclick=()=>{patch(c,it.id,{suggested:false});closeSheet();toast("Kept")};$("#sg-drop").onclick=()=>{del(c,it.id);closeSheet();toast("Removed")}}
-function openSpot(it){
+function openSpot(it,fresh){
   if(!it){const r=stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
     sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
   sheet(head(esc(it.name))+`
@@ -801,8 +804,9 @@ function openSpot(it){
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
     <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
-    <div class="two"><label>Cost<input id="q-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Free" value="${it.price??""}"></label>
-      <label>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label></div>
+    <label>Cost<span class="costrow"><input id="q-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Free" value="${+it.price>0?(it.pp?Math.round(it.price/2*100)/100:it.price):""}">
+        <span class="pick sm"><label><input type="radio" name="q-pp" value="0" ${it.pp?"":"checked"}><span>both</span></label><label><input type="radio" name="q-pp" value="1" ${it.pp?"checked":""}><span>each</span></label></span></span></label>
+    <label>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label>
     <div class="muted" id="q-kea" style="font-size:.82rem;margin-top:-4px">${keaNote(it)}</div>
     <label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>
     <div class="two"><label class="check"><input type="checkbox" id="q-book" ${it.book?"checked":""}> Needs booking</label><label class="check"><input type="checkbox" id="q-booked" ${it.booked?"checked":""}> Booked</label></div>
@@ -817,7 +821,11 @@ function openSpot(it){
   $("#q-rain").onchange=e=>{patch("spots",it.id,{rain:e.target.checked});toast(e.target.checked?"Good in rain ☔":"Fair-weather only")};
   $("#q-cat").onchange=e=>{patch("spots",it.id,{cat:e.target.value});keaSyncSpot(it.id);toast("Category saved")};
   $("#q-done").onchange=e=>{const on=e.target.checked;if(on&&+S.docs.spots[it.id]?.price>0&&!S.docs.spots[it.id]?.keaId){e.target.checked=false;return openPaid(it.id)}setDone(it.id,on)};
-  $("#q-price").onchange=e=>{const v=parseFloat(String(e.target.value).replace(",","."));const price=v>0?Math.round(v*100)/100:null;
+  const savePrice=()=>{const v=parseFloat(String($("#q-price").value).replace(",",".")),pp=$("#form [name=q-pp]:checked")?.value==="1";
+    const price=v>0?Math.round(v*(pp?2:1)*100)/100:null;patch("spots",it.id,{price,pp});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});
+    if(price)toast(pp?`${nzd(v)} each · ${nzd(price)} for both`:`${nzd(price)} for both`)};
+  $("#form").querySelectorAll("[name=q-pp]").forEach(r=>r.onchange=()=>{if($("#q-price").value)savePrice()});
+  $("#q-price").onchange=e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(v>0)return savePrice();const price=null;
     patch("spots",it.id,{price});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});toast(price?`Price ${nzd(price)}`:"Marked free")};
   armed($("#del"),"Tap again",()=>{const had=keaUnpay(it.id,true);del("spots",it.id);closeSheet();toast(had?"Deleted, and removed from Kea":"Deleted")})}
 function openCamp(it){
@@ -1056,7 +1064,8 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addtodo")return;e.preve
   i.value="";add("todos",{text:v,done:false,at:new Date().toISOString()});setTimeout(()=>$("#f-todo")?.focus(),0)});
 document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preventDefault();
   const name=$("#f-act").value.trim();if(!name)return;const d=state.day;$("#f-act").value="";
-  add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length})});
+  const id=add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
+  openSpot({id,...S.docs.spots[id]},true)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx()}});

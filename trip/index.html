@@ -1482,11 +1482,13 @@ async function geoLookup(q,near){const p=new URLSearchParams({q:q+", New Zealand
   if(near)p.set("viewbox",`${near.lng-1.5},${near.lat+1.2},${near.lng+1.5},${near.lat-1.2}`);
   const r=await fetch("https://nominatim.openstreetmap.org/search?"+p,{headers:{"Accept-Language":"en"}});if(!r.ok)throw new Error("osm "+r.status);return r.json()}
 async function geoCheck(){const out=$("#geo-out");if(geoRun)return;geoRun={stop:false,fixes:[],missing:[]};
+  let lock=null;const wake=async()=>{try{lock=await navigator.wakeLock?.request("screen")}catch{}};await wake();
+  const onVis=()=>{if(document.visibilityState==="visible"&&geoRun&&(!lock||lock.released))wake()};document.addEventListener("visibilitychange",onVis);
   const items=[...state.spots.filter(x=>!["chore","task","plan"].includes(x.kind)).map(x=>({c:"spots",x})),...state.camps.map(x=>({c:"camps",x}))]
-    .filter(({x})=>x.name&&!x.done&&!x.llok);
+    .filter(({x})=>x.name&&!x.llok);
   let i=0;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   for(const it of items){if(geoRun.stop)break;i++;const x=it.x,cur=ptOf(x);
-    if(out)out.innerHTML=`<div class="muted" style="font-size:.85rem">Checking ${i} of ${items.length}: ${esc(x.name)}… <button type="button" class="pill" id="geo-stop">Stop</button></div>`;
+    if(out)out.innerHTML=`<div class="muted" style="font-size:.85rem">Checking ${i} of ${items.length}: ${esc(x.name)}…${"wakeLock" in navigator?" · screen stays on":""} <button type="button" class="pill" id="geo-stop">Stop</button></div>`;
     $("#geo-stop")&&($("#geo-stop").onclick=()=>geoRun.stop=true);
     let hits=[];const names=[...new Set([x.osm,x.name.replace(/\s*\(.*?\)\s*/g," ").trim(),geoName(x.name)].filter(Boolean))];
     for(const q of names){try{hits=await geoLookup(q,cur)}catch{}await sleep(1100);if(hits.length)break}
@@ -1499,7 +1501,7 @@ async function geoCheck(){const out=$("#geo-out");if(geoRun)return;geoRun={stop:
     scored.sort((a,b)=>a.d-b.d);const best=scored[0];
     if(cur&&best.d>150){geoRun.missing.push(it);continue}
     if(!cur||best.d>2)geoRun.fixes.push({...it,ll:best.ll,d:cur?Math.round(best.d):null,osm:String(best.h.display_name).split(",").slice(0,2).join(","),on:true})}
-  const F=geoRun.fixes,M=geoRun.missing;geoRun=null;
+  const F=geoRun.fixes,M=geoRun.missing;geoRun=null;try{lock?.release()}catch{}document.removeEventListener("visibilitychange",onVis);
   if(!out)return;
   out.innerHTML=`<div style="display:grid;gap:6px;font-size:.85rem">
     <b>${F.length} to fix${M.length?` · ${M.length} not found in OpenStreetMap`:""}</b>

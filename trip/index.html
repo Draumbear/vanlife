@@ -210,6 +210,13 @@ textarea{min-height:72px;resize:vertical}
 .mk .dt{position:absolute;left:18px;top:-8px;background:#2f6b4f;color:#fff;font:800 9px/1 var(--body);padding:3px 5px;border-radius:6px}
 .mk .nm{display:none;font:700 12px var(--body);color:#1d2621;background:rgba(255,255,255,.88);padding:2px 6px;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .named .mk .nm{display:inline-block}
+.named .mk.nolbl .nm{display:none}
+.mk.hid{display:none}
+.mk .more{position:absolute;left:-6px;bottom:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#1d2621;color:#fff;font:800 10px/17px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
+.daypick{display:inline-flex;align-items:center;gap:2px;padding-right:4px}
+.daypick select{border:0;background:transparent;font:inherit;color:inherit;padding:0 2px;max-width:150px}
+.daypick.on{background:#2f6b4f;color:#fff;border-color:#2f6b4f}
+.mk .num{position:absolute;left:-7px;top:-7px;width:17px;height:17px;border-radius:50%;background:#2f6b4f;color:#fff;font:800 10px/17px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
 .me{width:22px;height:22px;border-radius:50%;background:#2b8fd6;border:3px solid #fff;box-shadow:0 0 0 2px rgba(43,143,214,.35),0 1px 4px rgba(0,0,0,.4);animation:mepulse 2s ease-out infinite}
 @keyframes mepulse{0%{box-shadow:0 0 0 0 rgba(43,143,214,.55),0 1px 4px rgba(0,0,0,.4)}100%{box-shadow:0 0 0 16px rgba(43,143,214,0),0 1px 4px rgba(0,0,0,.4)}}
 .mstop{width:22px;height:22px;border-radius:50%;background:#2f6b4f;color:#fff;font:800 11px/22px var(--body);text-align:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
@@ -704,12 +711,15 @@ function openMap(){const t=today(),st=sortStops(),L=legs();let left=0;st.forEach
   renderMapBar();
   loadLeaflet().then(L=>{buildMap(L)}).catch(()=>{$("#lmap").innerHTML=`<div class="wrap vbody"><p class="muted">The full map needs a connection the first time. Here's the route for now.</p><div class="mapwrap">${mapSvg()}</div></div>`})}
 function renderMapBar(){$("#msrc").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-msrc="${k}">${l}</button>`).join("");
-  $("#mkinds").innerHTML=MAPK.map(([k,l])=>k==="done"?`<button class="pill" type="button" aria-pressed="${state.mapDone!==false}" data-mdonetog>${l}</button>`:`<button class="pill" type="button" aria-pressed="${state.mapKind===k}" data-mkind="${k}">${l}</button>`).join("")}
+  const t=today(),days=[...new Set(state.spots.filter(x=>x.day&&x.day>=t&&x.kind!=="task").map(x=>x.day))].sort().slice(0,40);
+  if(state.mapDay&&state.mapDay<t)state.mapDay="";
+  $("#mkinds").innerHTML=`<label class="pill daypick ${state.mapDay?"on":""}">📅 <select id="mday" aria-label="Show one day">${[["","Any day"],...days.map(d=>[d,`${d===t?"Today":d===addDays(t,1)?"Tomorrow":wd(d)} ${fmt(d)}`])].map(([v,l])=>`<option value="${v}" ${state.mapDay===v?"selected":""}>${l}</option>`).join("")}</select></label>`+MAPK.map(([k,l])=>k==="done"?`<button class="pill" type="button" aria-pressed="${state.mapDone!==false}" data-mdonetog>${l}</button>`:`<button class="pill" type="button" aria-pressed="${state.mapKind===k}" data-mkind="${k}">${l}</button>`).join("")}
 function buildMap(L){const el=$("#lmap");el.innerHTML="";
   lmap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:false}).setView([-44.5,170],7);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(lmap);
   L.control.zoom({position:"bottomright"}).addTo(lmap);
   const zc=()=>el.classList.toggle("named",lmap.getZoom()>=11);lmap.on("zoomend",zc);zc();
+  lmap.on("zoomend moveend",()=>declutter());
   // the route between stops, and the stops themselves
   const st=sortStops().filter(hasLL),t=today(),cur=currentStop();
   {const pts=nightPts(),pa=pts.filter(q=>q.d<t),fu=pts.filter(q=>q.d>=t);if(pa.length&&fu.length)fu.unshift(pa[pa.length-1]);
@@ -721,20 +731,41 @@ function buildMap(L){const el=$("#lmap");el.innerHTML="";
   if(cur&&hasLL(cur))lmap.setView([cur.lat,cur.lng],9);
   locate(false)}
 function mapItems(){const k=state.mapKind;const out=[];
+  if(state.mapDay){const d=state.mapDay,n=nightInfo(d),c=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp));
+    planFor(d).forEach(x=>{const p=ptOf(x);if(p)out.push({x,p,camp:false})});if(c){const p=ptOf(c);if(p)out.push({x:c,p,camp:true})}
+    return out}
   if(k==="all"||k==="camp")state.camps.forEach(c=>{if(visSug(c)){const p=ptOf(c);if(p)out.push({x:c,p,camp:true})}});
   if(k!=="camp")state.spots.forEach(x=>{if(x.kind==="chore"||x.kind==="task")return;if(!visSug(x))return;if(x.done&&state.mapDone===false)return;if(k!=="all"&&(x.kind||"place")!==k)return;const p=ptOf(x);if(p)out.push({x,p,camp:false})});
   return out}
-function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();const t=today();
+let mks=[];
+function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();mks=[];const t=today();
   mapItems().forEach(({x,p,camp})=>{const ic=camp?CK[x.type]||"⛺":MK[x.kind]||"📸",st=camp&&isStayed(x);
     const cls=["mk",x.suggested?"sg":"ours",x.done&&!camp?"done":"",st?"stayed":"",x.day?"planned":"",camp?"camp":"",x.fav?"fav":""].join(" ");
-    const html=`<div class="${cls}"><span class="ic">${ic}</span>${x.done||st?`<span class="ok">✓</span>`:x.day?`<span class="dt">${fmt(x.day)}</span>`:""}<span class="nm">${esc(x.name)}</span></div>`;
+    const html=`<div class="${cls}"><span class="ic">${ic}</span>${state.mapDay&&!camp?`<span class="num">${planFor(state.mapDay).indexOf(x)+1}</span>`:""}${x.done||st?`<span class="ok">✓</span>`:x.day&&!state.mapDay?`<span class="dt">${fmt(x.day)}</span>`:""}<span class="nm">${esc(x.name)}</span></div>`;
     const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html,iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:x.day?400:x.suggested?0:200});
     const kind=camp?(CAMPTYPES[x.type]||"Campsite"):kindLabel(x);
     m.bindPopup(()=>`<div class="mpop"><b>${x.suggested?"✦ ":""}${esc(x.name)}</b><span class="muted">${esc(kind)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}${st?" · "+esc(stayLabel(x)):x.done?" · done":""}</span>
       ${x.notes?`<span class="clamp2">${esc(x.notes)}</span>`:""}
       <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}" target="_blank" rel="noopener">Google Maps</a></div>
       <div class="row2">${camp?`<button type="button" class="pill ${st?"":"go"}" data-tog="camps:done:${esc(x.id)}">${st?"Undo stayed":"✓ Stayed here"}</button>`:`<button type="button" class="pill ${x.done?"":"go"}" data-mdone="${esc(x.id)}">${x.done?"Undo done":"✓ Done"}</button>`}<button type="button" class="pill warn" data-mdel="${camp?"camp":"spot"}:${esc(x.id)}">Remove</button></div></div>`,{maxWidth:260});
-    m.addTo(lyr)})}
+    m.addTo(lyr);mks.push({m,ll:[p.lat,p.lng],len:(x.name||"").length,pri:(x.day&&x.day>=t?0:x.fav?1:camp&&st?2:x.suggested?4:x.done?5:3)+(state.mapDay?0:0)})});
+  if(state.mapDay){const pts=mks.map(o=>o.ll);if(pts.length>1)lmap.fitBounds(pts,{padding:[50,50],maxZoom:14});else if(pts.length)lmap.setView(pts[0],13)}
+  declutter()}
+/* busy zooms: the most important pin wins its spot; nearby ones fold into a "+n" badge
+   (tap it to zoom in), and names that would overlap are left off */
+function declutter(){if(!lmap)return;const z=lmap.getZoom(),named=z>=11,all=z>=16,shown=[],boxes=[];
+  const ov=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
+  mks.slice().sort((a,b)=>a.pri-b.pri).forEach(o=>{const el=o.m.getElement();if(!el)return;const mk=el.querySelector(".mk");if(!mk)return;
+    const q=lmap.latLngToContainerPoint(o.ll);o.q=q;let host=null;
+    if(!all)host=shown.find(s=>Math.abs(s.q.x-q.x)<26&&Math.abs(s.q.y-q.y)<26);
+    mk.querySelector(".more")?.remove();
+    if(host){el.style.display="none";host.n=(host.n||0)+1;return}
+    el.style.display="";o.n=0;shown.push(o);boxes.push([q.x-15,q.y-15,q.x+15,q.y+15])});
+  shown.forEach(o=>{const mk=o.m.getElement().querySelector(".mk");
+    if(o.n){const b=document.createElement("span");b.className="more";b.textContent="+"+o.n;b.dataset.zoomto=o.ll.join(",");mk.appendChild(b)}
+    if(!named){mk.classList.remove("nolbl");return}
+    const r=[o.q.x+17,o.q.y-11,o.q.x+17+o.len*7+14,o.q.y+11];
+    if(boxes.some((b,i)=>ov(r,b)&&!(b===boxes[shown.indexOf(o)])))mk.classList.add("nolbl");else{mk.classList.remove("nolbl");boxes.push(r)}})}
 /* where we are: a blue dot that follows the phone; problems are explained instead of failing silently */
 function locate(center){const L=window.L;if(!lmap)return;
   if(!navigator.geolocation){if(center)toast("This browser can't share location");return}
@@ -1613,6 +1644,7 @@ function openSettings(){
 
 /* ================= events ================= */
 document.addEventListener("click",e=>{
+  const zt=e.target.closest?.("[data-zoomto]");if(zt&&lmap){e.stopPropagation();lmap.closePopup();const [a,c]=zt.dataset.zoomto.split(",").map(Number);lmap.setView([a,c],Math.min(lmap.getZoom()+2,17));return}
   const b=e.target.closest("button");if(!b||(b.closest("#form")&&b.type==="submit"))return;
   const ds=b.dataset;
   if(ds.tab){state.tab=ds.tab;document.querySelectorAll(".seg button").forEach(t=>t.setAttribute("aria-selected",t===b));
@@ -1664,7 +1696,8 @@ $("#sync").onclick=()=>{if(syncOn()&&!lastErr){sync(true)}else openSettings()};
 $("#scrim").onclick=closeSheet;
 $("#q").oninput=e=>{state.q=e.target.value;renderPlaces()};
 $("#region").onchange=e=>{state.region=e.target.value;renderPlaces()};
-document.addEventListener("change",e=>{const f=e.target;if(f.dataset?.memphoto&&f.files?.[0])savePhoto(f.dataset.memphoto,f.files[0])});
+document.addEventListener("change",e=>{const f=e.target;
+  if(f.id==="mday"){state.mapDay=f.value;renderMapBar();drawMarkers();if(!f.value&&lmap)lmap.setZoom(Math.min(lmap.getZoom(),10));return}if(f.dataset?.memphoto&&f.files?.[0])savePhoto(f.dataset.memphoto,f.files[0])});
 document.addEventListener("change",e=>{if(e.target.name==="book"&&$("#s-bookopts"))$("#s-bookopts").hidden=!e.target.checked;});
 document.addEventListener("change",e=>{if(e.target.id!=="mv-to"||!e.target.value)return;const v=e.target.value;e.target.value="";if(moveNight(state.day,v))closeDay()});
 document.addEventListener("input",e=>{if(e.target.id==="q-ideas"){state.ideaQ=e.target.value;state.ideaAll=false;renderIdeas()}});

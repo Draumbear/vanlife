@@ -93,6 +93,24 @@ textarea{min-height:72px;resize:vertical}
 .today .bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--on-fern) 25%,transparent);overflow:hidden}
 .today .bar span{display:block;height:100%;background:var(--on-fern)}
 .today .btn{background:var(--on-fern);color:var(--fern);border-color:transparent}
+.today .thead{background:none;border:0;padding:0;color:inherit;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;cursor:pointer;font:inherit}
+.today .thead .s{grid-column:1/-1}
+.today .twx{font-weight:800;font-size:.9rem;white-space:nowrap}
+.tplan{background:color-mix(in srgb,var(--on-fern) 12%,transparent);border-radius:14px;padding:6px 10px;display:grid}
+.trow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--on-fern) 18%,transparent)}
+.trow.done .tn{text-decoration:line-through;opacity:.7}
+.tn{background:none;border:0;padding:0;color:inherit;font:700 1rem var(--body);text-align:left;cursor:pointer;min-width:0}
+.tn small{font:600 .78rem var(--mono);opacity:.85;margin-left:4px}
+.today .tw{border-color:color-mix(in srgb,var(--on-fern) 40%,transparent);background:transparent;color:var(--on-fern)}
+.today .chk.tw{color:transparent;border-width:2px}
+.today .chk.tw.on{background:var(--on-fern);color:var(--fern)}
+.tfoot{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
+.tadd{display:inline-flex;align-items:center;gap:4px;background:var(--on-fern);color:var(--fern);border:0;border-radius:999px;padding:6px 12px 6px 8px;font:800 .85rem var(--body);cursor:pointer}
+.tadd .svg{width:16px;height:16px}
+.tmore{background:none;border:0;color:inherit;opacity:.85;font:700 .82rem var(--body);padding:8px 0 0;text-align:left;cursor:pointer}
+.tnight{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tnight b{font-weight:800}
+.tbtns{display:flex;gap:6px}
 .today .btn.ghost{background:transparent;color:var(--on-fern);border-color:color-mix(in srgb,var(--on-fern) 45%,transparent)}
 
 /* days list */
@@ -602,15 +620,22 @@ loadKea();
 function renderToday(){
   const el=$("#todaycard"),t=today(),cur=currentStop();
   if(!cur){el.innerHTML="";return}
-  const here=cur.start<=t,d=here?t:cur.start,n=nightInfo(d),plan=planFor(d),done=plan.filter(x=>x.done).length;
+  const here=cur.start<=t,d=here?t:cur.start,n=nightInfo(d),plan=planFor(d),done=plan.filter(x=>x.done).length,w=wxFor(d);
   const st=sortStops(),next=st[st.indexOf(cur)+1],left=cur.end?daysBetween(t,cur.end):0;
+  const MAX=4,shown=state.todayOpen?plan:plan.slice(0,MAX),camp=campOf(n);
+  const tot=here?sumA(spentOn(t)):0,pd=keaPerDay();
   el.innerHTML=`<div class="today">
-    <div class="k">${here?"Tonight":"Next"} · ${wd(d)} ${fmt(d)}${wxFor(d)?` · ${wxShort(wxFor(d))}${wxFor(d).p>=1?` · ${Math.round(wxFor(d).p)} mm`:""}`:""}</div>
-    <h2>${n.camp?esc(n.camp):"No campsite yet"}</h2>
-    <div class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</div>
-    ${plan.length?`<div class="bar" aria-hidden="true"><span style="width:${done/plan.length*100}%"></span></div><div class="s">${done} of ${plan.length} done</div>`:""}
-    ${here?(()=>{const tot=sumA(spentOn(t)),pd=keaPerDay();return tot||pd?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""})():""}
-    <div class="row2"><button class="btn" type="button" data-day="${d}">Plan</button>${n.camp?`<a class="btn ghost" href="${esc(navUrl(campOf(n),"camp"))}">Directions</a>`:`<button class="btn ghost" type="button" data-night="${d}">Pick campsite</button>`}</div>
+    <button type="button" class="thead" data-day="${d}"><span class="k">${here?"Today":"Next up"} · ${wd(d)} ${fmt(d)}</span>${w?`<span class="twx">${wxShort(w)}${w.p>=1?` · ${Math.round(w.p)} mm`:""}</span>`:""}
+      <span class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</span></button>
+    <div class="tplan">${shown.map(x=>`<div class="trow ${x.done?"done":""}">
+        <button class="chk tw ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
+        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}</button>
+        <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
+      ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
+      <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button>${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}</div></div>
+    <div class="tnight"><span>⛺ <span class="s">Tonight</span> <b>${n.camp?esc(n.camp):"no campsite yet"}</b></span>
+      <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
+    ${here&&(tot||pd)?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""}
   </div>`}
 function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   if(d<t){const sp=spentOn(d),tot=sumA(sp);
@@ -1080,7 +1105,8 @@ document.addEventListener("click",e=>{
     try{localStorage.setItem("sil-tab",ds.tab)}catch{}window.scrollTo(0,0);if(ds.tab==="days")requestAnimationFrame(drawRoad)}
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
-  else if("newplan" in ds)openNewPlan(state.day);
+  else if("newplan" in ds)openNewPlan(ds.newplan||state.day);
+  else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}
   else if(ds.day)openDay(ds.day);
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
     if(x?.kind==="plan"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}

@@ -131,6 +131,7 @@ textarea{min-height:72px;resize:vertical}
 .bars .r{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.85rem}
 .bars i{display:block;height:8px;border-radius:4px;background:var(--fern)}
 .openideas{width:100%;justify-content:space-between}
+.openideas span{white-space:nowrap}
 .card.wxline{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:.88rem}
 .wxline .big{font:800 1.25rem var(--display)}
 .day .dt b{display:block;font-weight:500;color:var(--muted);font-size:.72rem}
@@ -222,6 +223,10 @@ textarea{min-height:72px;resize:vertical}
 .act .nm{font-weight:700;display:block}
 .act.done .nm{text-decoration:line-through;color:var(--muted)}
 .act .sub{font-size:.8rem;color:var(--muted)}
+.gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
+.gobtn .svg{width:18px;height:18px}
+.addplus{width:34px;height:34px;border-radius:50%;border:0;background:var(--fern);color:var(--on-fern);display:grid;place-items:center;cursor:pointer;padding:0}
+.addplus .svg{width:18px;height:18px}
 .go{display:flex;gap:4px}
 .go a{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);text-decoration:none;font:800 .7rem var(--body)}
 .addrow{display:flex;gap:8px}
@@ -268,6 +273,8 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-nav" viewBox="0 0 24 24"><path d="M12 3 5 20l7-4 7 4z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></symbol>
 </svg>
 <header><div class="wrap">
@@ -364,8 +371,13 @@ function gUrl(x,kind){const t=dest(x,kind);return "https://www.google.com/maps/d
 function wazeUrl(x,kind){const t=dest(x,kind);return t.ll?`https://waze.com/ul?ll=${t.ll}&navigate=yes`:`https://waze.com/ul?q=${encodeURIComponent(t.q)}&navigate=yes`}
 function infoUrl(x,kind){return safeUrl(x.url)||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(kind==="camp"?(x.region||""):ctxName(x))+" New Zealand"+(kind==="hike"||(kind==="camp"&&x.type==="doc")?" DOC":""))}
 const A=(href,label)=>`<a href="${esc(href)}" target="_blank" rel="noopener">${label}</a>`;
-const navLinks=(x,kind)=>`<div class="links">${A(gUrl(x,kind),"Maps")}${A(wazeUrl(x,kind),"Waze")}${A(infoUrl(x,kind),"Info")}</div>`;
-const goBtns=(x,kind)=>`<div class="go"><a href="${esc(gUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Google Maps">Maps</a><a href="${esc(wazeUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Waze">Waze</a></div>`;
+/* one directions link: Android's geo: intent lets the phone ask which app (Maps, Waze…) to use */
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
+function navUrl(x,kind){const t=dest(x,kind),label=encodeURIComponent(x.name||"");
+  if(IOS)return "https://maps.apple.com/?daddr="+(t.ll||encodeURIComponent(t.q));
+  return t.ll?`geo:${t.ll}?q=${t.ll}(${label})`:`geo:0,0?q=${encodeURIComponent(t.q)}`}
+const navLinks=(x,kind)=>`<div class="links"><a href="${esc(navUrl(x,kind))}">Directions</a>${A(infoUrl(x,kind),"Info")}</div>`;
+const goBtns=(x,kind)=>`<a class="gobtn" href="${esc(navUrl(x,kind))}" aria-label="Directions to ${esc(x.name||"")}">${icon("nav")}</a>`;
 
 /* ================= local store + sync ================= */
 const LS="sil-v2",OLD="sil-plan-v1",PREV="sil-plan-prev",LS_CRED="sil-sync-v1",KEA_CRED="vanbudget.sync.v1";
@@ -598,7 +610,7 @@ function renderToday(){
     <div class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</div>
     ${plan.length?`<div class="bar" aria-hidden="true"><span style="width:${done/plan.length*100}%"></span></div><div class="s">${done} of ${plan.length} done</div>`:""}
     ${here?(()=>{const tot=sumA(spentOn(t)),pd=keaPerDay();return tot||pd?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""})():""}
-    <div class="row2"><button class="btn" type="button" data-day="${d}">Plan</button>${n.camp?`<a class="btn ghost" href="${esc(gUrl(campOf(n),"camp"))}" target="_blank" rel="noopener">Navigate</a>`:`<button class="btn ghost" type="button" data-night="${d}">Pick campsite</button>`}</div>
+    <div class="row2"><button class="btn" type="button" data-day="${d}">Plan</button>${n.camp?`<a class="btn ghost" href="${esc(navUrl(campOf(n),"camp"))}">Directions</a>`:`<button class="btn ghost" type="button" data-night="${d}">Pick campsite</button>`}</div>
   </div>`}
 function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   if(d<t){const sp=spentOn(d),tot=sumA(sp);
@@ -660,7 +672,7 @@ async function pullWx(){if(wxBusy||!navigator.onLine)return;wxBusy=true;const t=
 const wxShort=w=>w?`${WMO(w.c)} ${Math.round(w.hi)}°`:"";
 function wxCard(d){const w=wxFor(d);if(!w)return "";
   return `<div class="card wxline"><span class="big">${WMO(w.c)} ${Math.round(w.hi)}°</span><span class="muted">low ${Math.round(w.lo)}°</span>
-    <span>${w.p>=0.5?`💧 ${Math.round(w.p)} mm`:"dry"}</span><span>💨 ${Math.round(w.w)} km/h</span>${w.sr?`<span class="muted">sunrise ${w.sr} · sunset ${w.ss}</span>`:""}</div>`}
+    <span>${w.p>=0.5?`💧 ${Math.round(w.p)} mm`:"dry"}</span><span>💨 ${Math.round(w.w)} km/h</span>${w.sr?`<span>🌅 ${w.sr}</span><span>🌇 ${w.ss}</span>`:""}</div>`}
 /* ---- things to book: plans and stop campsites flagged "needs booking" ---- */
 const LEADS=[[3,"3 days"],[7,"1 week"],[14,"2 weeks"],[30,"1 month"],[60,"2 months"]];
 function bookItems(){const t=today(),out=[];
@@ -761,18 +773,18 @@ function renderDay(){
     ${d<=t?spendCard(d):""}
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
       <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
-    <div class="card"><span class="label">Plan</span>
+    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></div>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
-      <form class="addrow" id="addact"><input id="f-act" placeholder="Add something" autocomplete="off" aria-label="Add an activity"><button class="btn primary" type="submit">Add</button></form></div>
+      </div>
     <div class="card" id="ideas-card"></div>
     ${s?`<div class="links">${A(safeUrl(s.weather)||MS_INDEX,"MetService")}${hasLL(s)?A(windyUrl(s),"Windy"):""}</div>`:""}
    </div>`;
   renderIdeas();
-  if(keep)$("#f-act").value=keep;if(focus)$("#f-act").focus();el.scrollTop=scroll}
+  el.scrollTop=scroll}
 const rainOK=x=>x.rain===true||(x.rain!==false&&["paid","quirky","food"].includes(x.kind));
 const isWet=w=>!!w&&((+w.p||0)>=5||(w.c>=61&&w.c<=67)||(w.c>=80));
 function renderIdeas(){
@@ -787,7 +799,7 @@ function renderIdeas(){
   const ideas=state.spots.filter(x=>!x.day&&!x.done&&visSug(x)).map(x=>({...x,_km:dist(x)}))
     .filter(x=>q?(x.name+" "+(x.notes||"")+" "+(KINDS[x.kind]||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
     .sort((a,b)=>(wet?(rainOK(b)?1:0)-(rainOK(a)?1:0):0)||(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
-  if(!state.ideasOpen){$("#ideas-h").textContent=`${ideas.length} nearby${wet?" · ☔ rain-proof first":""}`;return}
+  if(!state.ideasOpen){$("#ideas-h").textContent=`${ideas.length} nearby${wet?" · ☔":""}`;return}
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:wet?`Wet day · rain-proof first`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
   $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(kindLabel(x))}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}${wet&&rainOK(x)?` <span class="rainok">☔ good in rain</span>`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
@@ -818,6 +830,10 @@ function campFields(it){return `<label>Name<input name="name" value="${esc(it.na
 
 const sgBox=it=>it.suggested?`<div class="sgbox"><span><b>✦ Claude's suggestion</b></span><div class="row2"><button type="button" class="btn sm" id="sg-keep">Keep it</button><button type="button" class="btn sm" id="sg-drop">Not for us</button></div></div>`:"";
 function sgWire(c,it){if(!it.suggested)return;$("#sg-keep").onclick=()=>{patch(c,it.id,{suggested:false});closeSheet();toast("Kept")};$("#sg-drop").onclick=()=>{del(c,it.id);closeSheet();toast("Removed")}}
+function openNewPlan(d){
+  sheet(head(`Add to ${wd(d)} ${fmt(d)}`)+`<label>What<input name="name" placeholder="Swimming pool, dump station…" autocomplete="off" enterkeyhint="done"></label>
+    <div class="end"><div></div><div><button class="btn primary" type="submit">Add</button></div></div>`,"newplan",d);
+  setTimeout(()=>$("#form [name=name]")?.focus(),60)}
 function openSpot(it,fresh){
   if(!it){const r=stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
     sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
@@ -970,6 +986,9 @@ $("#form").addEventListener("submit",e=>{
   e.preventDefault();const f=e.target,type=f.dataset.type,id=f.dataset.id;if(type==="settings")return;
   const v={};for(const [k,x] of new FormData(f).entries())v[k]=typeof x==="string"?x.trim():x;
   if("name" in v&&!v.name){toast("Give it a name");f.querySelector("[name=name]").focus();return}
+  if(type==="newplan"){const d=id,name=v.name;
+    const nid=add("spots",{name,kind:"plan",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
+    openSpot({id:nid,...S.docs.spots[nid]},true);return}
   if(type==="paid"){const x=S.docs.spots[id];if(!x)return closeSheet();
     const amt=parseFloat(String(v.amount||"").replace(",","."));if(!(amt>0)){toast("Enter an amount");return}
     const keaId=x.keaId||newId(),meta={payer:v.payer||keaMe(),account:v.account||"",personal:v.personal||""};
@@ -1061,6 +1080,7 @@ document.addEventListener("click",e=>{
     try{localStorage.setItem("sil-tab",ds.tab)}catch{}window.scrollTo(0,0);if(ds.tab==="days")requestAnimationFrame(drawRoad)}
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
+  else if("newplan" in ds)openNewPlan(state.day);
   else if(ds.day)openDay(ds.day);
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
     if(x?.kind==="plan"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}

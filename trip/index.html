@@ -1483,13 +1483,16 @@ async function geoLookup(q,near){const p=new URLSearchParams({q:q+", New Zealand
   const r=await fetch("https://nominatim.openstreetmap.org/search?"+p,{headers:{"Accept-Language":"en"}});if(!r.ok)throw new Error("osm "+r.status);return r.json()}
 async function geoCheck(){const out=$("#geo-out");if(geoRun)return;geoRun={stop:false,fixes:[],missing:[]};
   const items=[...state.spots.filter(x=>!["chore","task","plan"].includes(x.kind)).map(x=>({c:"spots",x})),...state.camps.map(x=>({c:"camps",x}))]
-    .filter(({x})=>x.name&&!x.done);
+    .filter(({x})=>x.name&&!x.done&&!x.llok);
   let i=0;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   for(const it of items){if(geoRun.stop)break;i++;const x=it.x,cur=ptOf(x);
     if(out)out.innerHTML=`<div class="muted" style="font-size:.85rem">Checking ${i} of ${items.length}: ${esc(x.name)}… <button type="button" class="pill" id="geo-stop">Stop</button></div>`;
     $("#geo-stop")&&($("#geo-stop").onclick=()=>geoRun.stop=true);
-    let hits=[];const names=[...new Set([x.name.replace(/\s*\(.*?\)\s*/g," ").trim(),geoName(x.name)])];
+    let hits=[];const names=[...new Set([x.osm,x.name.replace(/\s*\(.*?\)\s*/g," ").trim(),geoName(x.name)].filter(Boolean))];
     for(const q of names){try{hits=await geoLookup(q,cur)}catch{}await sleep(1100);if(hits.length)break}
+    // second opinion from Photon (fuzzier matching on the same OpenStreetMap data)
+    if(!hits.length){try{const p=new URLSearchParams({q:names[0],limit:"5"});if(cur){p.set("lat",cur.lat);p.set("lon",cur.lng)}
+      const r=await fetch("https://photon.komoot.io/api/?"+p);if(r.ok){const j=await r.json();hits=(j.features||[]).filter(f=>f.properties?.country==="New Zealand"||f.properties?.countrycode==="NZ").map(f=>({lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],display_name:[f.properties.name,f.properties.city||f.properties.county||f.properties.state].filter(Boolean).join(", ")}))}}catch{}await sleep(600)}
     if(!hits.length){geoRun.missing.push(it);continue}
     // pick the match nearest our current guess (or the most important if we have none), but never one 150+ km away from it
     const scored=hits.map(h=>({h,ll:{lat:+h.lat,lng:+h.lon}})).map(o=>({...o,d:cur?hav(cur,o.ll):0}));
@@ -1531,7 +1534,7 @@ function openSettings(){
     <label>Restore<input type="file" id="s-file" accept=".json,application/json"></label>
     ${prev?`<button type="button" class="btn" id="s-undo">Undo last restore</button>`:""}
     <details><summary>Check map positions</summary><div style="display:grid;gap:8px">
-      <p class="muted" style="margin:0;font-size:.85rem">Looks every place up in OpenStreetMap (about one per second, so a few minutes with the screen on) and suggests fixes for ones that are off. Nothing changes until you tap Apply.</p>
+      <p class="muted" style="margin:0;font-size:.85rem">Places already checked by hand are skipped. Looks the rest up in OpenStreetMap (about one per second, so a few minutes with the screen on) and suggests fixes for ones that are off. Nothing changes until you tap Apply.</p>
       <button type="button" class="btn" id="geo-go">Start checking</button><div id="geo-out"></div></div></details>
     <a class="btn" href="../">Open Kea</a>`,"settings");
   const test=async(url,key)=>{const msg=$("#s-msg");msg.innerHTML=`<span class="muted">Testing…</span>`;

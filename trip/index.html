@@ -176,6 +176,8 @@ textarea{min-height:72px;resize:vertical}
 #plane{position:absolute;left:0;top:0;z-index:3;transform-origin:60px 55px;pointer-events:none;will-change:transform}
 #van .sold{position:absolute;right:-12px;top:-10px;width:18px;height:18px;border-radius:50%;background:#2f8f4e;color:#fff;font:800 11px/18px var(--body);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35);transform:scale(0);transition:transform .25s cubic-bezier(.3,1.6,.6,1)}
 #van.sold .sold{transform:scale(1)}
+.sea-end{position:relative;z-index:0;height:440px;margin:26px 0 0 -30px;border-radius:18px;overflow:hidden;background:repeating-linear-gradient(170deg,transparent 0 22px,color-mix(in srgb,var(--card) 35%,transparent) 22px 24px),linear-gradient(var(--sea-soft),color-mix(in srgb,var(--sea) 30%,var(--sea-soft)))}
+.sea-end .fcap{top:auto;bottom:24px}
 .sea-panel{position:relative;z-index:0;height:620px;margin:26px 0 26px -30px;border-radius:18px;overflow:hidden;
   background:repeating-linear-gradient(170deg,transparent 0 22px,color-mix(in srgb,var(--card) 35%,transparent) 22px 24px),linear-gradient(var(--sea-soft),color-mix(in srgb,var(--sea) 30%,var(--sea-soft)))}
 .fcap{position:absolute;left:150px;right:12px;top:40px;display:grid;gap:2px}
@@ -186,6 +188,21 @@ textarea{min-height:72px;resize:vertical}
 #van.aboard{filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
 #van{position:absolute;left:0;top:0;width:18px;height:28px;pointer-events:none;will-change:transform;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
 .day .wx{display:block;font-style:normal;font-size:.72rem;margin-top:2px;color:var(--ink)}
+.mem img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block}
+.memnote{margin:0;font-size:.95rem;font-style:italic}
+.mem .btn input{display:none}
+.card.alert{border-color:var(--tussock);background:color-mix(in srgb,var(--tussock-soft) 70%,var(--card))}
+.card.alert .sub{display:block;font-size:.8rem;color:var(--muted)}
+.talert{background:color-mix(in srgb,var(--on-fern) 16%,transparent);border:0;border-radius:10px;padding:7px 10px;color:inherit;font:700 .85rem var(--body);text-align:left;cursor:pointer}
+.sub.tide{color:var(--sea)!important;display:block;font-size:.8rem}
+.tn .tsub{display:block;font:500 .76rem var(--body);opacity:.85}
+.fuel{font-size:.76rem;color:var(--muted);margin:0 96px 2px 2px;position:relative;z-index:1}
+.todo .sub{display:block;font-size:.76rem;color:var(--muted)}
+.todo .sub.late{color:var(--rust);font-weight:700}
+.heavy{color:var(--tussock);font-weight:700}
+.day .thumb{width:40px;height:40px;object-fit:cover;border-radius:8px;margin-right:2px}
+.day.past{grid-template-columns:62px minmax(0,1fr) auto auto}
+.memline{display:block;font-size:.78rem;color:var(--muted);font-style:italic}
 #extras{display:grid;gap:10px;margin-top:12px}
 #extras:empty{display:none}
 .mini-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -418,9 +435,9 @@ const KINDS_PL={place:"Sights",hike:"Hikes",multi:"Overnight hikes",bike:"MTB & 
 const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
 const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
-const COLLS=["stops","spots","camps","nights","todos"];
+const COLLS=["stops","spots","camps","nights","todos","journal"];
 const COLL={stop:"stops",spot:"spots",camp:"camps"};
-const state={tab:"days",stops:[],spots:[],camps:[],nights:[],todos:[],ideasOpen:false,kind:"all",region:null,q:"",showPast:false,dview:"ahead",day:null,ideaQ:"",ideaAll:false,src:"both"};
+const state={tab:"days",stops:[],spots:[],camps:[],nights:[],todos:[],journal:[],sellAll:false,ideasOpen:false,kind:"all",region:null,q:"",showPast:false,dview:"ahead",day:null,ideaQ:"",ideaAll:false,src:"both"};
 try{const v=localStorage.getItem("sil-sug");state.src=v==="0"?"ours":v==="claude"?"claude":"both"}catch{}
 const visSug=x=>state.src==="both"||(state.src==="ours"?(!x.suggested||!!x.day):!!x.suggested);
 const $=s=>document.querySelector(s);
@@ -433,7 +450,7 @@ const addDays=(d,n)=>{const x=new Date(d+"T12:00:00Z");x.setUTCDate(x.getUTCDate
 const daysBetween=(a,b)=>Math.round((D(b)-D(a))/864e5);
 const safeUrl=u=>/^https:\/\//i.test(u||"")?u:"";
 const icon=(n,cls="svg")=>`<svg class="${cls}"><use href="#i-${n}"/></svg>`;
-function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+function toast(t,ms=2200){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,ms)}
 function hav(a,b){const R=6371,r=x=>x*Math.PI/180;const dLa=r(b.lat-a.lat),dLo=r(b.lng-a.lng);const h=Math.sin(dLa/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 const hasLL=s=>typeof s.lat==="number"&&typeof s.lng==="number"&&!isNaN(s.lat)&&!isNaN(s.lng);
 const sortStops=()=>[...state.stops].sort((a,b)=>(a.start||"9").localeCompare(b.start||"9")||(a.name||"").localeCompare(b.name||""));
@@ -464,7 +481,7 @@ const shortStop=n=>(n||"").split(/\s*(?:&|–|\/|,)\s*/)[0].trim();
 function ctxName(x){let s=x.day?stopFor(x.day):null;
   if(!s){const p=ptOf(x);if(p){let bd=1e9;sortStops().forEach(st=>{if(hasLL(st)){const d=hav(st,p);if(d<bd){bd=d;s=st}}});if(bd>40)s=null}}
   return s?shortStop(s.name):(x.region||"")}
-const kindLabel=x=>x.kind==="chore"?"Van chore":x.kind&&KINDS[x.kind]?KINDS[x.kind]:+x.price>0?kcat(x.cat||"activity")[1]:x.kind==="plan"?"Plan":"Sight";
+const kindLabel=x=>x.kind==="chore"?"Van chore":x.kind==="task"?"Selling the van":x.kind&&KINDS[x.kind]?KINDS[x.kind]:+x.price>0?kcat(x.cat||"activity")[1]:x.kind==="plan"?"Plan":"Sight";
 function dest(x,kind){
   if(hasLL(x))return {ll:x.lat+","+x.lng};
   const m=LLRE.exec(x.loc||"");if(m)return {ll:m[1]+","+m[2]};
@@ -494,7 +511,7 @@ function persist(){try{localStorage.setItem(LS,JSON.stringify(S))}catch{toast("P
 function refresh(){COLLS.forEach(c=>state[c]=Object.entries(S.docs[c]).map(([id,v])=>({id,...v})));render()}
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function strip(v){const o={...v};delete o.id;return o}
-function put(c,id,v){S.docs[c][id]=strip(v);S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
+function put(c,id,v){S.docs[c][id]={...strip(v),by:keaMe()};S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
 function patch(c,id,p){const o=S.docs[c][id];if(!o)return;put(c,id,{...o,...p})}
 function del(c,id){delete S.docs[c][id];S.pending[c+"/"+id]=1;persist();refresh();scheduleSync()}
 function add(c,v){const id=newId();put(c,id,v);return id}
@@ -519,12 +536,17 @@ async function api(path,opt={},c=cred){
     const ct=r.headers.get("content-type")||"";return r.status===204||!ct.includes("json")?null:r.json()}
   finally{clearTimeout(t)}}
 async function pullAll(since){const out=[];let off=0;
-  for(;;){const rows=await api(`trip_docs?select=coll,id,data,deleted,updated_at${since?"&updated_at=gte."+encodeURIComponent(since):""}&order=updated_at.asc,coll.asc,id.asc&limit=1000&offset=${off}`);
+  for(;;){const rows=await api(`trip_docs?select=coll,id,data,deleted,updated_at&coll=neq.photos${since?"&updated_at=gte."+encodeURIComponent(since):""}&order=updated_at.asc,coll.asc,id.asc&limit=1000&offset=${off}`);
     out.push(...rows);if(rows.length<1000||off>60000)break;off+=1000}
   return out}
 const maxTs=rows=>rows.reduce((m,r)=>r.updated_at>m?r.updated_at:m,"");
 function scheduleSync(ms=1200){setChip();if(!syncOn())return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>sync(false),ms)}
 const missingTable=e=>e&&(e.status===404||/PGRST205|trip_docs/.test(e.body||""));
+/* "Zita added Swimming pool to Wed 28 Oct" when the other phone changed the plan */
+function tellChanges(list){const who=PEOPLE[list[0].by]||"The other phone",x=list[0];
+  const what=x.c==="spots"?(x.del?`removed ${x.d.name||"a plan"}`:!x.was&&x.d.day?`added ${x.d.name} to ${wd(x.d.day)} ${fmt(x.d.day)}`:x.d.day&&x.was?.day!==x.d.day?`moved ${x.d.name} to ${wd(x.d.day)} ${fmt(x.d.day)}`:x.d.done&&!x.was?.done?`ticked off ${x.d.name}`:`changed ${x.d.name||"a place"}`)
+    :x.c==="stops"?`changed ${x.d.name||"a stop"}`:x.c==="nights"?"changed a campsite":x.c==="journal"?`added a memory for ${wd(x.d.date||"")} ${fmt(x.d.date||"")}`:"changed the plan";
+  toast(`${who} ${what}${list.length>1?` (+${list.length-1} more)`:""}`,5000)}
 async function sync(manual){
   if(!syncOn()||syncing)return setChip();
   if(!navigator.onLine){if(manual)toast("No signal — changes stay on this phone until you're back online");return setChip()}
@@ -534,7 +556,7 @@ async function sync(manual){
       const probe=await api("trip_docs?select=id&limit=1");
       if(probe.length){
         try{localStorage.setItem(PREV,JSON.stringify(S.docs))}catch{}
-        const all=await pullAll("");const docs={stops:{},spots:{},camps:{},nights:{},todos:{}};
+        const all=await pullAll("");const docs={stops:{},spots:{},camps:{},nights:{},todos:{},journal:{}};
         all.forEach(r=>{if(!r.deleted&&docs[r.coll])docs[r.coll][r.id]=r.data});
         S.docs=docs;S.pending={};S.lastPull=maxTs(all);S.synced=true;persist();refresh();
         toast("Shared plan loaded");return;
@@ -552,10 +574,13 @@ async function sync(manual){
       persist();
     }
     const rows=await pullAll(S.lastPull);let changed=false;
+    const me=keaMe(),theirs=[];
     rows.forEach(r=>{const k=r.coll+"/"+r.id;if(S.pending[k]||!S.docs[r.coll])return;
-      if(r.deleted){if(r.id in S.docs[r.coll]){delete S.docs[r.coll][r.id];changed=true}}
-      else if(JSON.stringify(S.docs[r.coll][r.id])!==JSON.stringify(r.data)){S.docs[r.coll][r.id]=r.data;changed=true}});
+      if(r.deleted){if(r.id in S.docs[r.coll]){const o=S.docs[r.coll][r.id];delete S.docs[r.coll][r.id];changed=true;if(o?.by&&o.by!==me)theirs.push({by:o.by,c:r.coll,d:o,del:true})}}
+      else if(JSON.stringify(S.docs[r.coll][r.id])!==JSON.stringify(r.data)){const was=S.docs[r.coll][r.id];S.docs[r.coll][r.id]=r.data;changed=true;if(r.data.by&&r.data.by!==me)theirs.push({by:r.data.by,c:r.coll,d:r.data,was})}});
     const m=maxTs(rows);if(m)S.lastPull=m;persist();if(changed)refresh();
+    if(theirs.length&&S.lastPull&&!manual)tellChanges(theirs);
+    syncPhotos();
     lastErr=null;if(manual)toast("Synced");
   }catch(e){lastErr=e;console.warn("sync",e);if(manual)toast(missingTable(e)?"The shared table isn't set up yet — see ⋯":"Sync failed — will retry")}
   finally{syncing=false;setChip()}
@@ -615,6 +640,80 @@ function renderHeader(){const r=tripRange(),t=today();if(!r)return;
   const total=Math.max(1,daysBetween(r.first,r.last)),n=Math.min(total,Math.max(0,daysBetween(r.first,t)+1));
   $("#bar").style.width=(n/total*100)+"%";
   $("#dayline").textContent=t<r.first?`Starts ${fmt(r.first)}`:t>=r.last?"Trip done":`Day ${n} of ${total} · ${total-n} to go`}
+/* ================= memories: one photo + note per day ================= */
+const IDB=(()=>{let db;const open=()=>db||(db=new Promise((ok,no)=>{const r=indexedDB.open("loop-photos",1);r.onupgradeneeded=()=>r.result.createObjectStore("p");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}));
+  const tx=(m,f)=>open().then(d=>new Promise((ok,no)=>{const t=d.transaction("p",m),st=t.objectStore("p"),q=f(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>no(t.error)}));
+  return {get:k=>tx("readonly",s=>s.get(k)),set:(k,v)=>tx("readwrite",s=>s.put(v,k)),del:k=>tx("readwrite",s=>s.delete(k))}})();
+const PQ="sil-photoq";const photoQ=()=>{try{return JSON.parse(localStorage.getItem(PQ)||"[]")}catch{return[]}};
+/* shrink to at most 1280px and ~200 KB JPEG before it goes anywhere */
+async function compress(file){const url=URL.createObjectURL(file);try{
+  const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+  const M=1280,sc=Math.min(1,M/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.round(img.naturalWidth*sc),h=Math.round(img.naturalHeight*sc);
+  const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
+  let q=.72,out=c.toDataURL("image/jpeg",q);while(out.length>270000&&q>.35){q-=.1;out=c.toDataURL("image/jpeg",q)}return out}finally{URL.revokeObjectURL(url)}}
+async function savePhoto(d,file){toast("Shrinking photo…");let data;try{data=await compress(file)}catch{return toast("Couldn't read that photo")}
+  await IDB.set(d,data);const q=photoQ().filter(x=>x!==d);q.push(d);try{localStorage.setItem(PQ,JSON.stringify(q))}catch{}
+  const j=S.docs.journal[d]||{};put("journal",d,{...j,date:d,photo:Date.now()});toast(`Photo saved · ${Math.round(data.length*.75/1024)} KB`);syncPhotos()}
+async function syncPhotos(){if(!syncOn()||!navigator.onLine)return;const q=photoQ();if(!q.length)return;
+  for(const d of q){try{const data=await IDB.get(d);if(data)await api("trip_docs?on_conflict=coll,id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify([{coll:"photos",id:d,data:{img:data},deleted:false}])});
+    localStorage.setItem(PQ,JSON.stringify(photoQ().filter(x=>x!==d)))}catch(e){console.warn("photo",e);break}}}
+const photoMem={};
+async function getPhoto(d){const j=S.docs.journal[d];if(!j?.photo)return null;const key=d+"@"+j.photo;if(photoMem[key])return photoMem[key];
+  let data=await IDB.get(d).catch(()=>null);
+  if(!data&&syncOn()&&navigator.onLine){try{const r=await api(`trip_docs?select=data&coll=eq.photos&id=eq.${d}`);data=r?.[0]?.data?.img||null;if(data)IDB.set(d,data)}catch{}}
+  if(data)photoMem[key]=data;return data}
+function hydratePhotos(root=document){root.querySelectorAll("img[data-photo]").forEach(async im=>{const src=await getPhoto(im.dataset.photo);if(src){im.src=src;im.hidden=false}})}
+function memoryCard(d){const j=S.docs.journal[d]||{};
+  return `<div class="card mem"><div class="mini-h"><span class="label">Memory</span>${j.photo||j.note?`<button type="button" class="pill" data-memedit="${d}">Edit note</button>`:""}</div>
+    ${j.photo?`<img data-photo="${d}" alt="Photo of ${wd(d)} ${fmt(d)}" hidden>`:""}
+    ${j.note?`<p class="memnote">${esc(j.note)}</p>`:""}
+    <div class="row2"><label class="btn"><input type="file" accept="image/*" data-memphoto="${d}" hidden>📷 ${j.photo?"Change photo":"Add photo"}</label>${j.note?"":`<button type="button" class="btn ghost" data-memedit="${d}">✏️ Add a note</button>`}</div></div>`}
+function openMemNote(d){const j=S.docs.journal[d]||{};
+  sheet(head(`${wd(d)} ${fmt(d)}`)+`<label>What do you want to remember?<textarea name="note" placeholder="Swam at the Wānaka pool, Zita won disc golf…">${esc(j.note||"")}</textarea></label>
+    <div class="end"><div></div><div><button class="btn primary" type="submit">Save</button></div></div>`,"memnote",d)}
+
+/* ================= selling the van: a countdown of jobs with "do by" dates ================= */
+function sellCard(){const t=today(),tasks=state.spots.filter(x=>x.kind==="task"&&!x.done).sort((a,b)=>(a.by||"9").localeCompare(b.by||"9"));
+  if(!tasks.length)return "";const shown=state.sellAll?tasks:tasks.slice(0,3);
+  return `<div class="card"><div class="mini-h"><span class="label">Selling the van</span><span class="muted" style="font-size:.78rem">${tasks.length} to do</span></div>
+    ${shown.map(x=>`<div class="todo"><button class="chk sm" type="button" data-tog="spots:done:${esc(x.id)}" aria-label="Done">✓</button>
+      <button type="button" class="tx" data-open="spot:${esc(x.id)}" style="background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer"><b>${esc(x.name)}</b>${x.by?`<span class="sub ${x.by<t?"late":""}">by ${wd(x.by)} ${fmt(x.by)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}</span>`:""}</button><span></span></div>`).join("")}
+    ${tasks.length>3?`<button type="button" class="pill" data-sellall>${state.sellAll?"Show less":`Show all ${tasks.length}`}</button>`:""}</div>`}
+
+/* ================= tides for tide-dependent plans (Open-Meteo marine, approximate) ================= */
+const TK="sil-tide";let tides={};try{tides=JSON.parse(localStorage.getItem(TK))||{}}catch{}
+const tideKey=p=>(+p.lat).toFixed(2)+","+(+p.lng).toFixed(2);
+function lowTides(x,d){const p=ptOf(x);if(!p)return null;const c=tides[tideKey(p)];if(!c)return null;return c.low.filter(t=>t.startsWith(d)).map(t=>t.slice(11,16))}
+let tideBusy=false;
+async function pullTides(){if(tideBusy||!navigator.onLine)return;tideBusy=true;const t=today(),until=addDays(t,15);let changed=false;
+  try{const want=state.spots.filter(x=>x.tide&&x.day&&x.day>=t&&x.day<=until&&ptOf(x));
+    for(const x of want){const p=ptOf(x),k=tideKey(p),c=tides[k];if(c&&Date.now()-c.at<12*3600e3)continue;
+      try{const r=await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${p.lat}&longitude=${p.lng}&hourly=sea_level_height_msl&timezone=Pacific%2FAuckland&forecast_days=16`);
+        if(!r.ok)continue;const j=await r.json(),T=j.hourly.time,H=j.hourly.sea_level_height_msl,low=[];
+        for(let i=1;i<H.length-1;i++){if(H[i]==null||H[i-1]==null||H[i+1]==null)continue;if(H[i]<=H[i-1]&&H[i]<H[i+1]){
+          const den=H[i-1]-2*H[i]+H[i+1],off=den?(H[i-1]-H[i+1])/(2*den):0,ms=new Date(T[i]+":00").getTime()+off*3600e3,dt=new Date(ms);
+          low.push(`${T[i].slice(0,10)}T${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`)}}
+        tides[k]={at:Date.now(),low};changed=true}catch{}}
+    if(changed){try{localStorage.setItem(TK,JSON.stringify(tides))}catch{}render()}}finally{tideBusy=false}}
+const tideNote=(x)=>{if(!x.tide||!x.day)return "";const l=lowTides(x,x.day);
+  return `<span class="sub tide">🌊 ${l&&l.length?`Low tide ~${l.join(" & ")}`:x.day>addDays(today(),15)?"Tide times show up ~2 weeks before":"Check low tide"}</span>`};
+
+/* ================= road alerts (NZTA, via our small proxy) near where you'll be ================= */
+const RAK="sil-roadx";let roadx={at:0,events:[]};try{roadx=JSON.parse(localStorage.getItem(RAK))||roadx}catch{}
+let raBusy=false;
+async function pullRoadAlerts(){const c=keaCred()||cred;if(raBusy||!c?.url||!navigator.onLine||Date.now()-roadx.at<20*60e3)return;raBusy=true;
+  try{const r=await fetch(c.url.replace(/\/+$/,"")+"/functions/v1/road-alerts",{headers:{apikey:c.key}});if(r.ok){const j=await r.json();
+    roadx={at:Date.now(),events:(j.events||[]).filter(e=>/closed|delay/i.test(e.impact||""))};try{localStorage.setItem(RAK,JSON.stringify(roadx))}catch{}render()}}catch{}finally{raBusy=false}}
+function alertsFor(d){const t=today();if(d<t||d>addDays(t,3)||!roadx.events.length)return [];
+  const here=[stopFor(d),stopFor(addDays(d,-1))].filter(x=>x&&hasLL(x)),pts=[...here,...planFor(d).map(ptOf).filter(Boolean)];
+  if(!pts.length)return [];const near=(a,b,km)=>hav(a,{lat:b[0],lng:b[1]})<=km;
+  const seg=here.length===2&&here[0]!==here[1]?here:null;
+  return roadx.events.filter(e=>e.pts.some(q=>pts.some(p=>near(p,q,30))||(seg&&segNear(seg[1],seg[0],q))))}
+function segNear(a,b,q){for(let i=0;i<=10;i++){const t=i/10,p={lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t};if(hav(p,{lat:q[0],lng:q[1]})<=12)return true}return false}
+function alertCard(d){const a=alertsFor(d);if(!a.length)return "";
+  return `<div class="card alert"><span class="label">⚠️ Road alerts</span>${a.slice(0,3).map(e=>`<div><b>${esc(e.name.replace(/^(Road Closure|Area Warning|Road Work):\s*/,""))}</b><span class="sub">${esc(e.impact)}${e.until?` · ${esc(e.until)}`:""}</span>${e.note?`<span class="sub clamp2">${esc(e.note)}</span>`:""}</div>`).join("")}
+    <a class="pill" href="https://www.journeys.nzta.govt.nz/" target="_blank" rel="noopener" style="justify-self:start">NZTA road info</a></div>`}
+
 /* ================= Kea (the budget app on this same site) ================= */
 const KEA_LS="vanbudget.v1",KEA_CACHE="sil-kea";
 const KCAT={fuel:["⛽","Fuel"],grocery:["🛒","Groceries"],eatout:["🍔","Eating out"],camp:["🏕️","Campsites"],stay:["🛏️","Stays"],activity:["🪂","Activities"],van:["🔧","Van"],transport:["⛴️","Transport"],utility:["🚿","Showers & laundry"],phone:["📱","Phone"],gear:["🎒","Gear"],health:["💊","Health"],gift:["🎁","Gifts"],drinks:["🍻","Drinks"],other:["✨","Other"]};
@@ -715,12 +814,13 @@ function renderToday(){
       <span class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</span></button>
     <div class="tplan">${shown.map(x=>`<div class="trow ${x.done?"done":""}">
         <button class="chk tw ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}</button>
+        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}${x.tide?`<small class="tsub">${tideNote(x).replace(/<[^>]+>/g,"")}</small>`:""}</button>
         <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
       ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
       <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button>${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}</div></div>
     <div class="tnight"><span>⛺ <span class="s">Tonight</span> <b>${n.camp?esc(n.camp):"no campsite yet"}</b></span>
       <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
+    ${alertsFor(d).length?`<button type="button" class="talert" data-day="${d}">⚠️ ${alertsFor(d).length} road alert${alertsFor(d).length>1?"s":""} near you</button>`:""}
     ${here&&(tot||pd)?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""}
   </div>`}
 /* little decorations on special days */
@@ -732,14 +832,16 @@ const DECO={"11-20":CAKE,"12-06":MITRE,"12-25":HAT,"12-31":FIREWORKS};
 const deco=d=>DECO[d.slice(5)]||"";
 function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   if(d<t){const sp=spentOn(d),tot=sumA(sp);
+    const j=S.docs.journal[d];
     return `<button type="button" class="day past" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
-      <span class="what"><span class="clamp2">${sp.length?spendCats(sp):plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`}</span></span>
+      <span class="what"><span class="clamp2">${sp.length?spendCats(sp):plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`}</span>${j?.note?`<span class="memline clamp1">“${esc(j.note)}”</span>`:""}</span>
+      ${j?.photo?`<img class="thumb" data-photo="${d}" alt="" hidden>`:""}
       ${sp.length||kea.set||Object.keys(kea.ex).length?moneyTag(tot):`<span class="n"></span>`}</button>`}
   const what=plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
   const fx=n.flex&&d>t;
   const w=wxFor(d);
-  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}</i>`:""}</span>
+  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}>${deco(d)}<span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}${alertsFor(d).length?" ⚠️":""}</i>`:alertsFor(d).length?`<i class="wx">⚠️</i>`:""}</span>
     <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night${fx?" · drag to another stop":""}</span>`:""}</span>
     ${fx?`<span class="grip" aria-hidden="true">⠿</span>`:`<span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span>`}</button>`}
 /* how the planned nights compare with the ideal range set on the stop (imin–imax) */
@@ -747,10 +849,16 @@ function fitOf(s){const n=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):
   if(lo==null||!n)return null;const rng=lo===hi?`${lo}`:`${lo}–${hi}`;
   return n<lo?{c:"short",l:`Short · ideal ${rng}`}:n>hi?{c:"chill",l:`Chill · ideal ${rng}`}:{c:"ok",l:"About right"}}
 const fitTag=s=>{const f=fitOf(s);return f?`<span class="fit ${f.c}">${f.l}</span>`:""};
+/* planned activity costs at a stop, quietly compared with the budget for those nights */
+function planTag(s){const days=stopDays(s);if(!days.length||days[days.length-1]<today())return "";
+  const c=state.spots.filter(x=>x.day&&days.includes(x.day)&&+x.price>0&&!x.keaId).reduce((t,x)=>t+(+x.price),0);if(!c)return "";
+  const pd=keaPerDay(),heavy=pd&&c>pd*days.length*.5;
+  return ` · <span class="${heavy?"heavy":""}" title="${heavy?"Over half the budget for these nights":""}">${nzd(c)} planned</span>`}
 function stopBlock(s,days,t,L,i,showLeg){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ${legReal(i)?"":"~"}${L[i]} km</div>`:"")+
-   `<div class="stop-h" data-sid="${esc(s.id)}">${lmFor(s)}<button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   `<div class="stop-h" data-sid="${esc(s.id)}">${lmFor(s)}<button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${planTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   (s.fuel&&days.some(d=>d>=t)?`<div class="fuel">⛽ ${esc(s.fuel)}</div>`:"")+
    days.map(d=>dayRow(d,t)).join("")}
 /* ---- the road down the side of the day list, with our van driving along it as you scroll ---- */
 const VAN=`<svg viewBox="-2 0 22 28" width="18" height="28"><g fill="#1b1f1c"><rect x="-1.5" y="5" width="3" height="5" rx="1"/><rect x="16.5" y="5" width="3" height="5" rx="1"/><rect x="-1.5" y="18" width="3" height="5" rx="1"/><rect x="16.5" y="18" width="3" height="5" rx="1"/></g>
@@ -815,7 +923,8 @@ function welcomeSVG(cx,y){const cols=["#e8833a","#2b6f86","#b26fd0","#2f8f4e","#
 const LM={mbs:`<g transform="translate(-34 -46)" stroke="#33424a" stroke-width="1.6" stroke-linejoin="round"><path d="M10 46V14h10v32M29 46V14h10v32M48 46V14h10v32" fill="#f4f5f2"/><path d="M4 12c20-4 40-4 62 0v4H4z" fill="#dfe7ea"/><path d="M0 46h68" stroke="#33424a"/></g>`,
  atomium:`<g stroke="#33424a" stroke-width="1.3"><path d="M-13.3 12.7L-16.7 39.4M24.5 8.7L30.6 39.4M-11.1 3.9L-13.9 39.4M0.0 25.4L0.0 39.4" stroke-width="2"/><path d="M0.0 25.4L-11.1 3.9M0.0 25.4L-13.3 12.7M0.0 25.4L24.5 8.7M-11.1 3.9L-24.5 -8.7M-11.1 3.9L13.3 -12.7M-13.3 12.7L-24.5 -8.7M-13.3 12.7L11.1 -3.9M-24.5 -8.7L-0.0 -25.4M24.5 8.7L13.3 -12.7M24.5 8.7L11.1 -3.9M13.3 -12.7L-0.0 -25.4M11.1 -3.9L-0.0 -25.4M0.0 -0.0L0.0 25.4M0.0 -0.0L-11.1 3.9M0.0 -0.0L-13.3 12.7M0.0 -0.0L-24.5 -8.7M0.0 -0.0L24.5 8.7M0.0 -0.0L13.3 -12.7M0.0 -0.0L11.1 -3.9M0.0 -0.0L-0.0 -25.4" stroke-width="2" opacity=".7"/><circle cx="-11.1" cy="3.9" r="4.6" fill="#d6dadd"/><circle cx="13.3" cy="-12.7" r="4.8" fill="#d9dde0"/><circle cx="0.0" cy="25.4" r="5.2" fill="#e1e5e8"/><circle cx="24.5" cy="8.7" r="5.4" fill="#e4e8eb"/><circle cx="0.0" cy="-0.0" r="5.4" fill="#e5e9ec"/><circle cx="-24.5" cy="-8.7" r="5.4" fill="#e5e9ec"/><circle cx="-0.0" cy="-25.4" r="5.6" fill="#e8ecef"/><circle cx="-13.3" cy="12.7" r="6.0" fill="#f0f4f7"/><circle cx="11.1" cy="-3.9" r="6.2" fill="#f4f8fb"/><path d="M-40.5 39.4H40.5"/></g>`};
 let road={x:RX,max:null,ferry:null,fly:null,sell:null};
-function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".fly-panel"),g={zones:[]};
+function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".fly-panel"),se=el.querySelector(".sea-end"),g={zones:[]};
+  if(se){const P0=se.offsetTop;g.endFerry={fa:P0+124};g.zones.push([P0,Infinity])}
   if(sp){const P0=sp.offsetTop,P1=P0+sp.offsetHeight;g.ferry={P0,P1,fa:P0+124,fb:P1-120-246};g.zones.push([P0,P1])}
   if(fp){const A0=fp.offsetTop,W=el.clientWidth,PX=Math.min(W-70,260);
     g.fly={A0,A1:A0+fp.offsetHeight,park:A0+150,PX,lift:A0+470,SG:{x:Math.round(W*.3),y:A0+860},BR:{x:Math.round(W*.6),y:A0+1250}};g.zones.push([A0,Infinity])}
@@ -826,14 +935,14 @@ function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".f
       if(z1!==Infinity&&y>z1-110)return FX+(RX(y)-FX)*blend(y,z1-110,z1);
       return FX}
     return RX(y)};
-  g.max=g.fly?g.fly.park:null;
+  g.max=g.fly?g.fly.park:g.endFerry?g.endFerry.fa+112:null;
   if(g.fly){const f=g.fly,pts=[[f.PX,f.lift],[f.SG.x,f.SG.y],[f.BR.x,f.BR.y]];
     f.x=y=>{if(y<=pts[0][1])return f.PX;for(let i=1;i<pts.length;i++){const [x0,y0]=pts[i-1],[x1,y1]=pts[i];if(y<=y1){const t=(y-y0)/(y1-y0),s=(1-Math.cos(Math.PI*t))/2;return x0+(x1-x0)*s}}return f.BR.x};
     f.end=f.BR.y}
   return g}
 function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.querySelectorAll(".road,#van,#people,#plane").forEach(n=>n.remove());
   const H=el.scrollHeight;if(H<60||el.querySelector(".empty"))return;
-  road=geo(el);const X=road.x,end=road.fly?road.fly.park+6:H;
+  road=geo(el);const X=road.x,end=road.fly?road.fly.park+6:road.endFerry?road.endFerry.fa+6:H;
   const sl=state.stops.find(x=>x.sell&&x.sell>today());road.sell=null;
   if(sl){const row=el.querySelector(`[data-day="${sl.sell}"]`);if(row)road.sell=row.offsetTop}
   let d="",pen=false;
@@ -847,14 +956,15 @@ function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.qu
     <rect x="${FX-26}" y="${F.park-30}" width="${PXr-FX+4}" height="60" rx="8" fill="#4b5157" opacity=".55"/>
     <path d="${fp}" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" opacity=".9"/>
     <g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g>${welcomeSVG(Math.round(W*.45),F.BR.y+128)}<g transform="translate(${F.BR.x+92} ${F.BR.y+4}) scale(1.2)">${LM.atomium}</g>`}
-  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}</svg>
+  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}${road.endFerry?`<g transform="translate(${FX} ${road.endFerry.fa})">${FERRY}</g>`:""}</svg>
     <div id="van" aria-hidden="true">${VAN}<b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
   moveVan()}
 function moveVan(){const el=$("#daylist"),v=$("#van");
   const bg=$("#bg");if(bg)bg.style.maskPosition=bg.style.webkitMaskPosition=`0 ${-Math.round(scrollY*.25)}px`;
   if(!el||!v||!el.offsetParent)return;const r=el.getBoundingClientRect(),H=el.scrollHeight,X=road.x;
   let y=innerHeight*.45-r.top;const left=Math.max(0,document.documentElement.scrollHeight-innerHeight-scrollY);
-  if(road.fly){const extra=road.fly.end-(y+left),k=Math.max(0,1-left/520);if(extra>0)y+=extra*k*k}
+  const target=road.fly?road.fly.end:road.endFerry?road.max:null;
+  if(target!=null){const extra=target-(y+left),k=Math.max(0,1-left/520);if(extra>0)y+=extra*k*k}
   const ptr=y;y=Math.max(14,Math.min(road.max??H-16,y));
   // ferry: carry the van across
   const f=road.ferry,fg=$("#ferryg");
@@ -918,7 +1028,7 @@ function todoCard(){const open=state.todos.filter(x=>!x.done).sort((a,b)=>(a.at|
     <form class="addrow" id="addtodo"><input id="f-todo" placeholder="${open.length?"Add":"Water, dump station, laundry…"}" autocomplete="off" aria-label="Add a to-do"><button class="btn" type="submit">Add</button></form></div>`}
 function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="past"){el.innerHTML="";return}
   const keep=$("#f-todo")?.value||"",focus=document.activeElement?.id==="f-todo";
-  el.innerHTML=bookCard()}
+  el.innerHTML=bookCard()+sellCard()}
 /* ---- trip so far, at the top of Past ---- */
 function recapHTML(){const t=today(),st=sortStops(),L=legs();let km=0;st.forEach((s,i)=>{if(s.start&&s.start<=t)km+=L[i]||0});
   const r=tripRange();if(!r)return "";const nights=[];for(let d=r.first;d<t;d=addDays(d,1))nights.push(d);
@@ -950,7 +1060,9 @@ function renderDays(){
     if(!past.length){el.innerHTML=`<p class="empty">No days behind you yet.</p>`;return}
     const days=past.flatMap(p=>p[1]),tot=sumA(days.flatMap(spentOn)),pd=keaPerDay();
     el.innerHTML=recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
-      past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("");requestAnimationFrame(drawRoad);return}
+      past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("")+
+      (st[0]?.start?`<div class="sea-end"><div class="fcap"><b>⛴ Arrived by ferry</b><span>${wd(st[0].start)} ${fmt(st[0].start)} · Wellington → Picton, where it all began</span></div></div>`:"");
+    hydratePhotos(el);requestAnimationFrame(drawRoad);return}
   if(!html)html=`<p class="empty">No days ahead.</p>`;
   else{const last=st[st.length-1],fd=last?.flight||last?.end||last?.start;if(fd){const ar=addDays(fd,1);html+=`<div class="fly-panel"><div class="fcap ftop"><b>✈️ Flight home</b><span>${wd(fd)} ${fmt(fd)} · Auckland</span></div>
     <div class="skylab" id="sg-l" style="top:830px;left:calc(30% + 46px)"><b>🇸🇬 Singapore</b><span>transit</span></div>
@@ -958,7 +1070,7 @@ function renderDays(){
   el.innerHTML=html;requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */
-function allPlaces(){return [...state.spots.filter(x=>x.kind!=="chore").map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
+function allPlaces(){return [...state.spots.filter(x=>x.kind!=="chore"&&x.kind!=="task").map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
 function renderPlaces(){
   if(state.region===null&&state.stops.length)state.region=currentStop()?.region||"all";
   const reg=state.region||"all";
@@ -1001,13 +1113,15 @@ function renderDay(){
       <div class="sleep"><span class="nm">${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></span>
         ${n.camp?goBtns(camp,"camp"):""}<button class="ib" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></div>
       ${n.notes?`<div class="muted" style="font-size:.85rem">${esc(n.notes)}</div>`:""}</div>
+    ${alertCard(d)}
+    ${d<=t?memoryCard(d):""}
     ${d<=t?spendCard(d):""}
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
       <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
     <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></div>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       </div>
@@ -1015,7 +1129,7 @@ function renderDay(){
     ${s?`<div class="links">${A(safeUrl(s.weather)||MS_INDEX,"MetService")}${hasLL(s)?A(windyUrl(s),"Windy"):""}</div>`:""}
    </div>`;
   renderIdeas();
-  el.scrollTop=scroll}
+  el.scrollTop=scroll;hydratePhotos(el)}
 const rainOK=x=>x.rain===true||(x.rain!==false&&["paid","quirky","food"].includes(x.kind));
 const isWet=w=>!!w&&((+w.p||0)>=5||(w.c>=61&&w.c<=67)||(w.c>=80));
 function renderIdeas(){
@@ -1027,7 +1141,7 @@ function renderIdeas(){
   const st=stopFor(d),region=st?.region,q=state.ideaQ.toLowerCase(),ref=st&&hasLL(st)?st:null;
   const pt=ptOf,wet=isWet(wxFor(d));
   const dist=x=>{const p=ref&&pt(x);return p?Math.round(hav(ref,p)*ROAD):null};
-  const ideas=state.spots.filter(x=>!x.day&&!x.done&&x.kind!=="chore"&&visSug(x)).map(x=>({...x,_km:dist(x)}))
+  const ideas=state.spots.filter(x=>!x.day&&!x.done&&x.kind!=="chore"&&x.kind!=="task"&&visSug(x)).map(x=>({...x,_km:dist(x)}))
     .filter(x=>q?(x.name+" "+(x.notes||"")+" "+(KINDS[x.kind]||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
     .sort((a,b)=>(wet?(rainOK(b)?1:0)-(rainOK(a)?1:0):0)||(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
   if(!state.ideasOpen){$("#ideas-h").textContent=`${ideas.length} nearby${wet?" · ☔":""}`;return}
@@ -1075,7 +1189,8 @@ function openSpot(it,fresh){
     <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${ctxName(it)?" · "+esc(ctxName(it)):""}</div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
-    <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
+    ${it.kind==="task"?`<label>Do by<input type="date" id="q-by" value="${esc(it.by||"")}"></label>`:""}
+    <label>Day<select id="q-day">${dayOpts(it.day,it.kind==="task"?"No set day":"Not planned")}</select></label>
     <label>Cost<span class="costrow"><input id="q-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Free" value="${+it.price>0?(it.pp?Math.round(it.price/2*100)/100:it.price):""}">
         <span class="pick sm"><label><input type="radio" name="q-pp" value="0" ${it.pp?"":"checked"}><span>both</span></label><label><input type="radio" name="q-pp" value="1" ${it.pp?"checked":""}><span>each</span></label></span></span></label>
     <label id="q-catwrap" ${+it.price>0?"":"hidden"}>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label>
@@ -1092,6 +1207,7 @@ function openSpot(it,fresh){
   $("#q-booked").onchange=e=>{patch("spots",it.id,{booked:e.target.checked,...(e.target.checked?{book:true}:{})});if(e.target.checked)$("#q-book").checked=true;toast(e.target.checked?"Booked ✓":"Not booked")};
   $("#q-lead").onchange=e=>{patch("spots",it.id,{lead:+e.target.value})};
   $("#q-rain").onchange=e=>{patch("spots",it.id,{rain:e.target.checked});toast(e.target.checked?"Good in rain ☔":"Fair-weather only")};
+  if($("#q-by"))$("#q-by").onchange=e=>{patch("spots",it.id,{by:e.target.value||null});toast("Saved")};
   $("#q-cat").onchange=e=>{patch("spots",it.id,{cat:e.target.value});keaSyncSpot(it.id);toast("Category saved")};
   if($("#q-done"))$("#q-done").onchange=e=>{const on=e.target.checked;if(on&&+S.docs.spots[it.id]?.price>0&&!S.docs.spots[it.id]?.keaId){e.target.checked=false;return openPaid(it.id)}setDone(it.id,on)};
   const savePrice=()=>{const v=parseFloat(String($("#q-price").value).replace(",",".")),pp=$("#form [name=q-pp]:checked")?.value==="1";
@@ -1219,6 +1335,7 @@ $("#form").addEventListener("submit",e=>{
   e.preventDefault();const f=e.target,type=f.dataset.type,id=f.dataset.id;if(type==="settings")return;
   const v={};for(const [k,x] of new FormData(f).entries())v[k]=typeof x==="string"?x.trim():x;
   if("name" in v&&!v.name){toast("Give it a name");f.querySelector("[name=name]").focus();return}
+  if(type==="memnote"){const j=S.docs.journal[id]||{};put("journal",id,{...j,date:id,note:v.note||""});closeSheet();toast("Saved");return}
   if(type==="newplan"){const d=id,name=v.name;
     const nid=add("spots",{name,kind:"plan",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
     openSpot({id:nid,...S.docs.spots[nid]},true);return}
@@ -1314,6 +1431,8 @@ document.addEventListener("click",e=>{
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
   else if("newplan" in ds)openNewPlan(ds.newplan||state.day);
+  else if(ds.memedit)openMemNote(ds.memedit);
+  else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}
   else if(ds.day)openDay(ds.day);
@@ -1341,6 +1460,7 @@ $("#sync").onclick=()=>{if(syncOn()&&!lastErr){sync(true)}else openSettings()};
 $("#scrim").onclick=closeSheet;
 $("#q").oninput=e=>{state.q=e.target.value;renderPlaces()};
 $("#region").onchange=e=>{state.region=e.target.value;renderPlaces()};
+document.addEventListener("change",e=>{const f=e.target;if(f.dataset?.memphoto&&f.files?.[0])savePhoto(f.dataset.memphoto,f.files[0])});
 document.addEventListener("change",e=>{if(e.target.name==="book"&&$("#s-bookopts"))$("#s-bookopts").hidden=!e.target.checked;});
 document.addEventListener("change",e=>{if(e.target.id!=="mv-to"||!e.target.value)return;const v=e.target.value;e.target.value="";if(moveNight(state.day,v))closeDay()});
 document.addEventListener("input",e=>{if(e.target.id==="q-ideas"){state.ideaQ=e.target.value;state.ideaAll=false;renderIdeas()}});
@@ -1352,7 +1472,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preven
   openSpot({id,...S.docs.spots[id]},true)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx();pullTides();pullRoadAlerts()}});
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
 /* ================= start ================= */
@@ -1363,7 +1483,7 @@ setTimeout(()=>$("#splash")?.remove(),2400);
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
-  pullKea();pullWx();pullRoads();
+  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();syncPhotos();
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>

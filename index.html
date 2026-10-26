@@ -3,27 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f1511">
+<meta name="theme-color" content="#13160d">
 <title>Kea — trip kitty</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{
-  /* Native bush at dusk: kea olive + the orange under its wing */
-  --bg:#0f1511; --card:#18211a; --card2:#212c23; --line:#2f3d32;
-  --tx:#e9efe4; --dim:#92a793;
-  --ok:#8cc07a;            /* new growth */
-  --warn:#e3b13c;          /* kōwhai */
-  --bad:#dd6a5f;           /* rātā */
-  --accent:#e8833a;        /* kea underwing */
-  --pa:#3fa89b;            /* tūī */
-  --pb:#c9705f;            /* kākā */
+  /* A kea, feather by feather: olive plumage edged in near-black, a bronze sheen,
+     the flash of orange-red under the wing and the blue in the flight feathers */
+  --bg:#13160d; --card:#1d2213; --card2:#272e18; --line:#3a4322;
+  --tx:#eef0dc; --dim:#a8ae88;
+  --ok:#a4c24f;            /* fresh olive */
+  --warn:#e3b13c;          /* bronze-gold */
+  --bad:#e5533a;           /* scarlet */
+  --accent:#f0632a;        /* kea underwing */
+  --pa:#4a8fc4;            /* flight-feather blue */
+  --pb:#c98a3a;            /* bronze */
   --safe-b:env(safe-area-inset-bottom,0px);
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   --serif:Georgia,"Noto Serif","Times New Roman",serif;
-  /* contour lines, like a topo map of the ranges you're parked in */
-  --contour:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='none' stroke='%23cfe0c6' stroke-opacity='.05' stroke-width='1'%3E%3Cpath d='M-10 40C50 10 110 70 250 30'/%3E%3Cpath d='M-10 72C50 42 110 102 250 62'/%3E%3Cpath d='M-10 104C50 74 110 134 250 94'/%3E%3Cpath d='M-10 136C50 106 110 166 250 126'/%3E%3Cpath d='M-10 168C50 138 110 198 250 158'/%3E%3Cpath d='M-10 200C50 170 110 230 250 190'/%3E%3Cpath d='M-10 232C50 202 110 262 250 222'/%3E%3C/g%3E%3C/svg%3E");
+  /* overlapping feather scallops */
+  --contour:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='24'%3E%3Cg fill='none' stroke-width='1.2'%3E%3Cpath d='M0 12a9 9 0 0 1 18 0a9 9 0 0 1 18 0' stroke='%23d8e08a' stroke-opacity='.07'/%3E%3Cpath d='M-9 24a9 9 0 0 1 18 0a9 9 0 0 1 18 0a9 9 0 0 1 18 0' stroke='%23d8e08a' stroke-opacity='.07'/%3E%3Cpath d='M0 13.5a9 9 0 0 1 18 0a9 9 0 0 1 18 0' stroke='%23000' stroke-opacity='.18'/%3E%3C/g%3E%3C/svg%3E");
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
@@ -39,12 +40,13 @@ button{background:none;border:none;padding:0;cursor:pointer}
 
 /* ---------- chrome ---------- */
 header{
-  position:sticky;top:0;z-index:20;background:rgba(15,21,17,.93);
+  position:sticky;top:0;z-index:20;background:rgba(19,22,13,.94);
   backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
   padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;
   display:flex;align-items:center;gap:10px;
 }
 header .mark{width:26px;height:26px;flex:none}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--pb) 15%,var(--accent) 45%,#e5533a 60%,var(--pa) 85%,transparent);opacity:.75}
 header h1{margin:0;font-family:var(--serif);font-size:20px;font-weight:600;
   letter-spacing:.5px;flex:1}
 .chip{
@@ -72,7 +74,7 @@ header .loop img{width:100%;height:100%;display:block}
 
 nav{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(15,21,17,.96);backdrop-filter:blur(12px);
+  background:rgba(19,22,13,.96);backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
   padding:8px 6px calc(8px + var(--safe-b));
   display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
@@ -266,11 +268,11 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 <body>
 <div id="ksplash" aria-hidden="true"><div class="ks-sky"><svg class="kb" viewBox="0 0 120 80" aria-hidden="true">
   <path d="M8 46 L32 39 L32 51 Z" fill="#55692d"/>
-  <ellipse cx="48" cy="45" rx="23" ry="14" fill="#6f8a3c"/>
+  <ellipse cx="48" cy="45" rx="23" ry="14" fill="#6f8a3c"/><path d="M32 40c4 3 8 3 12 0M40 46c4 3 8 3 12 0M30 49c4 3 8 3 12 0" stroke="#2c3518" stroke-width="1.4" fill="none" opacity=".7"/>
   <circle cx="73" cy="37" r="11.5" fill="#7d9a45"/>
   <path d="M81 32 C93 30 99 38 95 47 C93 51 89 50 89 46 C89 42 86 40 81 41 Z" fill="#3a3f3b"/>
   <circle cx="76" cy="35" r="2.2" fill="#111"/>
-  <g class="kb-wing"><path d="M40 42 C34 22 46 6 70 0 C62 16 60 30 58 42 Z" fill="#5f7a31"/><path d="M44 42 C42 28 50 16 62 9 C58 22 57 32 55 42 Z" fill="#e8833a"/></g>
+  <g class="kb-wing"><path d="M40 42 C34 22 46 6 70 0 C62 16 60 30 58 42 Z" fill="#5f7a31"/><path d="M44 42 C42 28 50 16 62 9 C58 22 57 32 55 42 Z" fill="#f0632a"/><path d="M52 6 C62 2 68 1 70 0 C66 6 62 10 58 13 Z" fill="#4a8fc4"/></g>
 </svg></div><div class="ks-title">Kea</div></div>
 
 <header>

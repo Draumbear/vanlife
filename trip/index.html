@@ -18,7 +18,7 @@
   --paper:#f3f4ee; --card:#fbfbf7; --ink:#1d2621; --muted:#64706a; --line:#dde1d6;
   --fern:#2f6b4f; --fern-soft:#dbe9df; --tussock:#b8761f; --tussock-soft:#f3e3c8;
   --sea:#2b6f86; --sea-soft:#d6e8ee; --rust:#a6432e; --rust-soft:#f2dcd5;
-  --land:#e4e8dc; --water:#dfe9ec; --on-fern:#ffffff;
+  --land:#e4e8dc; --water:#dfe9ec; --on-fern:#ffffff; --contour:#cfd6c6; --road:#d3d9c9;
   --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
   --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -27,12 +27,12 @@
   --paper:#121815; --card:#1a221e; --ink:#e7ece6; --muted:#97a49c; --line:#29332e;
   --fern:#7cc49b; --fern-soft:#1d3629; --tussock:#e2a552; --tussock-soft:#3a2c17;
   --sea:#79bdd3; --sea-soft:#183139; --rust:#e58a73; --rust-soft:#3d2119;
-  --land:#222c27; --water:#15212a; --on-fern:#0e1d16; color-scheme:dark }}
+  --land:#222c27; --water:#15212a; --on-fern:#0e1d16; --contour:#25302a; --road:#2c3832; color-scheme:dark }}
 :root[data-theme="dark"]{
   --paper:#121815; --card:#1a221e; --ink:#e7ece6; --muted:#97a49c; --line:#29332e;
   --fern:#7cc49b; --fern-soft:#1d3629; --tussock:#e2a552; --tussock-soft:#3a2c17;
   --sea:#79bdd3; --sea-soft:#183139; --rust:#e58a73; --rust-soft:#3d2119;
-  --land:#222c27; --water:#15212a; --on-fern:#0e1d16; color-scheme:dark }
+  --land:#222c27; --water:#15212a; --on-fern:#0e1d16; --contour:#25302a; --road:#2c3832; color-scheme:dark }
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -103,6 +103,17 @@ textarea{min-height:72px;resize:vertical}
 .leg{font:500 .72rem var(--mono);color:var(--muted);margin-top:16px}
 .day{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-top:6px;cursor:pointer}
 .day .dt{font:500 .8rem/1.2 var(--mono)}
+#bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--contour);opacity:.7;
+  -webkit-mask:url(contour.svg) 0 0/520px 520px repeat;mask:url(contour.svg) 0 0/520px 520px repeat}
+#daylist{position:relative;padding-left:30px}
+.road{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.road .asph{stroke:var(--road);stroke-width:11;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.road .mid{stroke:var(--paper);stroke-width:1.6;fill:none;stroke-dasharray:6 9}
+.road .pin{fill:var(--fern);stroke:var(--paper);stroke-width:2.5}
+#van{position:absolute;left:0;top:0;width:18px;height:28px;pointer-events:none;will-change:transform;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+.day .wx{display:block;font-style:normal;font-size:.72rem;margin-top:2px;color:var(--ink)}
+.card.wxline{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:.88rem}
+.wxline .big{font:800 1.25rem var(--display)}
 .day .dt b{display:block;font-weight:500;color:var(--muted);font-size:.72rem}
 .day .what{font-size:.92rem;min-width:0}
 .day .what .none{color:var(--muted)}
@@ -227,6 +238,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 </style>
 </head>
 <body>
+<div id="bg" aria-hidden="true"></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
@@ -537,7 +549,7 @@ function renderToday(){
   const here=cur.start<=t,d=here?t:cur.start,n=nightInfo(d),plan=planFor(d),done=plan.filter(x=>x.done).length;
   const st=sortStops(),next=st[st.indexOf(cur)+1],left=cur.end?daysBetween(t,cur.end):0;
   el.innerHTML=`<div class="today">
-    <div class="k">${here?"Tonight":"Next"} · ${wd(d)} ${fmt(d)}</div>
+    <div class="k">${here?"Tonight":"Next"} · ${wd(d)} ${fmt(d)}${wxFor(d)?` · ${wxShort(wxFor(d))}${wxFor(d).p>=1?` · ${Math.round(wxFor(d).p)} mm`:""}`:""}</div>
     <h2>${n.camp?esc(n.camp):"No campsite yet"}</h2>
     <div class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</div>
     ${plan.length?`<div class="bar" aria-hidden="true"><span style="width:${done/plan.length*100}%"></span></div><div class="s">${done} of ${plan.length} done</div>`:""}
@@ -552,7 +564,8 @@ function dayRow(d,t){const n=nightInfo(d),plan=planFor(d),s=n.stop;
   const what=plan.length?plan.map(x=>esc(x.name)).join(", "):`<span class="none">—</span>`;
   const own=n.override&&n.camp&&n.camp!==s?.camp;
   const fx=n.flex&&d>t;
-  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}</span>
+  const w=wxFor(d);
+  return `<button type="button" class="day ${d<t?"past":""} ${n.flex?"flex":""}" data-day="${d}" ${s?`data-sid="${esc(s.id)}"`:""} ${fx?`data-flexd="${d}"`:""}><span class="dt"><b>${wd(d)}</b>${fmt(d)}${w?`<i class="wx">${wxShort(w)}</i>`:""}</span>
     <span class="what"><span class="clamp2">${what}</span>${own?`<span class="camp">⛺ ${esc(n.camp)}</span>`:""}${n.flex?`<span class="fx">Flexible night${fx?" · drag to another stop":""}</span>`:""}</span>
     ${fx?`<span class="grip" aria-hidden="true">⠿</span>`:`<span class="n">${plan.length?`${plan.filter(x=>x.done).length}/${plan.length}`:""}</span>`}</button>`}
 /* how the planned nights compare with the ideal range set on the stop (imin–imax) */
@@ -565,6 +578,45 @@ function stopBlock(s,days,t,L,i,showLeg){
   return (showLeg&&L[i]?`<div class="leg">↓ ~${L[i]} km</div>`:"")+
    `<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    days.map(d=>dayRow(d,t)).join("")}
+/* ---- the road down the side of the day list, with our van driving along it as you scroll ---- */
+const VAN=`<svg viewBox="-2 0 22 28" width="18" height="28"><g fill="#1b1f1c"><rect x="-1.5" y="5" width="3" height="5" rx="1"/><rect x="16.5" y="5" width="3" height="5" rx="1"/><rect x="-1.5" y="18" width="3" height="5" rx="1"/><rect x="16.5" y="18" width="3" height="5" rx="1"/></g>
+  <rect x="0.5" y="0.5" width="17" height="27" rx="4.5" fill="#d6a63c" stroke="#9b7015"/><rect x="2.5" y="20" width="13" height="5.5" rx="1.6" fill="#1f3a2d"/>
+  <g stroke="#1b1f1c" stroke-width="1.1" stroke-linecap="round"><path d="M4 3.5V17M14 3.5V17M4 6.5H14M4 10.5H14M4 14.5H14"/></g></svg>`;
+const RX=y=>15+5*Math.sin(y/70);
+function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.querySelector(".road")?.remove();$("#van")?.remove();
+  const H=el.scrollHeight;if(H<60||el.querySelector(".empty"))return;
+  let d=`M${RX(0).toFixed(1)} 0`;for(let y=8;y<=H;y+=8)d+=` L${RX(y).toFixed(1)} ${y}`;
+  const pins=[...el.querySelectorAll(".stop-h")].map(h=>{const y=h.offsetTop+12;return `<circle class="pin" cx="${RX(y).toFixed(1)}" cy="${y}" r="5.5"/>`}).join("");
+  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="30" height="${H}" viewBox="0 0 30 ${H}" aria-hidden="true"><path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}</svg><div id="van" aria-hidden="true">${VAN}</div>`);
+  moveVan()}
+function moveVan(){const el=$("#daylist"),v=$("#van");
+  const bg=$("#bg");if(bg)bg.style.maskPosition=bg.style.webkitMaskPosition=`0 ${-Math.round(scrollY*.25)}px`;
+  if(!el||!v||!el.offsetParent)return;const r=el.getBoundingClientRect(),H=el.scrollHeight;
+  const y=Math.max(14,Math.min(H-16,innerHeight*.45-r.top)),ang=Math.atan(5/70*Math.cos(y/70))*57.3;
+  v.style.transform=`translate(${(RX(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`}
+addEventListener("scroll",moveVan,{passive:true});
+addEventListener("resize",()=>requestAnimationFrame(drawRoad));
+document.fonts?.ready?.then(()=>drawRoad());
+
+/* ---- weather (Open-Meteo, free, no key) for the stop you sleep at each night ---- */
+const WXK="sil-wx";let wx={};try{wx=JSON.parse(localStorage.getItem(WXK))||{}}catch{}
+const WMO=c=>c==null?"":c===0?"☀️":c<=2?"🌤️":c===3?"☁️":c<=48?"🌫️":c<=57?"🌦️":c<=67?"🌧️":c<=77?"🌨️":c<=82?"🌦️":c<=86?"🌨️":"⛈️";
+const wxKey=s=>(+s.lat).toFixed(2)+","+(+s.lng).toFixed(2);
+function wxFor(d){const s=stopFor(d);if(!s||!hasLL(s))return null;return wx[wxKey(s)]?.days?.[d]||null}
+let wxBusy=false;
+async function pullWx(){if(wxBusy||!navigator.onLine)return;wxBusy=true;const t=today(),until=addDays(t,13);let changed=false;
+  try{for(const s of sortStops().filter(s=>hasLL(s)&&(s.end||s.start)>=t&&s.start<=until)){
+    const k=wxKey(s),c=wx[k];if(c&&Date.now()-c.at<3*3600e3)continue;
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=Pacific%2FAuckland&forecast_days=14`);
+      if(!r.ok)continue;const j=await r.json(),D=j.daily,days={};
+      D.time.forEach((d,i)=>days[d]={c:D.weather_code[i],hi:D.temperature_2m_max[i],lo:D.temperature_2m_min[i],p:D.precipitation_sum[i],w:D.wind_speed_10m_max[i],sr:(D.sunrise[i]||"").slice(11),ss:(D.sunset[i]||"").slice(11)});
+      wx[k]={at:Date.now(),days};changed=true}catch{}}
+    Object.keys(wx).forEach(k=>{if(Date.now()-wx[k].at>14*864e5)delete wx[k]});
+    if(changed){try{localStorage.setItem(WXK,JSON.stringify(wx))}catch{}render()}}finally{wxBusy=false}}
+const wxShort=w=>w?`${WMO(w.c)} ${Math.round(w.hi)}°`:"";
+function wxCard(d){const w=wxFor(d);if(!w)return "";
+  return `<div class="card wxline"><span class="big">${WMO(w.c)} ${Math.round(w.hi)}°</span><span class="muted">low ${Math.round(w.lo)}°</span>
+    <span>${w.p>=0.5?`💧 ${Math.round(w.p)} mm`:"dry"}</span><span>💨 ${Math.round(w.w)} km/h</span>${w.sr?`<span class="muted">sunrise ${w.sr} · sunset ${w.ss}</span>`:""}</div>`}
 function renderDays(){
   const t=today(),st=sortStops(),L=legs(),el=$("#daylist");
   if(!st.length){el.innerHTML=`<p class="empty">No stops yet. Tap + to add your first one.</p>`;return}
@@ -580,9 +632,9 @@ function renderDays(){
     if(!past.length){el.innerHTML=`<p class="empty">No days behind you yet.</p>`;return}
     const days=past.flatMap(p=>p[1]),tot=sumA(days.flatMap(spentOn)),pd=keaPerDay();
     el.innerHTML=(tot?`<div class="muted" style="font-size:.88rem;margin:2px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
-      past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("");return}
+      past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("");requestAnimationFrame(drawRoad);return}
   if(!html)html=`<p class="empty">No days ahead.</p>`;
-  el.innerHTML=html}
+  el.innerHTML=html;requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */
 function allPlaces(){return [...state.spots.map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
@@ -623,6 +675,7 @@ function renderDay(){
      <button class="ib" type="button" data-day="${addDays(d,-1)}" aria-label="Previous day">${icon("back")}</button>
      <button class="ib" type="button" data-day="${addDays(d,1)}" aria-label="Next day">${icon("next")}</button></div></div>
    <div class="wrap vbody">
+    ${d>=t?wxCard(d):""}
     <div class="card"><span class="label">Sleeping</span>
       <div class="sleep"><span class="nm">${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span></span>
         ${n.camp?goBtns(camp,"camp"):""}<button class="ib" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></div>
@@ -904,7 +957,7 @@ document.addEventListener("click",e=>{
   const ds=b.dataset;
   if(ds.tab){state.tab=ds.tab;document.querySelectorAll(".seg button").forEach(t=>t.setAttribute("aria-selected",t===b));
     $("#days").hidden=ds.tab!=="days";$("#places").hidden=ds.tab!=="places";
-    try{localStorage.setItem("sil-tab",ds.tab)}catch{}window.scrollTo(0,0)}
+    try{localStorage.setItem("sil-tab",ds.tab)}catch{}window.scrollTo(0,0);if(ds.tab==="days")requestAnimationFrame(drawRoad)}
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
   else if(ds.day)openDay(ds.day);
@@ -933,7 +986,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preven
   add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length})});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx()}});
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
 /* ================= start ================= */
@@ -943,7 +996,7 @@ refresh();setChip();
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
-  pullKea();
+  pullKea();pullWx();
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>

@@ -203,7 +203,10 @@ textarea{min-height:72px;resize:vertical}
 .mk.sg .ic{border-color:#e0812a}
 .mk.camp .ic{border-color:#5f7d96;border-radius:9px}
 .mk.planned .ic{box-shadow:0 0 0 3px #fff,0 0 0 5px #2f6b4f}
-.mk.done{opacity:.5}
+.mk.done .ic{border-color:#9aa3a6;filter:grayscale(1);opacity:.7}
+.mk.done .nm{text-decoration:line-through;color:#6b7470}
+.mk .ok{position:absolute;left:19px;top:-7px;width:17px;height:17px;border-radius:50%;background:#2f8f4e;color:#fff;font:800 11px/17px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
+.mpop .pill.go{background:#2f6b4f;color:#fff;border-color:#2f6b4f}.mpop .pill.warn{color:#a6432e}
 .mk .dt{position:absolute;left:18px;top:-8px;background:#2f6b4f;color:#fff;font:800 9px/1 var(--body);padding:3px 5px;border-radius:6px}
 .mk .nm{display:none;font:700 12px var(--body);color:#1d2621;background:rgba(255,255,255,.88);padding:2px 6px;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .named .mk .nm{display:inline-block}
@@ -297,6 +300,8 @@ textarea{min-height:72px;resize:vertical}
 .pill{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font:700 .82rem var(--body);color:var(--muted);cursor:pointer}
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .reg{font:800 .95rem var(--display);margin:18px 0 0}
+.itemr{display:flex;align-items:center;gap:2px}
+.item.done .nm{text-decoration:line-through;color:var(--muted)}
 .item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
 .item .main{background:none;border:0;padding:11px 0;text-align:left;cursor:pointer;min-width:0}
 .item .nm{font-weight:700}
@@ -663,7 +668,7 @@ function mapSvg(){
 /* ================= the map: every idea & campsite, our route and where we are ================= */
 const MK={place:"📸",hike:"🥾",multi:"🏔️",bike:"🚵",disc:"🥏",paid:"🎟️",quirky:"🤪",food:"🍴",plan:"📌"};
 const CK={doc:"⛺",free:"🚐",paid:"🏕️",booked:"🏕️",unknown:"⛺"};
-const MAPK=[["all","All"],["camp","⛺ Camps"],["hike","🥾 Hikes"],["multi","🏔️ Overnight"],["bike","🚵 Bike"],["place","📸 Sights"],["paid","🎟️ Paid"],["disc","🥏 Disc golf"],["food","🍴 Food"],["quirky","🤪 Quirky"]];
+const MAPK=[["done","✓ Show done"],["all","All"],["camp","⛺ Camps"],["hike","🥾 Hikes"],["multi","🏔️ Overnight"],["bike","🚵 Bike"],["place","📸 Sights"],["paid","🎟️ Paid"],["disc","🥏 Disc golf"],["food","🍴 Food"],["quirky","🤪 Quirky"]];
 let LF=null,lmap=null,lyr=null,meDot=null,meWatch=null;
 function loadLeaflet(){if(window.L)return Promise.resolve(window.L);if(LF)return LF;
   LF=new Promise((ok,no)=>{const c=document.createElement("link");c.rel="stylesheet";c.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";document.head.appendChild(c);
@@ -676,7 +681,7 @@ function openMap(){const t=today(),st=sortStops(),L=legs();let left=0;st.forEach
   renderMapBar();
   loadLeaflet().then(L=>{buildMap(L)}).catch(()=>{$("#lmap").innerHTML=`<div class="wrap vbody"><p class="muted">The full map needs a connection the first time. Here's the route for now.</p><div class="mapwrap">${mapSvg()}</div></div>`})}
 function renderMapBar(){$("#msrc").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-msrc="${k}">${l}</button>`).join("");
-  $("#mkinds").innerHTML=MAPK.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.mapKind===k}" data-mkind="${k}">${l}</button>`).join("")}
+  $("#mkinds").innerHTML=MAPK.map(([k,l])=>k==="done"?`<button class="pill" type="button" aria-pressed="${state.mapDone!==false}" data-mdonetog>${l}</button>`:`<button class="pill" type="button" aria-pressed="${state.mapKind===k}" data-mkind="${k}">${l}</button>`).join("")}
 function buildMap(L){const el=$("#lmap");el.innerHTML="";
   lmap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:false}).setView([-44.5,170],7);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(lmap);
@@ -692,17 +697,18 @@ function buildMap(L){const el=$("#lmap");el.innerHTML="";
   locate(false)}
 function mapItems(){const k=state.mapKind;const out=[];
   if(k==="all"||k==="camp")state.camps.forEach(c=>{if(visSug(c)){const p=ptOf(c);if(p)out.push({x:c,p,camp:true})}});
-  if(k!=="camp")state.spots.forEach(x=>{if(x.kind==="chore"||x.kind==="task")return;if(!visSug(x))return;if(k!=="all"&&(x.kind||"place")!==k)return;const p=ptOf(x);if(p)out.push({x,p,camp:false})});
+  if(k!=="camp")state.spots.forEach(x=>{if(x.kind==="chore"||x.kind==="task")return;if(!visSug(x))return;if(x.done&&state.mapDone===false)return;if(k!=="all"&&(x.kind||"place")!==k)return;const p=ptOf(x);if(p)out.push({x,p,camp:false})});
   return out}
 function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();const t=today();
   mapItems().forEach(({x,p,camp})=>{const ic=camp?CK[x.type]||"⛺":MK[x.kind]||"📸";
     const cls=["mk",x.suggested?"sg":"ours",x.done?"done":"",x.day?"planned":"",camp?"camp":"",x.fav?"fav":""].join(" ");
-    const html=`<div class="${cls}"><span class="ic">${ic}</span>${x.day?`<span class="dt">${fmt(x.day)}</span>`:""}<span class="nm">${esc(x.name)}</span></div>`;
+    const html=`<div class="${cls}"><span class="ic">${ic}</span>${x.done?`<span class="ok">✓</span>`:x.day?`<span class="dt">${fmt(x.day)}</span>`:""}<span class="nm">${esc(x.name)}</span></div>`;
     const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html,iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:x.day?400:x.suggested?0:200});
     const kind=camp?(CAMPTYPES[x.type]||"Campsite"):kindLabel(x);
     m.bindPopup(()=>`<div class="mpop"><b>${x.suggested?"✦ ":""}${esc(x.name)}</b><span class="muted">${esc(kind)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}${x.done?" · done":""}</span>
       ${x.notes?`<span class="clamp2">${esc(x.notes)}</span>`:""}
-      <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}">Directions</a></div></div>`,{maxWidth:260});
+      <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}">Directions</a></div>
+      <div class="row2">${camp?"":`<button type="button" class="pill ${x.done?"":"go"}" data-mdone="${esc(x.id)}">${x.done?"Undo done":"✓ Done"}</button>`}<button type="button" class="pill warn" data-mdel="${camp?"camp":"spot"}:${esc(x.id)}">Remove</button></div></div>`,{maxWidth:260});
     m.addTo(lyr)})}
 /* where we are: a blue dot that follows the phone; problems are explained instead of failing silently */
 function locate(center){const L=window.L;if(!lmap)return;
@@ -1124,6 +1130,13 @@ function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="pa
   const keep=$("#f-todo")?.value||"",focus=document.activeElement?.id==="f-todo";
   el.innerHTML=bookCard()+sellCard()}
 /* ---- trip so far, at the top of Past ---- */
+/* past days with plans still unticked: one tap to confirm or drop them */
+function reviewHTML(){const t=today(),open=state.spots.filter(x=>x.day&&x.day<t&&!x.done&&x.kind!=="task").sort((a,b)=>b.day.localeCompare(a.day));if(!open.length)return "";
+  return `<div class="card"><div class="mini-h"><span class="label">Did you do these?</span><span class="muted" style="font-size:.78rem">${open.length}</span></div>
+    ${open.slice(0,state.reviewAll?99:5).map(x=>`<div class="todo"><button class="chk sm" type="button" data-tog="spots:done:${esc(x.id)}" aria-label="Yes, done">✓</button>
+      <button type="button" class="tx" data-open="spot:${esc(x.id)}" style="background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer"><b>${esc(x.name)}</b><span class="sub">${wd(x.day)} ${fmt(x.day)}</span></button>
+      <button type="button" class="rm" data-skip="${esc(x.id)}" aria-label="Didn't do it">×</button></div>`).join("")}
+    ${open.length>5&&!state.reviewAll?`<button type="button" class="pill" data-reviewall>Show all ${open.length}</button>`:""}</div>`}
 function recapHTML(){const t=today(),st=sortStops(),L=legs();let km=0;st.forEach((s,i)=>{if(s.start&&s.start<=t)km+=L[i]||0});
   const r=tripRange();if(!r)return "";const nights=[];for(let d=r.first;d<t;d=addDays(d,1))nights.push(d);
   const stayCats=["camp","stay"],paidN=nights.filter(d=>spentOn(d).some(e=>stayCats.includes(e.c))),paidSum=sumA(nights.flatMap(d=>spentOn(d).filter(e=>stayCats.includes(e.c))));
@@ -1153,7 +1166,7 @@ function renderDays(){
   if(isPast){
     if(!past.length){el.innerHTML=`<p class="empty">No days behind you yet.</p>`;return}
     const days=past.flatMap(p=>p[1]),tot=sumA(days.flatMap(spentOn)),pd=keaPerDay();
-    el.innerHTML=recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
+    el.innerHTML=reviewHTML()+recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
       past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("")+
       (st[0]?.start?`<div class="sea-end"><div class="fcap"><b>⛴ Arrived by ferry</b><span>${wd(st[0].start)} ${fmt(st[0].start)} · Wellington → Picton, where it all began</span></div></div>`:"");
     hydratePhotos(el);requestAnimationFrame(drawRoad);return}
@@ -1182,7 +1195,7 @@ function renderPlaces(){
   $("#plist").innerHTML=items.length?order.map(r=>(order.length>1?`<div class="reg">${esc(r)}</div>`:"")+by[r].map(x=>{
     const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>`:`${esc(kindLabel(x))}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
     return `<div class="item ${x.done?"done":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
-      <button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></div>`}).join("")).join("")
+      <span class="itemr">${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:""}<button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></span></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
   $("#fab").setAttribute("aria-label",state.kind==="camp"?"Add campsite":"Add place")}
 
@@ -1566,6 +1579,12 @@ document.addEventListener("click",e=>{
   else if(ds.memedit)openMemNote(ds.memedit);
   else if(b.id==="geo-go")geoCheck();
   else if(ds.msrc){state.src=ds.msrc;try{localStorage.setItem("sil-sug",{both:"1",ours:"0",claude:"claude"}[ds.msrc])}catch{}renderMapBar();drawMarkers();renderPlaces()}
+  else if(ds.skip){const x=S.docs.spots[ds.skip];if(!x)return;keaUnpay(ds.skip,true);if(x.kind==="plan"||x.kind==="chore")del("spots",ds.skip);else patch("spots",ds.skip,{day:null,order:null});toast("Back in your ideas")}
+  else if("reviewall" in ds){state.reviewAll=true;renderDays()}
+  else if("mdonetog" in ds){state.mapDone=state.mapDone===false;renderMapBar();drawMarkers()}
+  else if(ds.mdone){lmap?.closePopup();const x=S.docs.spots[ds.mdone];if(x)setDone(ds.mdone,!x.done)}
+  else if(ds.mdel){if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Tap again to remove";return}
+    const [t,id]=ds.mdel.split(":"),c=t==="camp"?"camps":"spots",nm=S.docs[c][id]?.name||"";lmap?.closePopup();if(c==="spots")keaUnpay(id,true);del(c,id);toast(`Removed ${nm}`)}
   else if(ds.mkind){state.mapKind=ds.mkind;renderMapBar();drawMarkers()}
   else if(b.id==="locme")locate(true);
   else if(ds.hidealert){const h=hiddenAlerts();h[ds.hidealert]=1;try{localStorage.setItem(HIDK,JSON.stringify(h))}catch{}render();toast("Alert hidden")}

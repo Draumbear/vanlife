@@ -941,7 +941,7 @@ function feedText(x){
     return 'saved ' + nm + ' as an idea';
   }
   if (x.c === 'stops') return (x.del ? 'removed ' : 'changed the stay at ') + nm;
-  if (x.c === 'nights') return x.del ? 'cleared a campsite' : 'set the campsite for ' + fmtDay(x.id);
+  if (x.c === 'nights') return x.del ? 'cleared a campsite' : d.stayed ? 'slept at <span class="what">' + esc(d.camp || 'a campsite') + '</span> on ' + fmtDay(x.id) : 'set the campsite for ' + fmtDay(x.id);
   if (x.c === 'journal') return x.del ? 'removed a memory' : 'wrote a memory for ' + fmtDay(d.date || x.id);
   return 'changed the plan';
 }

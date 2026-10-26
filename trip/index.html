@@ -1165,7 +1165,13 @@ function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.qu
     fly=`<rect x="${PXr-24}" y="${F.park-40}" width="48" height="${F.lift-F.park+70}" rx="6" fill="#4b5157"/><path d="M${PXr} ${F.park-30}V${F.lift+20}" stroke="#f3f3ee" stroke-width="2" stroke-dasharray="10 10"/>
     <rect x="${FX-26}" y="${F.park-30}" width="${PXr-FX+4}" height="60" rx="8" fill="#4b5157" opacity=".55"/>
     <path d="${fp}" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" opacity=".9"/>
-    <g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g>${welcomeSVG(Math.round(W*.45),F.BR.y+128)}<g transform="translate(${F.BR.x+96} ${F.BR.y-4}) scale(1.35)">${LM.mpis}</g>`}
+    ${(()=>{const bx=F.BR.x,y0=F.end-190,y1=F.end+34;return `<g aria-hidden="true"><rect x="${bx-25}" y="${y0}" width="50" height="${y1-y0}" rx="5" fill="#4b5157"/>
+      <path d="M${bx} ${y0+40}V${y1-16}" stroke="#f3f3ee" stroke-width="2" stroke-dasharray="10 10"/>
+      <path d="${[-19,-14,-9,9,14,19].map(o=>`M${bx+o} ${y0+6}v18`).join("")}" stroke="#f3f3ee" stroke-width="2.6"/>
+      <text x="${bx}" y="${y0+36}" text-anchor="middle" font-family="var(--body)" font-weight="800" font-size="9" fill="#f3f3ee" transform="rotate(180 ${bx} ${y0+33})">25R</text>
+      <path d="M${bx-14} ${F.end-60}h8M${bx+6} ${F.end-60}h8M${bx-14} ${F.end-52}h8M${bx+6} ${F.end-52}h8" stroke="#f3f3ee" stroke-width="3"/>
+      ${Array.from({length:Math.floor((y1-y0)/22)},(_,i)=>`<circle cx="${bx-28}" cy="${y0+8+i*22}" r="1.6" fill="#ffd36a"/><circle cx="${bx+28}" cy="${y0+8+i*22}" r="1.6" fill="#ffd36a"/>`).join("")}
+      <rect class="bru-twr" x="${bx-62}" y="${F.end-38}" width="8" height="30" fill="#d6dadd" stroke="#33424a" stroke-width="1"/><path d="M${bx-66} ${F.end-38}h16l-2 -9h-12z" fill="#7fb2d4" stroke="#33424a" stroke-width="1"/></g>`})()}<g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g>${welcomeSVG(Math.round(W*.45),F.BR.y+128)}<g transform="translate(${F.BR.x+96} ${F.BR.y-4}) scale(1.35)">${LM.mpis}</g>`}
   el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}${road.endFerry?`<g transform="translate(${FX} ${road.endFerry.fa})">${FERRY}</g>`:""}</svg>
     <div id="van" aria-hidden="true">${VAN}<b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
   moveVan()}

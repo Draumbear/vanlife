@@ -824,7 +824,7 @@ function loopItems(){
     Object.keys(out).forEach(id => { if (pend['spots/' + id] && !local.docs.spots[id]) delete out[id]; });
   }
   return Object.entries(out)
-    .filter(([id, d]) => d && +d.price > 0 && d.day && !d.paid)
+    .filter(([id, d]) => d && +d.price > 0 && d.day && !d.paid && !d.keaId && !d.done)
     .map(([id, d]) => ({id, name: d.name || 'Activity', price: +d.price, day: d.day, data: d}))
     .sort((a, b) => a.day.localeCompare(b.day));
 }
@@ -843,7 +843,7 @@ function renderLoop(){
 async function logLoop(id){
   const x = loopItems().find(i => i.id === id); if (!x) return;
   const me = S.settings.me || 'p1';
-  const rec = { id: uid(), amount: Math.round(x.price*100)/100, category: 'activity', spent_on: x.day,
+  const rec = { id: uid(), amount: Math.round(x.price*100)/100, category: x.data.cat || 'activity', spent_on: x.day,
     payer: me, account: S.settings.lastAccount || '', personal: '', entered_by: me, note: x.name,
     deleted: false, updated_at: new Date().toISOString(), dirty: true };
   S.expenses[rec.id] = rec;
@@ -881,6 +881,19 @@ document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-logloop]');
   if (b){ b.disabled = true; logLoop(b.dataset.logloop); }
 });
+
+/* Pick up expenses another app on this site (the trip planner) wrote into our
+   storage while we were in the background; the newest copy of each wins. */
+function absorbLocal(){
+  try {
+    const d = JSON.parse(localStorage.getItem(LS) || 'null');
+    if (!d || !d.expenses) return;
+    Object.values(d.expenses).forEach(e => {
+      const l = S.expenses[e.id];
+      if (!l || (e.updated_at || '') > (l.updated_at || '')) S.expenses[e.id] = e;
+    });
+  } catch(e){}
+}
 
 function renderHome(){
   const s = stats(true), full = stats(), st = S.settings, t = todayISO();
@@ -1874,7 +1887,8 @@ window.addEventListener('online',  () => sync(true));
 window.addEventListener('offline', chipIdle);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden){ if (view === 'set') captureSyncFields(); return; }
-  if (view === 'home') rerender();   // the trip planner may have changed planned activities
+  absorbLocal();                     // the trip planner on this phone may have logged or removed expenses
+  rerender();
   sync(true); fetchRate(false);
 });
 // Backstop: a phone can close the app without ever firing 'change' on a field.

@@ -153,6 +153,12 @@ textarea{min-height:72px;resize:vertical}
 .sg .nm,.nm.sg{color:var(--tussock)}
 .item.sg{box-shadow:inset 3px 0 0 var(--tussock);padding-left:10px}
 .srcseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:3px;border-radius:12px;margin:2px 0 8px}
+.pick{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pick label{display:inline-flex}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick span{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:700;font-size:.88rem;color:var(--muted);cursor:pointer;background:var(--card)}
+.pick input:checked+span{background:var(--fern);border-color:var(--fern);color:var(--on-fern,#fff)}
+.pick input:focus-visible+span{outline:2px solid var(--fern);outline-offset:2px}
 .srcseg.two{grid-template-columns:1fr 1fr;margin:0 0 12px}
 .srcseg button{border:0;background:none;border-radius:9px;padding:7px 4px;font:inherit;font-weight:700;font-size:.85rem;color:var(--muted);cursor:pointer}
 .srcseg button[aria-pressed="true"]{background:var(--card,#fff);color:var(--ink,inherit);box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -452,7 +458,7 @@ function loadKea(){let c={};try{c=JSON.parse(localStorage.getItem(KEA_CACHE))||{
 function keaCred(){try{const k=JSON.parse(localStorage.getItem(KEA_CRED)||"{}");if(k.url&&k.key)return k}catch{}return syncOn()?cred:null}
 let keaBusy=false;
 async function pullKea(){const c=keaCred();if(!c||keaBusy||!navigator.onLine)return;keaBusy=true;
-  try{const first=tripRange()?.first||"2026-01-01",out={};let off=0;
+  try{await flushKea();const first=tripRange()?.first||"2026-01-01",out={};let off=0;
     for(;;){const rows=await api(`van_expenses?select=id,amount,category,spent_on,note,deleted,updated_at&spent_on=gte.${first}&order=id.asc&limit=1000&offset=${off}`,{},c);
       rows.forEach(r=>out[r.id]={a:+r.amount||0,c:r.category,d:r.spent_on,n:r.note||"",x:!!r.deleted,u:r.updated_at||""});if(rows.length<1000||off>20000)break;off+=1000}
     let set=null;try{const sr=await api("van_settings?select=data,updated_at&id=eq.trip",{},c);if(sr&&sr[0])set={...sr[0].data,updated_at:sr[0].updated_at}}catch{}
@@ -469,14 +475,61 @@ const moneyTag=v=>{const pd=keaPerDay();return `<span class="money ${pd?(v>pd*1.
 function spendCats(list,k=3){const by={};list.forEach(e=>by[e.c]=(by[e.c]||0)+e.a);
   return Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,k).map(([c,v])=>`${kcat(c)[0]} ${nzd(v)}`).join(" · ")}
 function keaNote(x){if(!(+x.price>0))return "";
-  if(x.paid)return "✓ Logged in Kea";
-  return x.day?`Kea holds ${nzd(x.price)} back for ${wd(x.day)} ${fmt(x.day)} until you log it there.`:"Pick a day and Kea will hold the money back for it."}
+  if(x.keaId||x.paid){const m=x.keaMeta;return `✓ Paid · in Kea${m?` · ${PEOPLE[m.payer]||""}${m.account?" · "+esc(m.account):""}${m.personal?" · just "+(PEOPLE[m.personal]||""):""}`:""}`}
+  return x.day?`Planned cost in Kea for ${wd(x.day)} ${fmt(x.day)}. Tick Done when paid to log it.`:"Pick a day and it shows in Kea's planned costs."}
 function spendCard(d){const list=spentOn(d).sort((a,b)=>b.a-a.a),pd=keaPerDay(),tot=sumA(list);
   return `<div class="card"><span class="label">Spent${d===today()?" so far":""}</span>
     ${list.length?`<div class="spend">${list.map(e=>`<div class="r"><span>${kcat(e.c)[0]}</span><span class="clamp1">${esc(e.n||kcat(e.c)[1])}</span><span class="mono">${nzd(e.a)}</span></div>`).join("")}
       <div class="tot"><span>Total</span><span>${moneyTag(tot)}${pd?` <span class="muted" style="font-weight:400;font-size:.78rem">/ ${nzd(pd)} a day</span>`:""}</span></div></div>`
       :`<div class="muted" style="font-size:.9rem">Nothing logged in Kea${d===today()?" yet today":""}.</div>`}
     <a class="btn" href="../" style="margin-top:10px"><img src="../icon-192.png" alt="" width="20" height="20" style="border-radius:5px"> Open Kea</a></div>`}
+/* ---- writing paid plans into Kea ----
+   Ticking a priced plan done logs it as a Kea expense (who paid, from which
+   account, for both or one of you); unticking or removing it deletes it again. */
+const PEOPLE={p1:"Tanguy",p2:"Zita"},KQ="sil-keaq";
+const keaLocal=()=>{try{return JSON.parse(localStorage.getItem(KEA_LS))}catch{return null}};
+const keaMe=()=>keaLocal()?.settings?.me||"p1";
+function keaAccounts(){const k=keaLocal()?.settings||kea.set||{};return {list:k.accounts?.length?k.accounts:["BNZ","Revolut","Cash"],last:k.lastAccount||""}}
+function keaWrite(rec){
+  try{const k=keaLocal();if(k&&k.expenses){k.expenses[rec.id]={...(k.expenses[rec.id]||{}),...rec,dirty:true};localStorage.setItem(KEA_LS,JSON.stringify(k))}}catch{}
+  kea.ex[rec.id]={a:rec.amount,c:rec.category,d:rec.spent_on,n:rec.note,x:rec.deleted,u:rec.updated_at};
+  try{const c=JSON.parse(localStorage.getItem(KEA_CACHE)||"{}");c.ex=c.ex||{};c.ex[rec.id]=kea.ex[rec.id];localStorage.setItem(KEA_CACHE,JSON.stringify(c))}catch{}
+  let q=[];try{q=JSON.parse(localStorage.getItem(KQ)||"[]")}catch{}
+  q=q.filter(r=>r.id!==rec.id);q.push(rec);try{localStorage.setItem(KQ,JSON.stringify(q))}catch{}
+  render();flushKea()}
+async function flushKea(){const c=keaCred();if(!c||!navigator.onLine)return;let q=[];try{q=JSON.parse(localStorage.getItem(KQ)||"[]")}catch{}if(!q.length)return;
+  try{await api("van_expenses?on_conflict=id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(q)},c);
+    let now=[];try{now=JSON.parse(localStorage.getItem(KQ)||"[]")}catch{}
+    localStorage.setItem(KQ,JSON.stringify(now.filter(r=>!q.some(x=>x.id===r.id&&x.updated_at===r.updated_at))))}
+  catch(e){console.warn("kea write",e)}}
+/* the expense row for a paid plan, built from the plan and how it was paid */
+function keaRec(x,extra={}){const old=keaLocal()?.expenses?.[x.keaId]||{},m={...(x.keaMeta||{}),...extra},me=keaMe();
+  const day=x.day&&x.day<=today()?x.day:today();
+  return {id:x.keaId,amount:Math.round((+x.price||0)*100)/100,category:x.cat||"activity",spent_on:old.spent_on&&!x.day?old.spent_on:day,
+    payer:m.payer||old.payer||me,account:m.account??old.account??"",personal:m.personal??old.personal??"",entered_by:old.entered_by||me,
+    note:x.name||"Activity",deleted:false,updated_at:new Date().toISOString()}}
+/* call after a plan's price, category or day changed: keeps its Kea expense in step */
+function keaSyncSpot(id){const x=S.docs.spots[id];if(!x||!x.keaId)return;
+  if(+x.price>0)keaWrite(keaRec(x));else keaUnpay(id,true)}
+function keaUnpay(id,quiet){const x=S.docs.spots[id];if(!x||!x.keaId)return false;
+  const old=keaLocal()?.expenses?.[x.keaId]||{};
+  keaWrite({...keaRec(x),...old,id:x.keaId,deleted:true,updated_at:new Date().toISOString()});
+  S.docs.spots[id]={...x,keaId:null,keaMeta:null,paid:false};S.pending["spots/"+id]=1;persist();refresh();scheduleSync();
+  if(!quiet)toast("Removed from Kea");return true}
+function openPaid(id){const x=S.docs.spots[id];if(!x)return;const me=keaMe(),acc=keaAccounts();
+  const radio=(name,opts,val)=>`<div class="pick">${opts.map(([v,l])=>`<label><input type="radio" name="${name}" value="${esc(v)}" ${v===val?"checked":""}><span>${esc(l)}</span></label>`).join("")}</div>`;
+  sheet(head(`Paid for ${esc(x.name)}?`)+`
+    <div class="two"><label>Amount<input name="amount" type="number" inputmode="decimal" min="0" step="0.01" value="${x.price??""}"></label>
+      <label>Category<select name="cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(x.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label></div>
+    <div><span class="label">Who paid</span>${radio("payer",[["p1",PEOPLE.p1],["p2",PEOPLE.p2]],me)}</div>
+    <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),acc.last||acc.list[0])}</div>
+    <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],"")}</div>
+    <div class="end"><div><button type="button" class="btn" id="pd-skip">Done, not paid</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
+  $("#pd-skip").onclick=()=>{patch("spots",id,{done:true});closeSheet();toast("Done ✓")}}
+function setDone(id,on){const x=S.docs.spots[id];if(!x)return;
+  if(on&&+x.price>0&&!x.keaId)return openPaid(id);
+  if(!on&&x.keaId){keaUnpay(id,true);patch("spots",id,{done:false});return toast("Not done · removed from Kea")}
+  patch("spots",id,{done:on});toast(on?"Done ✓":"Not done")}
 loadKea();
 function renderToday(){
   const el=$("#todaycard"),t=today(),cur=currentStop();
@@ -580,9 +633,9 @@ function renderDay(){
     <div class="card"><span class="label">Plan</span>
       <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
         <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${nzd(x.price)}${x.paid?" ✓":""}</span>`:""}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
-      ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Paid activities: ${nzd(c)}, shown in Kea</div>`:""})()}
+      ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       <form class="addrow" id="addact"><input id="f-act" placeholder="Add something" autocomplete="off" aria-label="Add an activity"><button class="btn primary" type="submit">Add</button></form></div>
     <div class="card"><span class="label" id="ideas-h">Ideas</span>
       <input id="q-ideas" type="search" placeholder="Search your places" value="${esc(state.ideaQ)}" aria-label="Search ideas">
@@ -637,17 +690,19 @@ function openSpot(it){
     <div class="muted" style="font-size:.85rem">${esc(KINDS[it.kind]||"Sight")}${it.region?" · "+esc(it.region):""}</div>
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
-    <div class="two"><label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
-      <label>Price for both<input id="q-price" type="number" inputmode="decimal" min="0" step="1" placeholder="Free" value="${it.price??""}"></label></div>
+    <label>Day<select id="q-day">${dayOpts(it.day,"Not planned")}</select></label>
+    <div class="two"><label>Cost<input id="q-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Free" value="${it.price??""}"></label>
+      <label>Kea category<select id="q-cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(it.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label></div>
     <div class="muted" id="q-kea" style="font-size:.82rem;margin-top:-4px">${keaNote(it)}</div>
     <label class="check"><input type="checkbox" id="q-done" ${it.done?"checked":""}> Done</label>
     <details><summary>Edit details</summary><div>${spotFields(it)}${saveRow(false)}</div></details>`,"spot",it.id);
   sgWire("spots",it);
-  $("#q-day").onchange=e=>{const d=e.target.value||null;patch("spots",it.id,{day:d,order:d?planFor(d).length:0});toast(d?`Planned for ${wd(d)} ${fmt(d)}`:"Back to ideas")};
-  $("#q-done").onchange=e=>{patch("spots",it.id,{done:e.target.checked});toast(e.target.checked?"Done ✓":"Not done")};
+  $("#q-day").onchange=e=>{const d=e.target.value||null;if(!d)keaUnpay(it.id,true);patch("spots",it.id,{day:d,order:d?planFor(d).length:0,...(d?{}:{done:false})});keaSyncSpot(it.id);toast(d?`Planned for ${wd(d)} ${fmt(d)}`:"Back to ideas")};
+  $("#q-cat").onchange=e=>{patch("spots",it.id,{cat:e.target.value});keaSyncSpot(it.id);toast("Category saved")};
+  $("#q-done").onchange=e=>{const on=e.target.checked;if(on&&+S.docs.spots[it.id]?.price>0&&!S.docs.spots[it.id]?.keaId){e.target.checked=false;return openPaid(it.id)}setDone(it.id,on)};
   $("#q-price").onchange=e=>{const v=parseFloat(String(e.target.value).replace(",","."));const price=v>0?Math.round(v*100)/100:null;
-    patch("spots",it.id,{price});const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});toast(price?`Price ${nzd(price)}`:"Marked free")};
-  armed($("#del"),"Tap again",()=>{del("spots",it.id);closeSheet();toast("Deleted")})}
+    patch("spots",it.id,{price});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});toast(price?`Price ${nzd(price)}`:"Marked free")};
+  armed($("#del"),"Tap again",()=>{const had=keaUnpay(it.id,true);del("spots",it.id);closeSheet();toast(had?"Deleted, and removed from Kea":"Deleted")})}
 function openCamp(it){
   if(!it){sheet(head("New campsite")+campFields({region:state.region!=="all"?state.region:""})+saveRow(true),"camp");return}
   sheet(head(esc(it.name))+`
@@ -762,6 +817,14 @@ $("#form").addEventListener("submit",e=>{
   e.preventDefault();const f=e.target,type=f.dataset.type,id=f.dataset.id;if(type==="settings")return;
   const v={};for(const [k,x] of new FormData(f).entries())v[k]=typeof x==="string"?x.trim():x;
   if("name" in v&&!v.name){toast("Give it a name");f.querySelector("[name=name]").focus();return}
+  if(type==="paid"){const x=S.docs.spots[id];if(!x)return closeSheet();
+    const amt=parseFloat(String(v.amount||"").replace(",","."));if(!(amt>0)){toast("Enter an amount");return}
+    const keaId=x.keaId||newId(),meta={payer:v.payer||keaMe(),account:v.account||"",personal:v.personal||""};
+    const nx={...x,price:Math.round(amt*100)/100,cat:v.cat||"activity",done:true,paid:true,keaId,keaMeta:meta};
+    S.docs.spots[id]=nx;S.pending["spots/"+id]=1;persist();refresh();scheduleSync();
+    keaWrite(keaRec(nx,meta));
+    try{const k=keaLocal();if(k&&k.settings&&meta.account){k.settings.lastAccount=meta.account;localStorage.setItem(KEA_LS,JSON.stringify(k))}}catch{}
+    closeSheet();toast(`Logged ${nzd(amt)} in Kea`);return}
   if(type==="night"){
     if(v.all){const s=stopFor(id);patch("stops",s.id,{camp:v.camp,campType:v.campType});stopDays(s).forEach(d=>{const o=S.docs.nights[d];if(!o)return;if(o.flex&&d!==id)put("nights",d,{camp:v.camp,campType:v.campType,notes:"",flex:true});else del("nights",d)});if(v.notes||v.flex)setNight(id,v.camp,v.campType,v.notes,!!v.flex)}
     else setNight(id,v.camp,v.campType,v.notes,!!v.flex);
@@ -845,11 +908,11 @@ document.addEventListener("click",e=>{
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
   else if(ds.day)openDay(ds.day);
-  else if(ds.unplan){const x=S.docs.spots[ds.unplan];patch("spots",ds.unplan,{day:null,order:null});toast(`Removed ${x?.name||""} from this day`)}
+  else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);patch("spots",ds.unplan,{day:null,order:null,done:false});toast(`Removed ${x?.name||""} from this day${had?" and from Kea":""}`)}
   else if(ds.plan){const d=state.day;patch("spots",ds.plan,{day:d,order:planFor(d).length});toast("Added")}
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
-  else if(ds.tog){const [c,f,id]=ds.tog.split(":"),it=S.docs[c][id];if(it)patch(c,id,{[f]:!it[f]})}
+  else if(ds.tog){const [c,f,id]=ds.tog.split(":"),it=S.docs[c][id];if(!it)return;if(c==="spots"&&f==="done")setDone(id,!it.done);else patch(c,id,{[f]:!it[f]})}
   else if(ds.night)openNight(ds.night);
   else if(ds.src){state.src=ds.src;try{localStorage.setItem("sil-sug",{both:"1",ours:"0",claude:"claude"}[ds.src])}catch{}renderPlaces();renderIdeas()}
   else if(ds.kind){state.kind=ds.kind;renderPlaces()}
@@ -869,7 +932,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preven
   const name=$("#f-act").value.trim();if(!name)return;const d=state.day;$("#f-act").value="";
   add("spots",{name,kind:"place",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length})});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
-window.addEventListener("online",()=>sync(false));window.addEventListener("offline",()=>setChip());
+window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea()}});
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 

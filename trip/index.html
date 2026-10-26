@@ -182,6 +182,12 @@ textarea{min-height:72px;resize:vertical}
 #welcome.on .wave{animation:wave .35s ease-in-out infinite alternate}
 @keyframes wave{from{transform:rotate(-25deg)}to{transform:rotate(25deg)}}
 #welcome .balloon{transform-box:fill-box;transform-origin:50% 100%;animation:sway 2.4s ease-in-out infinite alternate}
+.mp-pee{stroke-dasharray:3 2.5;animation:pee .35s linear infinite}
+@keyframes pee{to{stroke-dashoffset:-5.5}}
+.mp-drops{animation:drip .5s ease-in-out infinite alternate}
+@keyframes drip{from{transform:translateY(0);opacity:.9}to{transform:translateY(-2px);opacity:.4}}
+#welcome .banner{transform-box:fill-box;transform-origin:50% 100%;animation:bsway 1.8s ease-in-out infinite alternate}
+@keyframes bsway{from{transform:rotate(-1.5deg)}to{transform:rotate(1.5deg)}}
 @keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
 .skylab.on{opacity:1;transform:none}.skylab b{font:800 1rem var(--display);color:#1d2621}.skylab span{font-size:.8rem;color:#33424a}
 #people{position:absolute;left:0;top:0;z-index:3;display:flex;gap:3px;transition:opacity .2s;pointer-events:none}
@@ -1084,16 +1090,39 @@ const LMI={
 const LM_RULES=[[/wānaka|wanaka/i,"tree"],[/hāwea|hawea|kidds/i,"tent"],[/queenstown|arrowtown/i,"gondola"],[/cromwell/i,"fruit"],[/glenorchy/i,"peaks"],[/te anau|milford/i,"mitre"],[/invercargill|bluff/i,"sign"],[/catlins/i,"lighthouse"],[/dunedin/i,"albatross"],[/oamaru|moeraki/i,"penguin"],[/twizel|pukaki/i,"lupins"],[/aoraki|mt cook|mount cook/i,"aoraki"],[/tekapo/i,"church"],[/hakatere|rakaia/i,"hill"],[/christchurch|akaroa/i,"tram"],[/arthur/i,"kea"],[/reefton/i,"lamp"],[/lewis|hanmer/i,"spring"],[/kaik/i,"whale"],[/picton|ferry|momorangi/i,"boat"],[/wellington/i,"cablecar"],[/auckland/i,"skytower"],[/franz|fox/i,"glacier"],[/greymouth|punakaiki/i,"rocks"],[/golden bay|kōhaihai|kohaihai|oparara/i,"arch"],[/abel|mārahau|marahau|french pass/i,"kayak"],[/rotoiti|nelson|motueka|westport/i,"tent"],[/tbd|north island/i,"road"]];
 const lmFor=s=>{const r=LM_RULES.find(([re])=>re.test(s.name||""));return r?`<svg class="lm" viewBox="0 0 64 48" aria-hidden="true">${LMI[r[1]]}</svg>`:""};
 /* family & friends at arrivals with a banner; they start waving when the plane lands */
-function welcomeSVG(cx,y){const cols=["#e8833a","#2b6f86","#b26fd0","#2f8f4e","#c0392b","#e7b93e","#5f7d96"],n=7,gap=24,x0=cx-(n-1)*gap/2;
-  const ppl=cols.map((c,i)=>{const x=x0+i*gap,hold=i===1||i===5,d=(i%3)*.12;
-    return `<g transform="translate(${x} ${y})"><circle cy="-30" r="6" fill="#f1c9a5"/><path d="M-7 -2 Q-7 -22 0 -22 Q7 -22 7 -2Z" fill="${c}"/><path d="M-3 -2V10M3 -2V10" stroke="#33424a" stroke-width="2.4" stroke-linecap="round"/>
-      ${hold?`<path d="M${i===1?-6:6} -18 L${i===1?-8:8} -38" stroke="#f1c9a5" stroke-width="2.6" stroke-linecap="round"/>`:`<path class="wave" style="animation-delay:${d}s" d="M6 -18 L13 -32" stroke="#f1c9a5" stroke-width="2.6" stroke-linecap="round"/>`}</g>`}).join("");
-  const bx0=x0+gap-8,bx1=x0+5*gap+8;
-  return `<g id="welcome">${ppl}<path d="M${bx0} ${y-38} Q${(bx0+bx1)/2} ${y-30} ${bx1} ${y-38} L${bx1} ${y-56} Q${(bx0+bx1)/2} ${y-48} ${bx0} ${y-56} Z" fill="#fff" stroke="#c0392b" stroke-width="1.5"/>
-    <text x="${(bx0+bx1)/2}" y="${y-43}" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="10.5" fill="#c0392b" letter-spacing=".5">WELCOME HOME!</text>
-    ${[0,1,2].map(i=>`<g class="balloon" style="animation-delay:${i*.3}s"><path d="M${bx1+10+i*9} ${y-60+i*6} q-2 18 0 36" stroke="#9aa3a6" fill="none"/><ellipse cx="${bx1+10+i*9}" cy="${y-66+i*6}" rx="6" ry="7.5" fill="${["#e8833a","#7d8be0","#e7b93e"][i]}"/></g>`).join("")}</g>`}
+function welcomeSVG(cx,y){
+  // family & friends at arrivals: two hold a banner on poles, one waves a Belgian flag, the little one has the balloons
+  const P=[{c:"#e8833a",h:"#3b2a20"},{c:"#2b6f86",h:"#c99a5b",pole:-1},{c:"#b26fd0",h:"#6b4a2e",flag:1},{c:"#2f8f4e",h:"#2a2522",kid:1},{c:"#c0392b",h:"#a0a0a0"},{c:"#e7b93e",h:"#3b2a20",pole:1},{c:"#5f7d96",h:"#7a5634",kid:1,bal:1}];
+  const gap=26,x0=cx-(P.length-1)*gap/2,poles=[],arm="#f1c9a5";
+  const ppl=P.map((q,i)=>{const x=x0+i*gap,k=q.kid?.74:1,d=(i%3)*.13;
+    let arms="";
+    if(q.pole){arms=`<path d="M${3*q.pole} -18 L${6*q.pole} -34" stroke="${arm}" stroke-width="2.6" stroke-linecap="round"/>`;poles.push(x+6*q.pole)}
+    else if(q.flag)arms=`<g class="wave" style="animation-delay:${d}s"><path d="M5 -18 L12 -27" stroke="${arm}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 -24 V-45" stroke="#5a5a5a" stroke-width="1.4"/><rect x="12" y="-45" width="4.5" height="9.5" fill="#1d1d1b"/><rect x="16.5" y="-45" width="4.5" height="9.5" fill="#f5d33a"/><rect x="21" y="-45" width="4.5" height="9.5" fill="#e2373f"/></g>`;
+    else if(q.bal)arms=`<path d="M5 -16 L10 -26" stroke="${arm}" stroke-width="2.4" stroke-linecap="round"/>`;
+    else arms=`<path class="wave" style="animation-delay:${d}s" d="M6 -18 L13 -32" stroke="${arm}" stroke-width="2.6" stroke-linecap="round"/>`;
+    return `<g transform="translate(${x} ${y}) scale(${k})"><path d="M-3 -2V10M3 -2V10" stroke="#33424a" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M-7.5 -1 Q-8 -22 0 -22 Q8 -22 7.5 -1Z" fill="${q.c}"/><path d="M-6 -18 L-10 -6" stroke="${arm}" stroke-width="2.6" stroke-linecap="round"/>
+      <circle cy="-29" r="6.2" fill="${arm}"/><path d="M-6.4 -29 Q-6 -37 0 -36.6 Q6 -37 6.4 -29 Q3 -33 -6.4 -29Z" fill="${q.h}"/>
+      <circle cx="-2.2" cy="-28.5" r=".9" fill="#33424a"/><circle cx="2.2" cy="-28.5" r=".9" fill="#33424a"/><path d="M-2 -25.5 Q0 -23.8 2 -25.5" stroke="#33424a" stroke-width=".9" fill="none"/>${arms}</g>`}).join("");
+  const [pa,pb]=poles,top=y-74,bh=26,mid=(pa+pb)/2;
+  const banner=`<g class="banner"><path d="M${pa} ${y-34}V${top-4}M${pb} ${y-34}V${top-4}" stroke="#7a5634" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M${pa} ${top} Q${mid} ${top+5} ${pb} ${top} V${top+bh} Q${mid} ${top+bh+5} ${pa} ${top+bh}Z" fill="#fffdf6" stroke="#c0392b" stroke-width="1.4"/>
+    <path d="M${pa+3} ${top+3.5} Q${mid} ${top+8} ${pb-3} ${top+3.5}" stroke="#e7b93e" stroke-width="1.4" fill="none" stroke-dasharray="3 3"/>
+    <text x="${mid}" y="${top+15}" text-anchor="middle" font-family="var(--display)" font-weight="800" font-size="10.5" fill="#c0392b" letter-spacing=".6">WELCOME HOME!</text>
+    <text x="${mid}" y="${top+24.5}" text-anchor="middle" font-family="var(--body)" font-weight="700" font-size="7" fill="#33424a">Tanguy &amp; Zita ♥</text></g>`;
+  const hx=x0+6*gap+7.4,hy=y-19;
+  const bal=[0,1,2].map(i=>{const bx=hx+[-8,4,14][i],by=y-[66,76,62][i];return `<g class="balloon" style="animation-delay:${i*.35}s"><path d="M${hx} ${hy} Q${(hx+bx)/2+3} ${(hy+by)/2} ${bx} ${by+8}" stroke="#9aa3a6" stroke-width=".8" fill="none"/><ellipse cx="${bx}" cy="${by}" rx="6.5" ry="8" fill="${["#e8833a","#7d8be0","#e2373f"][i]}"/><path d="M${bx-2.5} ${by-4} q1.5 -2 3 -1.5" stroke="#fff8" stroke-width="1.4" fill="none" stroke-linecap="round"/></g>`}).join("");
+  return `<g id="welcome"><ellipse cx="${cx+8}" cy="${y+11}" rx="${(P.length*gap)/2+28}" ry="6" fill="#33424a" opacity=".12"/>${banner}${ppl}${bal}</g>`}
 const LM={mbs:`<g transform="translate(-34 -46)" stroke="#33424a" stroke-width="1.6" stroke-linejoin="round"><path d="M10 46V14h10v32M29 46V14h10v32M48 46V14h10v32" fill="#f4f5f2"/><path d="M4 12c20-4 40-4 62 0v4H4z" fill="#dfe7ea"/><path d="M0 46h68" stroke="#33424a"/></g>`,
- atomium:`<g stroke="#33424a" stroke-width="1.3"><path d="M-13.3 12.7L-16.7 39.4M24.5 8.7L30.6 39.4M-11.1 3.9L-13.9 39.4M0.0 25.4L0.0 39.4" stroke-width="2"/><path d="M0.0 25.4L-11.1 3.9M0.0 25.4L-13.3 12.7M0.0 25.4L24.5 8.7M-11.1 3.9L-24.5 -8.7M-11.1 3.9L13.3 -12.7M-13.3 12.7L-24.5 -8.7M-13.3 12.7L11.1 -3.9M-24.5 -8.7L-0.0 -25.4M24.5 8.7L13.3 -12.7M24.5 8.7L11.1 -3.9M13.3 -12.7L-0.0 -25.4M11.1 -3.9L-0.0 -25.4M0.0 -0.0L0.0 25.4M0.0 -0.0L-11.1 3.9M0.0 -0.0L-13.3 12.7M0.0 -0.0L-24.5 -8.7M0.0 -0.0L24.5 8.7M0.0 -0.0L13.3 -12.7M0.0 -0.0L11.1 -3.9M0.0 -0.0L-0.0 -25.4" stroke-width="2" opacity=".7"/><circle cx="-11.1" cy="3.9" r="4.6" fill="#d6dadd"/><circle cx="13.3" cy="-12.7" r="4.8" fill="#d9dde0"/><circle cx="0.0" cy="25.4" r="5.2" fill="#e1e5e8"/><circle cx="24.5" cy="8.7" r="5.4" fill="#e4e8eb"/><circle cx="0.0" cy="-0.0" r="5.4" fill="#e5e9ec"/><circle cx="-24.5" cy="-8.7" r="5.4" fill="#e5e9ec"/><circle cx="-0.0" cy="-25.4" r="5.6" fill="#e8ecef"/><circle cx="-13.3" cy="12.7" r="6.0" fill="#f0f4f7"/><circle cx="11.1" cy="-3.9" r="6.2" fill="#f4f8fb"/><path d="M-40.5 39.4H40.5"/></g>`};
+ mpis:`<g><path d="M-24 40V-18Q-24 -44 0 -44Q24 -44 24 -18V40Z" fill="#e4ddcc" stroke="#b5ab94" stroke-width="1.4"/><path d="M-15 40V-14Q-15 -33 0 -33Q15 -33 15 -14V40Z" fill="#cdc3ad"/>
+  <path d="M-28 40H28" stroke="#33424a" stroke-width="1.6"/><path d="M-21 30Q0 42 21 30L19 40H-19Z" fill="#b9ae96" stroke="#9c917a"/><path d="M-17 31Q0 38 17 31" stroke="#8fc8e0" stroke-width="2" fill="none"/>
+  <rect x="-9" y="6" width="18" height="24" rx="1" fill="#d9d0bb" stroke="#a89e86"/><rect x="-12" y="3" width="24" height="5" rx="1.5" fill="#e7dfcc" stroke="#a89e86"/>
+  <g fill="#8a6634"><path d="M-3.4 3.5L-4.6 -7M3.4 3.5L4.6 -7" stroke="#8a6634" stroke-width="3.4" stroke-linecap="round"/><ellipse cy="-13" rx="5.6" ry="7.2"/>
+   <path d="M-5 -16Q-10 -12 -7 -7" stroke="#8a6634" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M5 -16Q9 -13 5 -9" stroke="#8a6634" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+   <circle cy="-24.5" r="5.2"/><circle cx="-3" cy="-28.5" r="2"/><circle cx="1" cy="-29.6" r="2"/><circle cx="4" cy="-27.5" r="1.8"/></g>
+  <path d="M-2 -20Q-1 -12 -3 -6" stroke="#b58a4c" stroke-width="1.2" fill="none" opacity=".8"/>
+  <path class="mp-pee" d="M3 -7.5Q13 -6 15 30" stroke="#7cc3e3" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+  <g class="mp-drops" fill="#7cc3e3"><circle cx="13" cy="31" r="1.2"/><circle cx="17" cy="30" r="1"/></g></g>`};
 let road={x:RX,max:null,ferry:null,fly:null,sell:null};
 function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".fly-panel"),se=el.querySelector(".sea-end"),g={zones:[]};
   if(se){const P0=se.offsetTop;g.endFerry={fa:P0+124};g.zones.push([P0,Infinity])}
@@ -1127,7 +1156,7 @@ function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.qu
     fly=`<rect x="${PXr-24}" y="${F.park-40}" width="48" height="${F.lift-F.park+70}" rx="6" fill="#4b5157"/><path d="M${PXr} ${F.park-30}V${F.lift+20}" stroke="#f3f3ee" stroke-width="2" stroke-dasharray="10 10"/>
     <rect x="${FX-26}" y="${F.park-30}" width="${PXr-FX+4}" height="60" rx="8" fill="#4b5157" opacity=".55"/>
     <path d="${fp}" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" opacity=".9"/>
-    <g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g>${welcomeSVG(Math.round(W*.45),F.BR.y+128)}<g transform="translate(${F.BR.x+92} ${F.BR.y+4}) scale(1.2)">${LM.atomium}</g>`}
+    <g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g>${welcomeSVG(Math.round(W*.45),F.BR.y+128)}<g transform="translate(${F.BR.x+96} ${F.BR.y-4}) scale(1.35)">${LM.mpis}</g>`}
   el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}${road.endFerry?`<g transform="translate(${FX} ${road.endFerry.fa})">${FERRY}</g>`:""}</svg>
     <div id="van" aria-hidden="true">${VAN}<b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
   moveVan()}

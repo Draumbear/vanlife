@@ -145,9 +145,20 @@ textarea{min-height:72px;resize:vertical}
 .road .asph{stroke:var(--road);stroke-width:11;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .road .mid{stroke:var(--paper);stroke-width:1.6;fill:none;stroke-dasharray:6 9}
 .road .pin{fill:var(--fern);stroke:var(--paper);stroke-width:2.5}
-.ferry-end{position:relative;z-index:0;height:250px;margin:26px 0 0 -30px;border-radius:18px;overflow:hidden;
+.fly-panel{position:relative;z-index:0;height:430px;margin:26px 0 0 -30px;border-radius:18px;overflow:hidden;background:linear-gradient(#cfe0e8,var(--sea-soft))}
+.fly-panel .fcap{top:auto;bottom:18px;left:16px}
+#people{position:absolute;left:0;top:0;z-index:3;display:flex;gap:3px;transition:opacity .2s;pointer-events:none}
+#people i{width:9px;height:9px;border-radius:50%;background:#e8833a;border:2px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+#people i+i{background:#2b6f86}
+#people.walk i{animation:step .32s ease-in-out infinite alternate}#people.walk i+i{animation-delay:.16s}
+@keyframes step{to{transform:translateY(-2px)}}
+#plane{position:absolute;left:0;top:0;z-index:3;transform-origin:60px 55px;pointer-events:none;will-change:transform}
+#van .sold{position:absolute;right:-12px;top:-10px;width:18px;height:18px;border-radius:50%;background:#2f8f4e;color:#fff;font:800 11px/18px var(--body);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35);transform:scale(0);transition:transform .25s cubic-bezier(.3,1.6,.6,1)}
+#van.sold .sold{transform:scale(1)}
+.sea-panel{position:relative;z-index:0;height:620px;margin:26px 0 26px -30px;border-radius:18px;overflow:hidden;
   background:repeating-linear-gradient(170deg,transparent 0 22px,color-mix(in srgb,var(--card) 35%,transparent) 22px 24px),linear-gradient(var(--sea-soft),color-mix(in srgb,var(--sea) 30%,var(--sea-soft)))}
 .fcap{position:absolute;left:150px;right:12px;top:40px;display:grid;gap:2px}
+.sea-panel .fcap{top:auto;bottom:24px}
 .fcap b{font:800 1.05rem var(--display)}.fcap span{font-size:.85rem;color:var(--muted)}
 .road .bob{animation:bob 3.2s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
 @keyframes bob{from{transform:rotate(-1.2deg) translateY(0)}to{transform:rotate(1.2deg) translateY(3px)}}
@@ -380,7 +391,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 
 <script>
 /* ================= constants & helpers ================= */
-const REGIONS=["Marlborough","Nelson/Tasman","West Coast","Otago","Fiordland","Southland","Canterbury"];
+const REGIONS=["Marlborough","Nelson/Tasman","West Coast","Otago","Fiordland","Southland","Canterbury","North Island"];
 const KINDS={place:"Sight",hike:"Hike",multi:"Overnight hike",bike:"MTB & bike",disc:"Disc golf",paid:"Paid activity",quirky:"Quirky",food:"Food & drink"};
 const KINDS_PL={place:"Sights",hike:"Hikes",multi:"Overnight hikes",bike:"MTB & bike",disc:"Disc golf",paid:"Paid ($)",quirky:"Quirky",food:"Food"};
 const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
@@ -718,34 +729,67 @@ const VAN=`<svg viewBox="-2 0 22 28" width="18" height="28"><g fill="#1b1f1c"><r
   <rect x="0.5" y="0.5" width="17" height="27" rx="4.5" fill="#cfc8ab" stroke="#8f886f"/><rect x="2.5" y="20" width="13" height="5.5" rx="1.6" fill="#1f3a2d"/>
   <g stroke="#9fa5a4" stroke-width="1.3" stroke-linecap="round"><path d="M4 3.5V17M14 3.5V17M4 6.5H14M4 10.5H14M4 14.5H14"/></g></svg>`;
 const RX=y=>15+5*Math.sin(y/70);
-/* the road, bending at the very end onto the Cook Strait ferry, which the van drives into when you reach the bottom */
-const FX=72;let roadX=RX,vanMax=null;
-const FERRY=`<g class="ferry">
-  <path d="M-55 30 L55 30 L55 150 Q55 200 0 208 Q-55 200 -55 150 Z" fill="#f3f3ee" stroke="#9aa3a6" stroke-width="2"/>
-  <path d="M-55 118 L55 118" stroke="#28507a" stroke-width="6"/>
-  <rect x="-34" y="30" width="68" height="84" fill="#596067"/><path d="M-11 34V110M11 34V110" stroke="#c8ccc8" stroke-width="1.5" stroke-dasharray="6 6"/>
-  <rect x="-22" y="12" width="44" height="20" rx="2" fill="#8b9297"/><path d="M-18 17H18M-18 22H18M-18 27H18" stroke="#6e757a" stroke-width="1.2"/>
-  <rect x="-42" y="128" width="84" height="44" rx="9" fill="#e4e5df" stroke="#9aa3a6" stroke-width="1.5"/>
-  <rect x="-34" y="160" width="68" height="7" rx="3" fill="#2f3a44"/><rect x="-9" y="136" width="18" height="18" rx="4" fill="#c0392b"/>
-</g>`;
-function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.querySelector(".road")?.remove();$("#van")?.remove();
+/* ---- the road and its set pieces: the Cook Strait ferry (the van rides it across) and the flight home (van sold, you two board, the plane leaves) ---- */
+const FX=72,isFerry=s=>!!s.ferry||/ferry/i.test(s.name||"");
+const FERRY=`<g class="bob">
+  <rect x="-20" y="-14" width="40" height="20" rx="2" fill="#8b9297"/><path d="M-16 -9H16M-16 -4H16M-16 1H16" stroke="#6e757a" stroke-width="1.2"/>
+  <path d="M-56 4 L56 4 L56 178 Q56 222 0 234 Q-56 222 -56 178 Z" fill="#f3f3ee" stroke="#9aa3a6" stroke-width="2"/>
+  <path d="M-56 70 V170 M56 70 V170" stroke="#28507a" stroke-width="5"/>
+  <rect x="-30" y="4" width="60" height="226" fill="#596067"/><path d="M0 10V224" stroke="#c8ccc8" stroke-width="1.5" stroke-dasharray="7 7"/>
+  <rect x="-54" y="112" width="22" height="64" rx="6" fill="#e4e5df" stroke="#9aa3a6"/><rect x="32" y="112" width="22" height="64" rx="6" fill="#e4e5df" stroke="#9aa3a6"/>
+  <rect x="-48" y="132" width="10" height="14" rx="3" fill="#c0392b"/><rect x="38" y="132" width="10" height="14" rx="3" fill="#c0392b"/>
+  <rect x="-16" y="228" width="32" height="18" rx="2" fill="#8b9297"/></g>`;
+const PLANE=`<svg viewBox="-60 -55 120 110" width="120" height="110"><g><g fill="#f4f5f2" stroke="#9aa3a6" stroke-width="1.5">
+  <path d="M-6 -44 Q0 -50 6 -44 L7 40 Q0 52 -7 40 Z"/><path d="M-7 0 L-56 -16 L-56 -8 L-7 16 Z"/><path d="M7 0 L56 -16 L56 -8 L7 16 Z"/><path d="M-5 -40 L-20 -46 L-20 -40 L-5 -32 Z"/><path d="M5 -40 L20 -46 L20 -40 L5 -32 Z"/></g>
+  <rect x="-2" y="-46" width="4" height="12" rx="2" fill="#28507a"/><path d="M-4 34 Q0 30 4 34 L3 40 L-3 40 Z" fill="#2b6f86"/><circle cx="-28" cy="0" r="3" fill="#9aa3a6"/><circle cx="28" cy="0" r="3" fill="#9aa3a6"/></g></svg>`;
+let road={x:RX,max:null,ferry:null,fly:null,sell:null};
+function geo(el){const sp=el.querySelector(".sea-panel"),fp=el.querySelector(".fly-panel"),g={zones:[]};
+  if(sp){const P0=sp.offsetTop,P1=P0+sp.offsetHeight;g.ferry={P0,P1,fa:P0+124,fb:P1-120-246};g.zones.push([P0,P1])}
+  if(fp){const A0=fp.offsetTop;g.fly={A0,A1:A0+fp.offsetHeight,park:A0+150};g.zones.push([A0,Infinity])}
+  const blend=(y,a,b)=>{const t=Math.max(0,Math.min(1,(y-a)/(b-a))),s=t*t*(3-2*t);return s};
+  // the road only swings out to the ferry/airport inside their panels, never across the day cards
+  g.x=y=>{for(const [z0,z1] of g.zones){if(y<z0||y>z1)continue;
+      if(y<z0+110)return RX(y)+(FX-RX(y))*blend(y,z0,z0+110);
+      if(z1!==Infinity&&y>z1-110)return FX+(RX(y)-FX)*blend(y,z1-110,z1);
+      return FX}
+    return RX(y)};
+  g.max=g.fly?g.fly.park:null;return g}
+function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.querySelectorAll(".road,#van,#people,#plane").forEach(n=>n.remove());
   const H=el.scrollHeight;if(H<60||el.querySelector(".empty"))return;
-  const fe=el.querySelector(".ferry-end"),F0=fe?fe.offsetTop+26:null,B=F0!=null?F0-120:null;
-  roadX=F0==null?RX:y=>{if(y<=B)return RX(y);if(y>=F0)return FX;const t=(y-B)/(F0-B),s=t*t*(3-2*t);return RX(B)+(FX-RX(B))*s};
-  vanMax=F0!=null?F0+78:null;const end=F0!=null?F0+14:H;
-  let d=`M${roadX(0).toFixed(1)} 0`;for(let y=8;y<=end;y+=8)d+=` L${roadX(y).toFixed(1)} ${y}`;d+=` L${roadX(end).toFixed(1)} ${end}`;
-  const pins=[...el.querySelectorAll(".stop-h")].map(h=>{const y=h.offsetTop+12;return `<circle class="pin" cx="${roadX(y).toFixed(1)}" cy="${y}" r="5.5"/>`}).join("");
-  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="160" height="${H}" viewBox="0 0 160 ${H}" aria-hidden="true">${F0!=null?`<g transform="translate(${FX} ${F0-14})"><g class="bob">${FERRY}</g></g>`:""}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}</svg><div id="van" aria-hidden="true">${VAN}</div>`);
+  road=geo(el);const X=road.x,end=road.fly?road.fly.park+6:H;
+  const sl=state.stops.find(x=>x.sell&&x.sell>today());road.sell=null;
+  if(sl){const row=el.querySelector(`[data-day="${sl.sell}"]`);if(row)road.sell=row.offsetTop}
+  let d="",pen=false;
+  for(let y=0;y<=end;y+=6){const water=road.ferry&&y>road.ferry.fa+4&&y<road.ferry.fb+244;
+    if(water){pen=false;continue}d+=(pen?" L":" M")+X(y).toFixed(1)+" "+y;pen=true}
+  const pins=[...el.querySelectorAll(".stop-h")].map(h=>{const y=h.offsetTop+12;return `<circle class="pin" cx="${X(y).toFixed(1)}" cy="${y}" r="5.5"/>`}).join("");
+  const W=el.clientWidth,PX=Math.min(W-70,260);road.px=PX;
+  const fly=road.fly?`<rect x="${PX-24}" y="${road.fly.park-40}" width="48" height="${road.fly.A1-road.fly.park+30}" rx="6" fill="#4b5157"/><path d="M${PX} ${road.fly.park-30}V${road.fly.A1-16}" stroke="#f3f3ee" stroke-width="2" stroke-dasharray="10 10"/>
+    <rect x="${FX-26}" y="${road.fly.park-30}" width="${PX-FX+4}" height="60" rx="8" fill="#4b5157" opacity=".55"/>`:"";
+  el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}</svg>
+    <div id="van" aria-hidden="true">${VAN}<b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
   moveVan()}
 function moveVan(){const el=$("#daylist"),v=$("#van");
   const bg=$("#bg");if(bg)bg.style.maskPosition=bg.style.webkitMaskPosition=`0 ${-Math.round(scrollY*.25)}px`;
-  if(!el||!v||!el.offsetParent)return;const r=el.getBoundingClientRect(),H=el.scrollHeight;
-  let y=innerHeight*.45-r.top;
-  if(vanMax!=null){const left=Math.max(0,document.documentElement.scrollHeight-innerHeight-scrollY),yEnd=y+left,extra=vanMax-yEnd,k=Math.max(0,Math.min(1,1-left/320));if(extra>0)y+=extra*k*k}
-  y=Math.max(14,Math.min(vanMax??H-16,y));
-  const dx=(roadX(y+3)-roadX(y-3))/6,ang=Math.atan(dx)*57.3,onboard=vanMax!=null&&y>vanMax-60;
-  v.classList.toggle("aboard",onboard);
-  v.style.transform=`translate(${(roadX(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`}
+  if(!el||!v||!el.offsetParent)return;const r=el.getBoundingClientRect(),H=el.scrollHeight,X=road.x;
+  let y=innerHeight*.45-r.top;const left=Math.max(0,document.documentElement.scrollHeight-innerHeight-scrollY);
+  if(road.max!=null){const y200=y+Math.max(0,left-220),extra=road.max-y200,k=left<=220?1:Math.max(0,1-(left-220)/360);if(extra>0)y+=extra*k*k}
+  y=Math.max(14,Math.min(road.max??H-16,y));
+  // ferry: carry the van across
+  const f=road.ferry,fg=$("#ferryg");
+  if(f&&fg){const top=Math.max(f.fa,Math.min(f.fb,y-110));fg.setAttribute("transform",`translate(${FX} ${top})`)}
+  const dx=(X(y+3)-X(y-3))/6,ang=Math.atan(dx)*57.3;
+  v.classList.toggle("aboard",!!(f&&y>f.fa+20&&y<f.fb+236));
+  v.classList.toggle("sold",!!((road.sell!=null&&y>=road.sell)||(road.fly&&y>=road.fly.A0)));
+  v.style.transform=`translate(${(X(y)-9).toFixed(1)}px,${(y-14).toFixed(1)}px) rotate(${(-ang).toFixed(1)}deg)`;
+  // the flight home: walk to the plane, then it rolls down the runway and lifts off
+  const fl=road.fly,pe=$("#people"),pl=$("#plane");if(!fl||!pe||!pl)return;
+  const parked=y>=fl.park-1,q=parked?Math.max(0,Math.min(1,1-left/200)):0,PX=road.px;
+  const w=Math.min(1,q/.45),px=FX+20+(PX-34-FX-20)*w,py=fl.park+2-6*Math.sin(w*Math.PI);
+  pe.style.opacity=q>0&&q<.5?1:0;pe.style.transform=`translate(${px.toFixed(1)}px,${py.toFixed(1)}px)`;pe.classList.toggle("walk",q>0&&q<.45);
+  const t=Math.max(0,(q-.5)/.5),lift=Math.max(0,(t-.45)/.55),sc=1+lift*.7;
+  pl.style.transform=`translate(${PX-60}px,${(fl.park-40+t*t*(fl.A1-fl.park-60)).toFixed(1)}px) scale(${sc.toFixed(3)})`;
+  pl.style.opacity=t>.92?Math.max(0,1-(t-.92)/.08*.6):1;pl.style.filter=`drop-shadow(${(lift*10).toFixed(1)}px ${(4+lift*18).toFixed(1)}px ${(2+lift*6).toFixed(1)}px rgba(0,0,0,${(.3-lift*.15).toFixed(2)}))`}
 addEventListener("scroll",moveVan,{passive:true});
 addEventListener("resize",()=>requestAnimationFrame(drawRoad));
 document.fonts?.ready?.then(()=>drawRoad());
@@ -807,10 +851,12 @@ function renderDays(){
   const t=today(),st=sortStops(),L=legs(),el=$("#daylist");
   if(!st.length){el.innerHTML=`<p class="empty">No stops yet. Tap + to add your first one.</p>`;return}
   let html="",first=true;const past=[];
+  let afterFerry=false;
   st.forEach((s,i)=>{const days=stopDays(s);
     const fut=days.filter(d=>d>t),pd=days.filter(d=>d<t);
     if(pd.length)past.push([s,pd,i]);
-    if(fut.length){html+=stopBlock(s,fut,t,L,i,!first&&fut[0]===s.start);first=false}});
+    if(fut.length){html+=stopBlock(s,fut,t,L,i,!first&&!afterFerry&&fut[0]===s.start);first=false;afterFerry=false;
+      const nx=st[i+1];if(isFerry(s)&&nx&&s.end){html+=`<div class="sea-panel"><div class="fcap"><b>⛴ Cook Strait ferry</b><span>${wd(s.end)} ${fmt(s.end)} · Picton → ${esc(shortStop(nx.name))}</span></div></div>`;afterFerry=true}}});
   const nPast=past.reduce((n,p)=>n+p[1].length,0),isPast=state.dview==="past";
   $("#dview").innerHTML=`<button type="button" data-dview="ahead" aria-pressed="${!isPast}">Coming up</button><button type="button" data-dview="past" aria-pressed="${isPast}">Past${nPast?` · ${nPast} days`:""}</button>`;
   $("#todaycard").hidden=isPast;el.classList.toggle("pastview",isPast);
@@ -820,7 +866,7 @@ function renderDays(){
     el.innerHTML=recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
       past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("");requestAnimationFrame(drawRoad);return}
   if(!html)html=`<p class="empty">No days ahead.</p>`;
-  else{const last=st[st.length-1],fd=last?.end||last?.start;if(fd)html+=`<div class="ferry-end"><div class="fcap"><b>⛴ Cook Strait ferry</b><span>${wd(fd)} ${fmt(fd)} · on to the North Island</span></div></div>`}
+  else{const last=st[st.length-1],fd=last?.flight||last?.end||last?.start;if(fd)html+=`<div class="fly-panel"><div class="fcap"><b>✈️ Flight home</b><span>${wd(fd)} ${fmt(fd)} · the end of the loop</span></div></div>`}
   el.innerHTML=html;requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */

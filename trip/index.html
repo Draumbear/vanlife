@@ -205,6 +205,8 @@ textarea{min-height:72px;resize:vertical}
 .sub.tide{color:var(--sea)!important;display:block;font-size:.8rem}
 .tn .tsub{display:block;font:500 .76rem var(--body);opacity:.85}
 .fuel{font-size:.76rem;color:var(--muted);margin:0 96px 2px 2px;position:relative;z-index:1}
+.sellpill{justify-self:start;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font:700 .82rem var(--body);color:var(--muted);cursor:pointer}
+.sellpill.soon{border-color:var(--rust);color:var(--rust)}
 .todo .sub{display:block;font-size:.76rem;color:var(--muted)}
 .todo .sub.late{color:var(--rust);font-weight:700}
 .heavy{color:var(--tussock);font-weight:700}
@@ -445,7 +447,7 @@ const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
 const COLLS=["stops","spots","camps","nights","todos","journal"];
 const COLL={stop:"stops",spot:"spots",camp:"camps"};
-const state={tab:"days",stops:[],spots:[],camps:[],nights:[],todos:[],journal:[],sellAll:false,ideasOpen:false,kind:"all",region:null,q:"",showPast:false,dview:"ahead",day:null,ideaQ:"",ideaAll:false,src:"both"};
+const state={tab:"days",stops:[],spots:[],camps:[],nights:[],todos:[],journal:[],sellAll:false,sellOpen:(()=>{try{return localStorage.getItem("sil-sellopen")==="1"}catch{return false}})(),ideasOpen:false,kind:"all",region:null,q:"",showPast:false,dview:"ahead",day:null,ideaQ:"",ideaAll:false,src:"both"};
 try{const v=localStorage.getItem("sil-sug");state.src=v==="0"?"ours":v==="claude"?"claude":"both"}catch{}
 const visSug=x=>state.src==="both"||(state.src==="ours"?(!x.suggested||!!x.day):!!x.suggested);
 const $=s=>document.querySelector(s);
@@ -682,8 +684,10 @@ function openMemNote(d){const j=S.docs.journal[d]||{};
 
 /* ================= selling the van: a countdown of jobs with "do by" dates ================= */
 function sellCard(){const t=today(),tasks=state.spots.filter(x=>x.kind==="task"&&!x.done).sort((a,b)=>(a.by||"9").localeCompare(b.by||"9"));
-  if(!tasks.length)return "";const shown=state.sellAll?tasks:tasks.slice(0,3);
-  return `<div class="card"><div class="mini-h"><span class="label">Selling the van</span><span class="muted" style="font-size:.78rem">${tasks.length} to do</span></div>
+  if(!tasks.length)return "";const soon=tasks.some(x=>x.by&&x.by<=addDays(t,7));
+  if(!state.sellOpen)return `<button type="button" class="sellpill ${soon?"soon":""}" data-sellopen>🏷️ Selling the van · ${tasks.length} to do${tasks[0].by?` · next by ${fmt(tasks[0].by)}`:""} <span aria-hidden="true">▾</span></button>`;
+  const shown=state.sellAll?tasks:tasks.slice(0,3);
+  return `<div class="card"><div class="mini-h"><span class="label">Selling the van</span><button type="button" class="pill" data-sellopen>Hide</button></div>
     ${shown.map(x=>`<div class="todo"><button class="chk sm" type="button" data-tog="spots:done:${esc(x.id)}" aria-label="Done">✓</button>
       <button type="button" class="tx" data-open="spot:${esc(x.id)}" style="background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer"><b>${esc(x.name)}</b>${x.by?`<span class="sub ${x.by<t?"late":""}">by ${wd(x.by)} ${fmt(x.by)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}</span>`:""}</button><span></span></div>`).join("")}
     ${tasks.length>3?`<button type="button" class="pill" data-sellall>${state.sellAll?"Show less":`Show all ${tasks.length}`}</button>`:""}</div>`}
@@ -1447,6 +1451,7 @@ document.addEventListener("click",e=>{
   else if("newplan" in ds)openNewPlan(ds.newplan||state.day);
   else if(ds.memedit)openMemNote(ds.memedit);
   else if(ds.hidealert){const h=hiddenAlerts();h[ds.hidealert]=1;try{localStorage.setItem(HIDK,JSON.stringify(h))}catch{}render();toast("Alert hidden")}
+  else if("sellopen" in ds){state.sellOpen=!state.sellOpen;try{localStorage.setItem("sil-sellopen",state.sellOpen?"1":"0")}catch{}renderExtras()}
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}

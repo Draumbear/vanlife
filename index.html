@@ -855,7 +855,7 @@ function loopItems(){
     Object.keys(out).forEach(id => { if (pend['spots/' + id] && !local.docs.spots[id]) delete out[id]; });
   }
   return Object.entries(out)
-    .filter(([id, d]) => d && +d.price > 0 && d.day && !d.paid && !d.keaId && !d.done)
+    .filter(([id, d]) => d && +d.price > 0 && d.day && !d.paid && !d.keaId && !d.nopay)
     .map(([id, d]) => ({id, name: d.name || 'Activity', price: +d.price, day: d.day, data: d}))
     .sort((a, b) => a.day.localeCompare(b.day));
 }
@@ -866,7 +866,7 @@ function renderLoop(){
   card.classList.remove('hide');
   document.getElementById('loop-list').innerHTML = items.map(x =>
     '<div class="item"><div class="m"><div class="t">' + esc(x.name) + '</div>' +
-    '<div class="s">' + fmtDay(x.day) + (x.day <= t ? ' · paid yet?' : ' · set aside') + (x.data.by ? ' · planned by ' + esc(byName(x.data.by)) : '') + '</div></div>' +
+    '<div class="s">' + fmtDay(x.day) + (x.data.done ? ' · done, not logged yet' : x.day <= t ? ' · paid yet?' : ' · set aside') + (x.data.by ? ' · planned by ' + esc(byName(x.data.by)) : '') + '</div></div>' +
     '<div class="v"><b>' + nz(x.price) + '</b></div>' +
     (x.day <= t ? '<button class="logit" data-logloop="' + esc(x.id) + '">Log it</button>' : '') + '</div>').join('') +
     '<div class="sub" style="margin-top:10px"><span>Held back from your allowance</span><b>' + nz(loopOwed()) + '</b></div>';

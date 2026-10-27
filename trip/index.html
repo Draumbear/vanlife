@@ -1095,13 +1095,13 @@ function openPaid(id){const x=S.docs.spots[id];if(!x)return;const me=keaMe(),acc
     <div><span class="label">Who paid</span>${radio("payer",[["p1",PEOPLE.p1],["p2",PEOPLE.p2]],me)}</div>
     <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),acc.last||acc.list[0])}</div>
     <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],"")}</div>
-    <div class="end"><div><button type="button" class="btn" id="pd-skip">Done, not paid</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
-  $("#pd-skip").onclick=()=>{patch("spots",id,{done:true});closeSheet();toast("Done ✓")};
+    <div class="end"><div><button type="button" class="btn" id="pd-skip">We didn't pay</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
+  $("#pd-skip").onclick=()=>{patch("spots",id,{done:true,nopay:true});closeSheet();toast("Done ✓ · nothing added to Kea")};
   if(x.pp)$("#form").querySelectorAll("[name=personal]").forEach(r=>r.onchange=()=>{$("#form [name=amount]").value=r.value?Math.round(x.price/2*100)/100:x.price})}
 function setDone(id,on){const x=S.docs.spots[id];if(!x)return;
   if(on&&+x.price>0&&!x.keaId)return openPaid(id);
   if(!on&&x.keaId){keaUnpay(id,true);patch("spots",id,{done:false});return toast("Not done · removed from Kea")}
-  patch("spots",id,{done:on});toast(on?"Done ✓":"Not done")}
+  patch("spots",id,{done:on,...(on?{}:{nopay:false})});toast(on?"Done ✓":"Not done")}
 loadKea();
 function renderToday(){
   const el=$("#todaycard"),t=today(),cur=currentStop();

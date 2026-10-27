@@ -207,7 +207,18 @@ textarea{min-height:72px;resize:vertical}
 .landing .kx-wing{animation:kxShowHide 1.5s linear .1s both,kxFlap .13s ease-in-out .1s 11 alternate}
 .landing .kx-fold{animation:kxHideShow 1.5s linear .1s both}
 .landing .kx-legs{animation:kxHideShow 1.5s linear .1s both}
-.landing .kx-head{animation:kxPeck .32s ease-in-out 1.8s 2}
+.landing .kx-head{animation:kxPeck .32s ease-in-out 2.6s 2}
+/* …and boots the pīwakawaka off the roof for the lolz */
+#splash.landing{animation-delay:3.3s}
+.landing .sp-fan{display:block;left:189px;top:20px;animation:fanKicked 1.4s cubic-bezier(.3,.1,.6,1) 1.85s both}
+.landing .sp-fan>g:first-child{transform-box:fill-box;transform-origin:0 50%;animation:fanTail .35s ease-in-out infinite alternate}
+.landing .sp-wing{animation:spFlap .12s ease-in-out 1.85s infinite alternate;transform:scaleY(.3)}
+.landing .kx-all{transform-box:fill-box;transform-origin:30% 90%;animation:kxLean .5s ease-in-out 1.62s}
+.landing .kx-legs{transform-box:fill-box;transform-origin:50% 0;animation:kxHideShow 1.5s linear .1s both,kxKick .4s cubic-bezier(.5,0,.2,1) 1.65s}
+@keyframes kxLean{0%,100%{transform:none}40%{transform:rotate(-10deg) translateX(-2px)}60%{transform:rotate(6deg) translateX(5px)}}
+@keyframes kxKick{0%,100%{transform:none}35%{transform:rotate(20deg)}60%{transform:rotate(-75deg) scaleY(1.15)}}
+@keyframes fanTail{to{transform:rotate(-14deg) scaleY(1.15)}}
+@keyframes fanKicked{0%{transform:none}14%{transform:translate(22px,-26px) rotate(150deg)}34%{transform:translate(48px,-14px) rotate(420deg)}58%{transform:translate(62px,104px) rotate(700deg)}66%{transform:translate(62px,108px) rotate(720deg) scale(1.15,.6)}76%{transform:translate(64px,100px) rotate(705deg) scaleX(-1)}100%{transform:translate(240px,-70px) rotate(700deg) scaleX(-1)}}
 @keyframes kxLand{0%{transform:translate(-60vw,-55vh) rotate(-10deg) scale(.7)}70%{transform:translate(-6px,-26px) rotate(4deg)}88%{transform:translate(0,-4px)}100%{transform:none}}
 @keyframes kxShowHide{0%,88%{opacity:1}92%,100%{opacity:0}}
 @keyframes kxHideShow{0%,86%{opacity:0}90%,100%{opacity:1}}
@@ -2310,7 +2321,7 @@ try{if(localStorage.getItem("sil-tab")==="places")document.querySelector('[data-
 refresh();setChip();
 const SPLASH_HTML=$("#splash")?.outerHTML||"";
 if(/[?&]from=kea/.test(location.search)){$("#splash")?.classList.add("landing");history.replaceState(null,"",location.pathname)}
-setTimeout(()=>$("#splash")?.remove(),$("#splash")?.classList.contains("landing")?3100:2400);
+setTimeout(()=>$("#splash")?.remove(),$("#splash")?.classList.contains("landing")?3900:2400);
 /* going to Kea: the kea chews the van's rubber, then flies off into Kea's own animation */
 document.addEventListener("click",e=>{const a=e.target.closest?.('a[href="../"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey)return;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;e.preventDefault();

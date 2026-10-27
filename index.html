@@ -76,6 +76,11 @@ main{padding:6px 16px 20px;max-width:620px;margin:0 auto}
 @keyframes ksFlap{from{transform:scaleY(1)}to{transform:scaleY(-.75)}}
 .ks-title{font:800 30px var(--display);color:#f0793a;opacity:0;animation:ksUp .5s ease .9s forwards}
 @keyframes ksUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#kgo{position:fixed;inset:0;z-index:300;background:#1d2621;opacity:0;animation:kgoIn .2s ease forwards;overflow:hidden}
+@keyframes kgoIn{to{opacity:1}}
+#kgo .kb{position:absolute;left:calc(50vw - 75px);top:40vh;width:150px;animation:kgoFly .85s cubic-bezier(.5,0,.9,.5) forwards}
+#kgo .kb-wing{transform-box:fill-box;transform-origin:bottom center;animation:ksFlap .13s ease-in-out infinite alternate}
+@keyframes kgoFly{0%{transform:translate(0,0)}100%{transform:translate(70vw,30vh) rotate(18deg) scale(.6)}}
 @media (prefers-reduced-motion:reduce){#ksplash{animation-delay:.5s}.kb{animation:none;transform:translateX(calc(50vw - 75px))}.kb-wing{animation:none}.ks-title{animation-delay:0s}}
 
 /* ---------- bottom nav with the + in the middle ---------- */
@@ -286,7 +291,7 @@ body.adding #v-add.hide{visibility:visible}
 </style>
 </head>
 <body>
-<div id="ksplash" aria-hidden="true"><div class="ks-sky"><svg class="kb" viewBox="0 0 120 80" aria-hidden="true">
+<div id="ksplash" aria-hidden="true"><div class="ks-sky"><svg class="kb" id="kbsrc" viewBox="0 0 120 80" aria-hidden="true">
   <path d="M8 46 L32 39 L32 51 Z" fill="#55692d"/>
   <ellipse cx="48" cy="45" rx="23" ry="14" fill="#6f8a3c"/><path d="M32 40c4 3 8 3 12 0M40 46c4 3 8 3 12 0M30 49c4 3 8 3 12 0" stroke="#2c3518" stroke-width="1.4" fill="none" opacity=".7"/>
   <circle cx="73" cy="37" r="11.5" fill="#7d9a45"/>
@@ -2021,7 +2026,19 @@ function reprobeColumns(){
 }
 
 /* ---- boot ---- */
+const KB_SRC = (document.getElementById('kbsrc') || {}).innerHTML || '';
 setTimeout(() => { const k = document.getElementById('ksplash'); if (k) k.remove(); }, 2400);
+if (/[?&]from=loop/.test(location.search)) history.replaceState(null, '', location.pathname);
+/* going to Loop: the kea takes off and heads for the van (it lands on it in Loop's opening) */
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href="trip/"]');
+  if (!a || e.metaKey || e.ctrlKey || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  e.preventDefault();
+  const ov = document.createElement('div'); ov.id = 'kgo';
+  ov.innerHTML = '<svg class="kb" viewBox="0 0 120 80" aria-hidden="true">' + KB_SRC + '</svg>';
+  document.body.appendChild(ov);
+  setTimeout(() => { location.href = 'trip/?from=kea'; }, 900);
+}, true);
 keepStorage();
 reprobeColumns();
 show('home');

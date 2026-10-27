@@ -1,7 +1,7 @@
 /* Van Budget NZ — offline shell.
    Bump CACHE when you change index.html so phones pick up the new version. */
-const CACHE = 'kea-v28';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './trip/icon-192.png'];
+const CACHE = 'kea-v29';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './trip/icon-192.png', './kea-icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

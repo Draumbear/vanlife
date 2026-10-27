@@ -53,7 +53,7 @@ header{position:sticky;top:0;z-index:20;background:var(--bg);
   border-bottom:1px solid transparent;transition:border-color .2s}
 header.scrolled{border-bottom-color:var(--line)}
 header .mark{width:34px;height:34px;flex:none;border-radius:10px;background:#1d2621;display:grid;place-items:center}
-header .mark svg{width:24px;height:24px}
+header .mark{overflow:hidden}header .mark img{width:100%;height:100%;display:block}
 header .ttlwrap{flex:1;min-width:0}
 header h1{margin:0;font:800 1.25rem/1.1 var(--display);letter-spacing:-.2px}
 header .hsub{font:500 .78rem/1.3 var(--sans);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -296,7 +296,7 @@ body.adding #v-add.hide{visibility:visible}
 </svg></div><div class="ks-title">Kea</div></div>
 
 <header id="hdr">
-  <div class="mark" aria-hidden="true"><svg viewBox="0 0 100 100"><g fill="#f0793a"><circle cx="42" cy="52" r="26"/><path d="M56 32 C79 34, 94 44, 98 56 C100 64, 95 71, 89 69 C86 65, 86 60, 85 56 C79 49, 69 47, 57 51 Z"/></g><circle cx="52" cy="43" r="4" fill="#1d2621"/></svg></div>
+  <div class="mark" aria-hidden="true"><img src="kea-icon.svg" alt="" width="34" height="34"></div>
   <div class="ttlwrap"><h1 id="ttl">Kea</h1><div class="hsub" id="hsub"></div></div>
   <button class="chip" id="sync">local</button>
 </header>

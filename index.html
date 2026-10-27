@@ -329,10 +329,6 @@ body.adding #v-add.hide{visibility:visible}
       <div id="loop-list"></div>
     </div>
 
-    <div class="card hide" id="feed-card">
-      <h2>Lately in Loop</h2>
-      <div id="feed-list"></div>
-    </div>
 
     <div class="card hide" id="each-card">
       <h2>Each of you</h2>
@@ -1056,7 +1052,7 @@ function renderHome(){
     pl.innerHTML = '<b>' + nz(s.planned) + '</b> of that is set aside for planned costs' + each() + '.';
   } else pl.classList.add('hide');
 
-  renderLoop(); renderFeed(); markFeedSeen();
+  renderLoop(); markFeedSeen();
   renderEach(full);
   renderSplit();
   renderTrend();

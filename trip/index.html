@@ -1518,9 +1518,17 @@ function locField(it){const has=hasLL(it);
     <div class="locstat"></div>
     <div class="locbtns"><button type="button" class="pill" data-lf="find">🔎 Find by name</button><button type="button" class="pill" data-lf="here">📍 We're here</button><button type="button" class="pill" data-lf="map">🗺️ Pick on map</button></div>
     <div class="locres"></div><div class="locmap" hidden></div>
-    <input name="loc" value="${esc(has?"":(it.loc||""))}" placeholder="…or paste coordinates or a Google Maps link" autocomplete="off"></div>`}
+    <input name="loc" value="${esc(has?"":(it.loc||""))}" placeholder="🔗 Paste a Google Maps link (or coordinates)" autocomplete="off"></div>`}
 function parseLL(t){t=String(t||"");let m=/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/.exec(t)||/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(t)||/[?&](?:q|ll|query|destination)=(-?\d+\.\d+)(?:,|%2C)\s*(-?\d+\.\d+)/i.exec(t)||/^\s*(-?\d{1,2}\.\d+)\s*[, ]\s*(-?\d{2,3}\.\d+)\s*$/.exec(t);
   if(!m)return null;let a=+m[1],b=+m[2];if(Math.abs(a)>90){[a,b]=[b,a]}if(a>0&&b>160)a=-a;return a<-30&&a>-48&&b>165&&b<179?{lat:a,lng:b}:null}
+/* Google Maps links: long links carry coordinates; short share links (maps.app.goo.gl) are followed by our maps-link function */
+const isGLink=t=>/https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.|maps\.)?google\.[a-z.]+\/maps|maps\.google\.)/i.test(t||"");
+async function resolveGLink(t){const u=(/(https?:\/\/\S+)/.exec(t)||[])[1];if(!u)return null;const ll=parseLL(u);
+  let out={ll,name:""};const nm=/\/maps\/place\/([^/@?]+)/.exec(u);if(nm)out.name=decodeURIComponent(nm[1].replace(/\+/g," "));
+  if(ll)return out;if(!cred.url)return out;
+  try{const r=await fetch(cred.url.replace(/\/+$/,"")+"/functions/v1/maps-link?u="+encodeURIComponent(u),{headers:{apikey:cred.key}});if(r.ok){const j=await r.json();
+    out.name=out.name||j.name||"";const p=j.lat!=null?{lat:+j.lat,lng:+j.lng}:null;if(p&&p.lat<-30&&p.lat>-48)out.ll=p}}catch{}
+  return out}
 function wireLoc(f){const box=f.querySelector(".locpick");if(!box)return;const la=box.querySelector("[name=lat]"),ln=box.querySelector("[name=lng]"),st=box.querySelector(".locstat"),res=box.querySelector(".locres"),mp=box.querySelector(".locmap"),paste=box.querySelector("[name=loc]");
   let mini=null,pin=null;
   const show=()=>{const p=la.value&&ln.value?{lat:+la.value,lng:+ln.value}:null;
@@ -1543,8 +1551,16 @@ function wireLoc(f){const box=f.querySelector(".locpick");if(!box)return;const l
     try{const L=await loadLeaflet(),c=near();mini=L.map(mp,{zoomControl:true,attributionControl:false}).setView([c.lat,c.lng],la.value?14:11);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(mini);mini.on("click",e=>set(e.latlng.lat,e.latlng.lng));pin=null;show();
       setTimeout(()=>mini.invalidateSize(),60)}catch{mp.innerHTML=`<p class="muted">The map needs a connection.</p>`}};
+  const nameIn=f.querySelector("[name=name]");
+  const fromLink=async t=>{res.innerHTML=`<p class="muted">Reading the Google Maps link…</p>`;const r=await resolveGLink(t);
+    const gname=(r?.name||(t.split(/https?:\/\//)[0]||"").trim().split("\n")[0]).trim();
+    if(nameIn&&!nameIn.value.trim()&&gname)nameIn.value=gname;
+    if(r?.ll){set(r.ll.lat,r.ll.lng);res.innerHTML="";paste.value="";toast("Location set from Google Maps");return}
+    if(gname){res.innerHTML="";box.querySelector("[data-lf=find]").click();return}
+    res.innerHTML=`<p class="muted">Couldn't read that link. Try 🔎 Find by name or pick it on the map.</p>`};
+  box.fromLink=fromLink;
   paste.addEventListener("input",()=>{const p=parseLL(paste.value);if(p){set(p.lat,p.lng);paste.value="";toast("Location set")}
-    else if(/goo\.gl|maps\.app/.test(paste.value))res.innerHTML=`<p class="muted">Short share links can't be read here. In Google Maps, long-press the spot and copy the coordinates instead.</p>`});
+    else if(isGLink(paste.value))fromLink(paste.value)});
   show()}
 /* long-press on the big map: add a place or campsite right there */
 function addHere(ll){sheet(head("Add here?")+`<p class="muted">${esc(townOf(ll)||"")} · ${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}</p>
@@ -1939,6 +1955,9 @@ setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 try{if(localStorage.getItem("sil-tab")==="places")document.querySelector('[data-tab="places"]').click()}catch{}
 refresh();setChip();
 setTimeout(()=>$("#splash")?.remove(),2400);
+(()=>{const q=new URLSearchParams(location.search),t=[q.get("title"),q.get("text"),q.get("url")].filter(Boolean).join("\n");
+  if(!t||!isGLink(t))return;history.replaceState(null,"",location.pathname);
+  setTimeout(()=>{if(/camp(site|ground)?\b|holiday park|freedom camp/i.test(t))openCamp(null);else openSpot(null);const f=$("#form");const go=()=>{const b=f.querySelector(".locpick");if(b?.fromLink)b.fromLink(t);else setTimeout(go,50)};go()},2500)})();
 (async()=>{
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}

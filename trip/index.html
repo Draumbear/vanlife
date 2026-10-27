@@ -955,7 +955,7 @@ const wxDay=d=>wxFor(d)||wxlog[d]||null;
 function nightLoc(d){const n=nightInfo(d),c=n.camp?state.camps.find(x=>sameCamp(x.name,n.camp)&&hasLL(x)):null,p=c||(n.stop&&hasLL(n.stop)?n.stop:null);
   return p?{lat:+p.lat,lng:+p.lng,name:n.camp||n.stop?.name||"",type:n.type}:null}
 function dayRoute(d){const a=nightLoc(addDays(d,-1)),b=nightLoc(d),acts=planFor(d).filter(x=>x.done&&x.kind!=="chore"&&x.kind!=="task"),pts=[];
-  if(a)pts.push({...a,k:"from"});acts.forEach(x=>{const p=ptOf(x);if(p)pts.push({lat:+p.lat,lng:+p.lng,name:x.name,k:"act",ic:MK[x.kind]||"📸"})});if(b)pts.push({...b,k:"to"});
+  if(a)pts.push({...a,k:"from"});acts.forEach(x=>{const p=ptOf(x);if(p)pts.push({lat:+p.lat,lng:+p.lng,name:x.name,k:"act",ic:MK[x.kind]||"📸",id:x.id})});if(b)pts.push({...b,k:"to"});
   let km=0;for(let i=1;i<pts.length;i++)km+=hopKm(pts[i-1],pts[i]);return {pts,acts,km}}
 function kmSoFar(d){const pts=nightPts();let km=0;for(let i=1;i<pts.length&&pts[i].d<=d;i++)km+=hopKm(pts[i-1],pts[i]);return km}
 function wrapLines(ctx,text,maxW,maxL){const words=String(text).split(/\s+/),out=[];let line="";
@@ -984,36 +984,58 @@ async function buildRecap(d){
     g.save();g.beginPath();g.roundRect(60,y,bw,bh2,28);g.clip();g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,60,y,bw,bh2);g.restore();y+=bh2+34}catch{}}
   if(L.length){g.fillStyle="#2f6b4f";g.font=`800 64px ${DF}`;g.fillText("“",54,y+40);g.fillStyle="#1d2621";g.font=`italic 400 36px ${BF}`;
     L.forEach((l,i)=>g.fillText(l,110,y+30+i*46))}
+  // the route on a real map: OpenStreetMap tiles under the day's path, numbered like the list beside it
+  const P=R.pts,MS=1.5,tw=256*MS,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
   g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,24);g.fill();
-  g.save();g.beginPath();g.roundRect(lx,by,lw,bh,24);g.clip();g.strokeStyle="#d2dcc8";g.lineWidth=2;
-  for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}
-  const P=R.pts;
-  if(P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng)){
-    let la0=Math.min(...P.map(p=>p.lat)),la1=Math.max(...P.map(p=>p.lat)),ln0=Math.min(...P.map(p=>p.lng)),ln1=Math.max(...P.map(p=>p.lng));
-    const kx=Math.cos(la0*Math.PI/180),span=Math.max((la1-la0),(ln1-ln0)*kx,0.04),pad=70,sc=Math.min((lw-2*pad)/Math.max((ln1-ln0)*kx,1e-6),(bh-2*pad-30)/Math.max(la1-la0,1e-6),(lw-2*pad)/span);
-    const cx=(ln0+ln1)/2,cy=(la0+la1)/2,X=p=>lx+lw/2+(p.lng-cx)*kx*sc,Y=p=>by+(bh-30)/2+15-(p.lat-cy)*sc;
-    g.strokeStyle="#4b5157";g.lineWidth=12;g.lineCap="round";g.lineJoin="round";g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
-    g.strokeStyle="#f1e3a6";g.lineWidth=3;g.setLineDash([14,14]);g.stroke();g.setLineDash([]);
-    P.forEach((p,i)=>{const x=X(p),yy=Y(p),camp=p.k!=="act";g.fillStyle=camp?(p.k==="to"?"#2f6b4f":"#8d9493"):"#fff";g.strokeStyle=camp?"#fff":"#2f6b4f";g.lineWidth=4;
-      g.beginPath();g.arc(x,yy,camp?17:24,0,7);g.fill();g.stroke();g.font=`${camp?18:26}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(camp?(p.k==="to"?"⛺":"•"):p.ic,x,yy+1);g.textBaseline="alphabetic";g.textAlign="left"});
-    const f=P[0];if(f.k==="from"){const lab="from "+(townOf(f).replace(/^\d+ km from /,"near ")||f.name);g.font=`700 22px ${BF}`;const tw=g.measureText(lab).width;
-      let tx=Math.min(Math.max(X(f)-tw/2,lx+12),lx+lw-tw-12),ty=Y(f)-28;if(ty<by+28)ty=Y(f)+44;g.fillStyle="rgba(244,241,232,.9)";g.beginPath();g.roundRect(tx-8,ty-22,tw+16,30,10);g.fill();g.fillStyle="#56645a";g.fillText(lab,tx,ty)}
-  }
-else{g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText(P.length?"Stayed put today 😌":"",lx+lw/2,by+bh/2);g.textAlign="left"}
+  g.save();g.beginPath();g.roundRect(lx,by,lw,bh,24);g.clip();
+  const moved=P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng);
+  // a long drive in: zoom on what we did and tonight's camp, and let the road come in from the edge
+  const rest=P.filter(p=>p.k!=="from"),farFrom=P[0]?.k==="from"&&rest.length>=2&&rest.every(p=>hav(p,P[0])>25);
+  const focus=farFrom?rest:P.length?P:[nightLoc(d)].filter(Boolean);
+  let X=null,Y=null,tilesOk=false;
+  if(focus.length){const pad=64,aw=lw-2*pad,ah=bh-2*pad-40;let z=14;
+    if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}
+    else z=13;
+    const cxw=(Math.max(...focus.map(p=>wx(p.lng,z)))+Math.min(...focus.map(p=>wx(p.lng,z))))/2,cyw=(Math.max(...focus.map(p=>wy(p.lat,z)))+Math.min(...focus.map(p=>wy(p.lat,z))))/2;
+    const ox=lx+lw/2-cxw*MS,oy=by+(bh-40)/2-cyw*MS;X=p=>ox+wx(p.lng,z)*MS;Y=p=>oy+wy(p.lat,z)*MS;
+    const tx0=Math.floor((lx-ox)/tw),tx1=Math.floor((lx+lw-ox)/tw),ty0=Math.floor((by-oy)/tw),ty1=Math.floor((by+bh-oy)/tw),jobs=[];
+    for(let tx=tx0;tx<=tx1;tx++)for(let ty=ty0;ty<=ty1;ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
+      try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);tilesOk=true}catch{}finally{clearTimeout(tm)}})());
+    await Promise.all(jobs)}
+  if(!tilesOk){g.strokeStyle="#d2dcc8";g.lineWidth=2;for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}}
+  else{g.fillStyle="rgba(244,241,232,.12)";g.fillRect(lx,by,lw,bh)}
+  const num={};let k=0;R.acts.forEach(x=>{if(ptOf(x))num[x.id]=++k});
+  if(X&&moved){g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=11;g.lineCap="round";g.lineJoin="round";g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
+    g.strokeStyle="#f1e3a6";g.lineWidth=3;g.setLineDash([14,12]);g.stroke();g.setLineDash([])}
+  if(X){P.forEach(p=>{const x=X(p),yy=Y(p);if(p.k==="act"){g.fillStyle="#e0601f";g.strokeStyle="#fff";g.lineWidth=4;g.beginPath();g.arc(x,yy,19,0,7);g.fill();g.stroke();
+      g.fillStyle="#fff";g.font=`800 22px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(num[p.id]||"•"),x,yy+1)}
+    else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4;g.beginPath();g.arc(x,yy,p.k==="to"?22:15,0,7);g.fill();g.stroke();
+      g.font=`${p.k==="to"?22:16}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,yy+1)}
+    g.textAlign="left";g.textBaseline="alphabetic"});
+    if(!P.length){const p=focus[0];g.fillStyle="#2f6b4f";g.strokeStyle="#fff";g.lineWidth=4;g.beginPath();g.arc(X(p),Y(p),22,0,7);g.fill();g.stroke()}
+    const f=P[0];if(f&&f.k==="from"&&moved){const ang=Math.atan2(Y(f)-(by+bh/2),X(f)-(lx+lw/2)),arw="→↘↓↙←↖↑↗"[(Math.round(ang/(Math.PI/4))+8)%8],lab=(farFrom?arw+" ":"")+"from "+(townOf(f).replace(/^\d+ km from /,"near ")||f.name);g.font=`700 22px ${BF}`;const w2=g.measureText(lab).width;
+      const fx=Math.min(Math.max(X(f),lx+20),lx+lw-20),fy=Math.min(Math.max(Y(f),by+20),by+bh-100);
+      let tx=Math.min(Math.max(fx-w2/2,lx+12),lx+lw-w2-12),ty=fy-30;if(ty<by+44)ty=fy+46;g.fillStyle="rgba(255,255,255,.92)";g.beginPath();g.roundRect(tx-8,ty-22,w2+16,30,10);g.fill();g.fillStyle="#56645a";g.fillText(lab,tx,ty)}}
+  if(!moved&&!tilesOk){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
+  if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
+  // where in Aotearoa: a small South Island in the corner of the map
+  {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,ix=lx+lw-iw-14,iy=by+bh-56-ih-26,LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
+    g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
+    g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
+    g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
   g.restore();
-  g.fillStyle="rgba(244,241,232,.92)";g.beginPath();g.roundRect(lx+14,by+bh-62,lw-28,48,14);g.fill();
-  g.fillStyle="#1d2621";g.font=`700 26px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd";g.fillText(wrapLines(g,tn,lw-60,1)[0]||"",lx+30,by+bh-29);
-  // what we did
+  g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-56,lw-28,44,14);g.fill();
+  g.fillStyle="#1d2621";g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd";g.fillText(wrapLines(g,tn,lw-56,1)[0]||"",lx+28,by+bh-26);
+  // what we did, numbered like the map; long names wrap onto a second line
   g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE DID",rx,by+30);
-  let ly=by+80;const MX=nightLoc(d)?.lat<-40.3?5:7,acts=R.acts.slice(0,MX);
+  let ly=by+76;const acts=R.acts,fs=acts.length>5?26:29,lh=fs+8;
   if(!acts.length){g.fillStyle="#1d2621";g.font=`700 34px ${DF}`;g.fillText(d===today()?"Still to come…":"A lazy day 😌",rx,ly)}
-  acts.forEach(x=>{g.font=`34px ${BF}`;g.fillText(MK[x.kind]||"📸",rx,ly);g.fillStyle="#1d2621";g.font=`700 31px ${BF}`;g.fillText(wrapLines(g,x.name,rw-58,1)[0],rx+56,ly);ly+=52});
-  if(R.acts.length>MX){g.fillStyle="#56645a";g.font=`700 26px ${BF}`;g.fillText(`+${R.acts.length-MX} more`,rx+56,ly)}
-  // where in Aotearoa: a small outline of the South Island with a dot
-  {const p=nightLoc(d);if(p&&p.lat<-40.3){const ix=rx+rw-104,iy=by+bh-126,iw=100,ih=118,LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
-    g.fillStyle="rgba(244,241,232,.85)";g.beginPath();g.roundRect(ix-6,iy-6,iw+12,ih+12,12);g.fill();
-    g.fillStyle="#b9c9b0";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
-    g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),6,0,7);g.fill();g.stroke()}}
+  let shown=0;
+  for(const x of acts){g.font=`700 ${fs}px ${BF}`;const L=wrapLines(g,x.name,rw-52,2);if(ly+(L.length-1)*lh>by+bh-4)break;
+    if(num[x.id]){g.fillStyle="#e0601f";g.beginPath();g.arc(rx+15,ly-fs*.35,15,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.fillText(String(num[x.id]),rx+15,ly-fs*.35+6);g.textAlign="left"}
+    else{g.font=`${fs}px ${BF}`;g.fillText(MK[x.kind]||"📸",rx,ly)}
+    g.fillStyle="#1d2621";g.font=`700 ${fs}px ${BF}`;L.forEach((l,i)=>g.fillText(l,rx+44,ly+i*lh));ly+=L.length*lh+14;shown++}
+  if(shown<acts.length){g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText(`+${acts.length-shown} more`,rx+44,Math.min(ly,by+bh))}
   // stats strip
   const so=kmSoFar(d),sy=H-120;g.fillStyle="#2f6b4f";g.beginPath();g.roundRect(60,sy,W-120,74,20);g.fill();
   g.fillStyle="#fff";g.font=`700 30px ${BF}`;

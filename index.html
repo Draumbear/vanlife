@@ -870,7 +870,6 @@ async function pullLoop(){
     rows.forEach(x => { c[x.id] = x.data; });
     localStorage.setItem(LOOP_CACHE, JSON.stringify(c));
   } catch(e){}
-  await pullFeed();
 }
 /* ---- Who changed what in Loop ----
    Every Loop change carries data.by (p1/p2); removals keep a small tombstone
@@ -1052,7 +1051,7 @@ function renderHome(){
     pl.innerHTML = '<b>' + nz(s.planned) + '</b> of that is set aside for planned costs' + each() + '.';
   } else pl.classList.add('hide');
 
-  renderLoop(); markFeedSeen();
+  renderLoop();
   renderEach(full);
   renderSplit();
   renderTrend();

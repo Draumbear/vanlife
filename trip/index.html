@@ -266,6 +266,7 @@ textarea{min-height:72px;resize:vertical}
 .day .wx{display:block;font-style:normal;font-size:.72rem;margin-top:2px;color:var(--ink)}
 .mem img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block}
 .pclist{display:grid;gap:6px}
+.bkbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}.bkbar i{display:block;height:100%;width:0;background:var(--fern);transition:width .3s}
 .pc{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;align-items:start;padding:8px 10px;border-radius:12px;background:var(--paper);border:1px solid var(--line)}
 .pc b{font-size:1rem;line-height:1.3}.pc.pc-ok b{color:var(--fern)}.pc.pc-bad b{color:var(--rust)}.pc.pc-meh b{color:var(--tussock)}
 .pc span{font-weight:700;font-size:.92rem}.pc small{display:block;color:var(--muted);font-size:.8rem}
@@ -1177,6 +1178,29 @@ async function openTripRecap(mode){const title=mode==="week"?"This week":"The tr
   const file=new File([blob],`loop-${mode}-${today()}.jpg`,{type:"image/jpeg"}),url=URL.createObjectURL(blob);const pv=$("#recap-prev");if(!pv)return;
   pv.innerHTML=`<img src="${url}" alt="${title}">`;const dl=$("#recap-dl");dl.href=url;dl.hidden=false;const b=$("#recap-share");
   if(navigator.canShare?.({files:[file]})){b.disabled=false;b.onclick=async()=>{try{await navigator.share({files:[file],title:`${title} · Aotearoa Loop`})}catch{}}}else{b.textContent="Save to share";b.disabled=false;b.onclick=()=>dl.click()}}
+/* ---- the photobook: the trip so far plus every day's recap, one PDF to keep, print or send home ---- */
+let jsPDFp=null;
+const loadPDF=()=>jsPDFp||(jsPDFp=new Promise((ok,no)=>{if(window.jspdf)return ok(window.jspdf);const sc=document.createElement("script");
+  sc.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";sc.onload=()=>ok(window.jspdf);sc.onerror=()=>{jsPDFp=null;no(new Error("pdf"))};document.head.appendChild(sc)}));
+async function makeBook(){const r=tripRange();if(!r)return;const t=today(),end=t>r.last?r.last:t;
+  const days=[];for(let d=r.first;d<=end;d=addDays(d,1)){const j=S.docs.journal[d]||{};if(j.photo||j.note||planFor(d).some(x=>x.done&&x.kind!=="chore"&&x.kind!=="task"))days.push(d)}
+  let stop=false;
+  sheet(head("Photobook")+`<p id="bk-msg">Getting ready… ${days.length} days with photos, notes or things done.</p><div class="bkbar"><i id="bk-bar"></i></div>
+    <div class="end"><div><button type="button" class="btn" id="bk-stop">Stop</button></div><div><a class="btn" id="bk-dl" hidden>Save</a> <button class="btn primary" type="button" id="bk-share" hidden>📤 Share</button></div></div>
+    <p class="muted" style="font-size:.8rem;margin:0">Keep the screen on — it builds one page per day, with the map for each.</p>`,"book","");
+  $("#bk-stop").onclick=()=>{stop=true;closeSheet()};
+  let wake=null;try{wake=await navigator.wakeLock?.request("screen")}catch{}
+  try{const {jsPDF}=await loadPDF();const pdf=new jsPDF({unit:"pt",format:[432,540],compress:true});const total=days.length+1;let n=0;
+    const page=async cv=>{if(n)pdf.addPage([432,540]);pdf.addImage(cv.toDataURL("image/jpeg",.84),"JPEG",0,0,432,540,undefined,"FAST");n++;
+      const b=$("#bk-bar");if(b)b.style.width=(n/total*100)+"%";const m=$("#bk-msg");if(m)m.textContent=`Page ${n} of ${total}…`};
+    await page(await buildTripRecap("all"));
+    for(const d of days){if(stop)return;await page(await buildRecap(d));await new Promise(r=>setTimeout(r,30))}
+    const blob=pdf.output("blob"),name=`Aotearoa-Loop-${t}.pdf`,file=new File([blob],name,{type:"application/pdf"}),url=URL.createObjectURL(blob);
+    const m=$("#bk-msg");if(!m)return;m.textContent=`Done · ${n} pages · ${Math.round(blob.size/1e6)} MB`;$("#bk-stop").textContent="Close";$("#bk-stop").onclick=closeSheet;
+    const dl=$("#bk-dl");dl.href=url;dl.download=name;dl.hidden=false;
+    if(navigator.canShare?.({files:[file]})){const sb=$("#bk-share");sb.hidden=false;sb.onclick=async()=>{try{await navigator.share({files:[file],title:"Aotearoa Loop"})}catch{}}}}
+  catch(e){const m=$("#bk-msg");if(m)m.textContent="Couldn't make the PDF — it needs a connection the first time."}
+  finally{try{wake?.release()}catch{}}}
 /* ================= selling the van: a countdown of jobs with "do by" dates ================= */
 function sellCard(){const t=today(),tasks=state.spots.filter(x=>x.kind==="task"&&!x.done).sort((a,b)=>(a.by||"9").localeCompare(b.by||"9"));
   if(!tasks.length)return "";const soon=tasks.some(x=>x.by&&x.by<=addDays(t,7));
@@ -1657,6 +1681,7 @@ function recapHTML(){const t=today(),st=sortStops(),L=legs();const km=Math.round
       ${(()=>{const ty=nightTypes(r.first,t);return `<div><b>${ty.free}</b><span>🚐 free nights</span></div><div><b>${ty.doc}</b><span>⛺ DOC nights</span></div><div><b>${ty.paid}</b><span>🏕️ paid nights${paidSum?` · ${nzd(paidSum)}`:""}</span></div>`})()}</div>
     <div class="muted" style="font-size:.75rem">km: from campsite to campsite, without side trips or day drives.${tot?` Spending ${nzd(tot/Math.max(1,nights.length+1))} a day.`:""}</div>
     <div class="row2"><button type="button" class="btn" data-triprecap="week">📤 Share this week</button><button type="button" class="btn" data-triprecap="all">📤 Share the trip so far</button></div>
+    <button type="button" class="btn" data-book>📕 Make the photobook (PDF)</button>
     ${regs.length?`<span class="label" style="margin-top:4px">Spent by region · ${nzd(tot)}</span><div class="bars">${regs.map(([k,v])=>`<div class="r"><span class="clamp1">${esc(k)}</span><i style="width:${Math.max(4,v/mx*100)}%"></i><span class="mono">${nzd(v)}</span></div>`).join("")}</div>`:""}
     ${favs.length?`<span class="label" style="margin-top:4px">Favourites</span><div style="font-size:.9rem">♥ ${favs.slice(0,8).map(esc).join(" · ")}</div>`:""}</div>`}
 function renderDays(){
@@ -2238,6 +2263,7 @@ document.addEventListener("click",e=>{
       toast(!j.photo&&!j.note?"Add a photo and a line about today first":!j.photo?"Add a photo of today first":"Add a line about today first")}
     else openRecap(d)}
   else if(ds.triprecap)openTripRecap(ds.triprecap);
+  else if("book" in ds)makeBook();
   else if("asknotif" in ds)askNotif();
   else if(ds.rate){lmap?.closePopup();openRate(ds.rate)}
   else if(ds.mvplan){const [id,to]=ds.mvplan.split(":"),x=S.docs.spots[id];if(!x)return;patch("spots",id,{day:to,order:planFor(to).length});keaSyncSpot(id);toast(`Moved ${x.name} to ${wd(to)} ${fmt(to)}`)}

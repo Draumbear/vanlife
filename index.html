@@ -492,6 +492,7 @@ body.adding #v-add.hide{visibility:visible}
       <h2>Evening reminder</h2>
       <div class="row"><div class="note" style="margin:0">A notification at 8 pm: “Spent anything today?”, with what’s logged so far.</div>
         <button class="btn ghost" id="nudge-btn" style="width:auto;padding:9px 14px;white-space:nowrap">Turn on</button></div>
+      <button class="btn ghost hide" id="nudge-test" style="margin-top:10px">Send me a test now</button>
     </div>
     <div class="card">
       <h2>Whose phone is this?</h2>
@@ -2089,11 +2090,18 @@ async function nudgeOff(){
 async function renderNudge(){
   const sub = await nudgeSub().catch(() => null), on = !!sub && Notification.permission === 'granted';
   const btn = document.getElementById('nudge-btn'); if (btn) btn.textContent = on ? 'On ✓ · Turn off' : 'Turn on';
+  document.getElementById('nudge-test').classList.toggle('hide', !on);
   let pref = null; try { pref = localStorage.getItem('kea.nudge'); } catch(e){}
   document.getElementById('nudge-card').classList.toggle('hide', on || pref === 'off' || pref === 'on' || !pushOK() || !syncOn());
 }
 document.getElementById('nudge-btn').addEventListener('click', async () => (await nudgeSub()) ? nudgeOff() : nudgeOn());
 document.getElementById('nudge-yes').addEventListener('click', nudgeOn);
+document.getElementById('nudge-test').addEventListener('click', async () => {
+  const sub = await nudgeSub(); if (!sub) return toast('Turn the reminder on first');
+  try { const r = await fetch(S.sync.url.replace(/\/+$/, '') + '/functions/v1/evening-nudge', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: S.sync.key },
+    body: JSON.stringify({ test: sub.endpoint }) }); toast(r.ok ? 'Sent — it should pop up in a few seconds' : 'Couldn’t send — turn it off and on again'); }
+  catch(e){ toast('No connection'); }
+});
 document.getElementById('nudge-no').addEventListener('click', () => { try { localStorage.setItem('kea.nudge', 'off'); } catch(e){} renderNudge(); });
 setTimeout(renderNudge, 1500);
 // tapping the notification opens Kea with a new expense ready

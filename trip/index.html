@@ -105,6 +105,9 @@ textarea{min-height:72px;resize:vertical}
 .today .chk.tw{color:transparent;border-width:2px}
 .today .chk.tw.on{background:var(--on-fern);color:var(--fern)}
 .tfoot{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
+.tfr{display:inline-flex;align-items:center;gap:10px}
+.tshare{width:36px;height:36px;border-radius:50%;border:0;background:var(--on-fern);color:var(--fern);display:grid;place-items:center;cursor:pointer}
+.tshare svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .tadd{display:inline-flex;align-items:center;gap:4px;background:var(--on-fern);color:var(--fern);border:0;border-radius:999px;padding:6px 12px 6px 8px;font:800 .85rem var(--body);cursor:pointer}
 .tadd .svg{width:16px;height:16px}
 .tmore{background:none;border:0;color:inherit;opacity:.85;font:700 .82rem var(--body);padding:8px 0 0;text-align:left;cursor:pointer}
@@ -263,6 +266,8 @@ textarea{min-height:72px;resize:vertical}
 .mem img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block}
 .recapprev img{width:100%;border-radius:12px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .recapbtn{width:100%;margin:2px 0 8px}
+.card.mem.pulse{animation:mempulse 1.4s ease 2}
+@keyframes mempulse{50%{box-shadow:0 0 0 4px var(--fern)}}
 .memnote{margin:0;font-size:.95rem;font-style:italic}
 .mem .btn input{display:none}
 .card.alert{border-color:var(--tussock);background:color-mix(in srgb,var(--tussock-soft) 70%,var(--card))}
@@ -998,42 +1003,82 @@ async function buildRecap(d){
     g.restore();y+=bh2+34}catch{}}
   if(L.length){g.fillStyle="#2f6b4f";g.font=`800 64px ${DF}`;g.fillText("“",54,y+40);g.fillStyle="#1d2621";g.font=`italic 400 36px ${BF}`;
     L.forEach((l,i)=>g.fillText(l,110,y+30+i*46))}
-  // the route on a real map: OpenStreetMap tiles under the day's path, numbered like the list beside it
-  const P=R.pts,MS=1.5,tw=256*MS,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
+  // the route on a real map (OpenStreetMap tiles); activity icons on it, and a zoomed-in box when several sit on top of each other
+  const P=R.pts,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
+  async function tiles(z,MS,ox,oy,x0,y0,w,h){const tw=256*MS,jobs=[];let ok=false;
+    for(let tx=Math.floor((x0-ox)/tw);tx<=Math.floor((x0+w-ox)/tw);tx++)for(let ty=Math.floor((y0-oy)/tw);ty<=Math.floor((y0+h-oy)/tw);ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
+      try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);ok=true}catch{}finally{clearTimeout(tm)}})());
+    await Promise.all(jobs);return ok}
+  function pin(p,x,y,s=1){if(p.k==="act"){g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=4*s;g.beginPath();g.arc(x,y,22*s,0,7);g.fill();g.stroke();
+      g.font=`${Math.round(24*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(p.ic,x,y+1)}
+    else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4*s;g.beginPath();g.arc(x,y,(p.k==="to"?21:14)*s,0,7);g.fill();g.stroke();
+      g.font=`${Math.round((p.k==="to"?21:15)*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,y+1)}
+    g.textAlign="left";g.textBaseline="alphabetic"}
+  function road(pts,X,Y,w){if(pts.length<2)return;g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=w;g.lineCap="round";g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
+    g.strokeStyle="#f1e3a6";g.lineWidth=Math.max(2,w/4);g.setLineDash([w*1.2,w]);g.stroke();g.setLineDash([])}
   g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,24);g.fill();
   g.save();g.beginPath();g.roundRect(lx,by,lw,bh,24);g.clip();
   const moved=P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng);
-  // a long drive in: zoom on what we did and tonight's camp, and let the road come in from the edge
   const rest=P.filter(p=>p.k!=="from"),farFrom=P[0]?.k==="from"&&rest.length>=2&&rest.every(p=>hav(p,P[0])>25);
-  const focus=farFrom?rest:P.length?P:[nightLoc(d)].filter(Boolean);
+  const focus=farFrom?rest:P.length?P:[nightLoc(d)].filter(Boolean),MS=1.5;
   let X=null,Y=null,tilesOk=false;
   if(focus.length){const pad=64,aw=lw-2*pad,ah=bh-2*pad-40;let z=14;
-    if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}
-    else z=13;
+    if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}else z=13;
     const cxw=(Math.max(...focus.map(p=>wx(p.lng,z)))+Math.min(...focus.map(p=>wx(p.lng,z))))/2,cyw=(Math.max(...focus.map(p=>wy(p.lat,z)))+Math.min(...focus.map(p=>wy(p.lat,z))))/2;
     const ox=lx+lw/2-cxw*MS,oy=by+(bh-40)/2-cyw*MS;X=p=>ox+wx(p.lng,z)*MS;Y=p=>oy+wy(p.lat,z)*MS;
-    const tx0=Math.floor((lx-ox)/tw),tx1=Math.floor((lx+lw-ox)/tw),ty0=Math.floor((by-oy)/tw),ty1=Math.floor((by+bh-oy)/tw),jobs=[];
-    for(let tx=tx0;tx<=tx1;tx++)for(let ty=ty0;ty<=ty1;ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
-      try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);tilesOk=true}catch{}finally{clearTimeout(tm)}})());
-    await Promise.all(jobs)}
+    tilesOk=await tiles(z,MS,ox,oy,lx,by,lw,bh)}
   if(!tilesOk){g.strokeStyle="#d2dcc8";g.lineWidth=2;for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}}
-  else{g.fillStyle="rgba(244,241,232,.12)";g.fillRect(lx,by,lw,bh)}
-  const num={};let k=0;R.acts.forEach(x=>{if(ptOf(x))num[x.id]=++k});
-  if(X&&moved){g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=11;g.lineCap="round";g.lineJoin="round";g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
-    g.strokeStyle="#f1e3a6";g.lineWidth=3;g.setLineDash([14,12]);g.stroke();g.setLineDash([])}
-  if(X){P.forEach(p=>{const x=X(p),yy=Y(p);if(p.k==="act"){g.fillStyle="#e0601f";g.strokeStyle="#fff";g.lineWidth=4;g.beginPath();g.arc(x,yy,19,0,7);g.fill();g.stroke();
-      g.fillStyle="#fff";g.font=`800 22px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(num[p.id]||"•"),x,yy+1)}
-    else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4;g.beginPath();g.arc(x,yy,p.k==="to"?22:15,0,7);g.fill();g.stroke();
-      g.font=`${p.k==="to"?22:16}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,yy+1)}
-    g.textAlign="left";g.textBaseline="alphabetic"});
-    if(!P.length){const p=focus[0];g.fillStyle="#2f6b4f";g.strokeStyle="#fff";g.lineWidth=4;g.beginPath();g.arc(X(p),Y(p),22,0,7);g.fill();g.stroke()}
-    const f=P[0];if(f&&f.k==="from"&&moved){const ang=Math.atan2(Y(f)-(by+bh/2),X(f)-(lx+lw/2)),arw="→↘↓↙←↖↑↗"[(Math.round(ang/(Math.PI/4))+8)%8],lab=(farFrom?arw+" ":"")+"from "+(townOf(f).replace(/^\d+ km from /,"near ")||f.name);g.font=`700 22px ${BF}`;const w2=g.measureText(lab).width;
-      const fx=Math.min(Math.max(X(f),lx+20),lx+lw-20),fy=Math.min(Math.max(Y(f),by+20),by+bh-100);
-      let tx=Math.min(Math.max(fx-w2/2,lx+12),lx+lw-w2-12),ty=fy-30;if(ty<by+44)ty=fy+46;g.fillStyle="rgba(255,255,255,.92)";g.beginPath();g.roundRect(tx-8,ty-22,w2+16,30,10);g.fill();g.fillStyle="#56645a";g.fillText(lab,tx,ty)}}
+  // pins that would cover each other: the biggest such group goes into a zoomed-in box
+  let clu=[];
+  if(X){const pts=P.filter(p=>p.k!=="from"),near=(a,b)=>Math.hypot(X(a)-X(b),Y(a)-Y(b))<46,seen=new Set();
+    for(const a of pts){if(seen.has(a))continue;const grp=[a];seen.add(a);for(let i=0;i<grp.length;i++)for(const b of pts)if(!seen.has(b)&&near(grp[i],b)){grp.push(b);seen.add(b)}
+      if(grp.length>clu.length&&grp.length>=2)clu=grp}}
+  if(X&&moved)road(P,X,Y,11);
+  if(X){P.forEach(p=>{if(!clu.includes(p))pin(p,X(p),Y(p))});if(!P.length){const p=focus[0];pin({k:"to"},X(p),Y(p))}}
+  let box=null;
+  if(clu.length){const cx=clu.reduce((t,p)=>t+X(p),0)/clu.length,cy=clu.reduce((t,p)=>t+Y(p),0)/clu.length;
+    const r0=Math.max(...clu.map(p=>Math.hypot(X(p)-cx,Y(p)-cy)))+28;
+    g.fillStyle="rgba(255,255,255,.35)";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.setLineDash([8,6]);g.beginPath();g.arc(cx,cy,r0,0,7);g.fill();g.stroke();g.setLineDash([]);
+    g.fillStyle="#2f6b4f";g.beginPath();g.arc(cx,cy,17,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(clu.length),cx,cy+1);g.textAlign="left";g.textBaseline="alphabetic";
+    const BW=196,BH=168,corners=[[lx+12,by+40],[lx+lw-BW-12,by+12],[lx+12,by+bh-BH-96],[lx+lw-BW-12,by+bh-BH-96]];
+    const hit=(x,y,px,py,m)=>px>x-m&&px<x+BW+m&&py>y-m&&py<y+BH+m;
+    const pick=corners.map(([x,y])=>({x,y,d:Math.hypot(x+BW/2-cx,y+BH/2-cy)-P.filter(p=>hit(x,y,X(p),Y(p),p.k==="from"?30:24)).length*400-(hit(x,y,cx,cy,r0)?800:0)})).sort((a,b)=>b.d-a.d)[0];
+    box={x:pick.x,y:pick.y,w:BW,h:BH,cx,cy,r0}}
+  if(box){const {x:bx,y:byy,w:BW,h:BH}=box;
+    // a line from the circle to the box
+    g.strokeStyle="#2f6b4f";g.lineWidth=2.5;g.beginPath();const ang=Math.atan2(byy+BH/2-box.cy,bx+BW/2-box.cx);g.moveTo(box.cx+Math.cos(ang)*box.r0,box.cy+Math.sin(ang)*box.r0);
+    g.lineTo(Math.min(Math.max(box.cx+Math.cos(ang)*9999,bx),bx+BW),Math.min(Math.max(box.cy+Math.sin(ang)*9999,byy),byy+BH));g.stroke();
+    g.save();g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.fillStyle="#e3eadb";g.fill();g.clip();
+    const MS2=1.25,padI=34;let zi=Math.min(18,14);
+    for(zi=18;zi>8;zi--){const xs=clu.map(p=>wx(p.lng,zi)*MS2),ys=clu.map(p=>wy(p.lat,zi)*MS2);if(Math.max(...xs)-Math.min(...xs)<=BW-2*padI&&Math.max(...ys)-Math.min(...ys)<=BH-2*padI)break}
+    const icx=(Math.max(...clu.map(p=>wx(p.lng,zi)))+Math.min(...clu.map(p=>wx(p.lng,zi))))/2,icy=(Math.max(...clu.map(p=>wy(p.lat,zi)))+Math.min(...clu.map(p=>wy(p.lat,zi))))/2;
+    const iox=bx+BW/2-icx*MS2,ioy=byy+BH/2-icy*MS2,IX=p=>iox+wx(p.lng,zi)*MS2,IY=p=>ioy+wy(p.lat,zi)*MS2;
+    await tiles(zi,MS2,iox,ioy,bx,byy,BW,BH);
+    road(P,IX,IY,8);
+    // pins at (almost) the same spot are fanned out a little, with a short stalk to where they really are
+    const pos=clu.map(p=>({p,x:IX(p),y:IY(p),x0:IX(p),y0:IY(p)}));
+    for(let it=0;it<60;it++)for(let i=0;i<pos.length;i++)for(let j=i+1;j<pos.length;j++){const a=pos[i],b2=pos[j];let dx=b2.x-a.x,dy=b2.y-a.y,dd=Math.hypot(dx,dy);
+      if(dd<40){if(dd<.5){dx=Math.cos(i+j);dy=Math.sin(i+j);dd=1}const push=(40-dd)/2;a.x-=dx/dd*push;a.y-=dy/dd*push;b2.x+=dx/dd*push;b2.y+=dy/dd*push}}
+    pos.forEach(q=>{q.x=Math.min(Math.max(q.x,bx+22),bx+BW-22);q.y=Math.min(Math.max(q.y,byy+22),byy+BH-22);
+      if(Math.hypot(q.x-q.x0,q.y-q.y0)>4){g.strokeStyle="#2f6b4f";g.lineWidth=2;g.beginPath();g.moveTo(q.x0,q.y0);g.lineTo(q.x,q.y);g.stroke();g.fillStyle="#2f6b4f";g.beginPath();g.arc(q.x0,q.y0,3.5,0,7);g.fill()}});
+    pos.forEach(q=>pin(q.p,q.x,q.y,.82));
+    g.restore();g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.stroke()}
+  if(X){const f=P[0];if(f&&f.k==="from"&&moved){const ang=Math.atan2(Y(f)-(by+bh/2),X(f)-(lx+lw/2)),arw="→↘↓↙←↖↑↗"[(Math.round(ang/(Math.PI/4))+8)%8],lab=(farFrom?arw+" ":"")+"from "+(townOf(f).replace(/^\d+ km from /,"")||f.name);
+      g.font=`700 21px ${BF}`;const w2=g.measureText(lab).width,fx=Math.min(Math.max(X(f),lx+20),lx+lw-20),fy=Math.min(Math.max(Y(f),by+20),by+bh-100);
+      // try above, below, right and left of the pin; take the first spot that covers nothing
+      const blocks=[...(box?[[box.x,box.y,box.w,box.h],[box.cx-box.r0,box.cy-box.r0,box.r0*2,box.r0*2]]:[]),[lx+lw-92,by+bh-200,92,100],[lx,by+bh-130,lw,130],
+        ...P.filter(p=>p!==f).map(p=>[X(p)-24,Y(p)-24,48,48])];
+      const clamp=(x,y)=>[Math.min(Math.max(x,lx+12),lx+lw-w2-12),Math.min(Math.max(y,by+50),by+bh-110)];
+      const cands=[clamp(fx-w2/2,fy-30),clamp(fx-w2/2,fy+46),clamp(fx+26,fy+8),clamp(fx-26-w2,fy+8)];
+      const bad=([x,y])=>blocks.some(([bx2,by2,bw2,bh2])=>x-8<bx2+bw2&&x+w2+8>bx2&&y-22<by2+bh2&&y+8>by2);
+      let [tx,ty]=cands.find(c=>!bad(c))||cands[0];
+      g.fillStyle="rgba(255,255,255,.92)";g.beginPath();g.roundRect(tx-8,ty-22,w2+16,30,10);g.fill();g.fillStyle="#56645a";g.fillText(lab,tx,ty)}}
   if(!moved&&!tilesOk){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
   if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
-  // where in Aotearoa: a small South Island in the corner of the map
-  {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,ix=lx+lw-iw-14,iy=by+bh-ih-112,LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
+  // where in Aotearoa: a small South Island in a free corner
+  {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,cand=[[lx+lw-iw-14,by+bh-ih-112],[lx+lw-iw-14,by+40],[lx+21,by+bh-ih-112]];
+    const free=cand.find(([x,y])=>!(box&&x<box.x+box.w+10&&x+iw>box.x-10&&y<box.y+box.h+10&&y+ih>box.y-10))||cand[0],[ix,iy]=free;
+    const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
     g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
     g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
     g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
@@ -1041,14 +1086,13 @@ async function buildRecap(d){
   g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd",CL=wrapLines(g,tn,lw-56,2),cbh=CL.length>1?74:44;
   g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-12-cbh,lw-28,cbh,14);g.fill();
   g.fillStyle="#1d2621";CL.forEach((l,i)=>g.fillText(l,lx+28,by+bh-12-cbh+30+i*30));
-  // what we did, numbered like the map; long names wrap onto a second line
+  // what we did, with the same icons as on the map; long names wrap onto a second line
   g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE DID",rx,by+30);
   let ly=by+76;const acts=R.acts,fs=acts.length>5?26:29,lh=fs+8;
   if(!acts.length){g.fillStyle="#1d2621";g.font=`700 34px ${DF}`;g.fillText(d===today()?"Still to come…":"A lazy day 😌",rx,ly)}
   let shown=0;
   for(const x of acts){g.font=`700 ${fs}px ${BF}`;const L=wrapLines(g,x.name,rw-52,2);if(ly+(L.length-1)*lh>by+bh-4)break;
-    if(num[x.id]){g.fillStyle="#e0601f";g.beginPath();g.arc(rx+15,ly-fs*.35,15,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.fillText(String(num[x.id]),rx+15,ly-fs*.35+6);g.textAlign="left"}
-    else{g.font=`${fs}px ${BF}`;g.fillText(MK[x.kind]||"📸",rx,ly)}
+    g.font=`${fs}px ${BF}`;g.fillStyle="#000";g.fillText(MK[x.kind]||"📸",rx,ly);
     g.fillStyle="#1d2621";g.font=`700 ${fs}px ${BF}`;L.forEach((l,i)=>g.fillText(l,rx+44,ly+i*lh));ly+=L.length*lh+14;shown++}
   if(shown<acts.length){g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText(`+${acts.length-shown} more`,rx+44,Math.min(ly,by+bh))}
   // stats strip
@@ -1308,7 +1352,7 @@ function renderToday(){
         <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}${x.tide?`<small class="tsub">${tideNote(x).replace(/<[^>]+>/g,"")}</small>`:""}</button>
         <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
       ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
-      <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button>${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}</div></div>
+      <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button><span class="tfr">${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}${here?`<button type="button" class="tshare" data-todayrecap="${d}" aria-label="Share today's recap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>`:""}</span></div></div>
     <div class="tnight"><span>${here?`<button class="chk tw ${n.stayed?"on":""}" type="button" data-stay="${d}" aria-pressed="${n.stayed}" aria-label="We're sleeping here">✓</button>`:""}⛺ <span class="s">Tonight</span> <b>${n.camp?esc(n.camp):"no campsite yet"}</b></span>
       <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" target="_blank" rel="noopener" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
     ${shownAlerts(d).length?`<button type="button" class="talert" data-day="${d}">⚠️ ${shownAlerts(d).length} road alert${shownAlerts(d).length>1?"s":""} near you</button>`:""}
@@ -2135,6 +2179,10 @@ document.addEventListener("click",e=>{
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:t==="stop"?openStop:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
   else if(ds.recap)openRecap(ds.recap);
+  else if(ds.todayrecap){const d=ds.todayrecap,j=S.docs.journal[d]||{};
+    if(!j.photo||!j.note){openDay(d);setTimeout(()=>{const m=$("#dayview .card.mem");if(m){m.scrollIntoView({behavior:"smooth",block:"center"});m.classList.add("pulse")}},120);
+      toast(!j.photo&&!j.note?"Add a photo and a line about today first":!j.photo?"Add a photo of today first":"Add a line about today first")}
+    else openRecap(d)}
   else if(ds.triprecap)openTripRecap(ds.triprecap);
   else if("asknotif" in ds)askNotif();
   else if(ds.rate){lmap?.closePopup();openRate(ds.rate)}

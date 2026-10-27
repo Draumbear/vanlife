@@ -57,6 +57,10 @@ header .mark{overflow:hidden}header .mark img{width:100%;height:100%;display:blo
 header .ttlwrap{flex:1;min-width:0}
 header h1{margin:0;font:800 1.25rem/1.1 var(--display);letter-spacing:-.2px}
 header .hsub{font:500 .78rem/1.3 var(--sans);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .ib{flex:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;color:var(--tx)}
+header .ib svg{width:20px;height:20px;fill:currentColor}
+header .ib.sel{border-color:var(--accent);color:var(--accent)}
+header .loopbtn img{width:26px;height:26px;border-radius:7px;display:block}
 header .loop{flex:none;display:block;width:38px;height:38px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
 header .loop img{width:100%;height:100%;display:block}
 .chip{display:inline-flex;align-items:center;gap:6px;font:700 .72rem var(--sans);padding:7px 10px;border-radius:999px;
@@ -64,6 +68,9 @@ header .loop img{width:100%;height:100%;display:block}
 .chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim)}
 .chip.on::before{background:var(--ok)}.chip.off::before{background:var(--warn)}.chip.err::before{background:var(--bad)}
 .chip.err{color:var(--bad)}
+header .chip{font-size:0;padding:0;width:26px;height:26px;justify-content:center;border:0;background:none}
+header .chip::before{width:10px;height:10px;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 15%,transparent)}
+header .chip.pending{font-size:.7rem;width:auto;padding:5px 8px;border:1px solid var(--line);background:var(--card)}
 main{padding:6px 16px 20px;max-width:620px;margin:0 auto}
 
 /* ---------- splash ---------- */
@@ -86,7 +93,7 @@ main{padding:6px 16px 20px;max-width:620px;margin:0 auto}
 /* ---------- bottom nav with the + in the middle ---------- */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--card) 94%,transparent);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);
-  padding:6px 8px calc(6px + var(--safe-b));display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+  padding:6px 8px calc(6px + var(--safe-b));display:grid;grid-template-columns:repeat(3,1fr);align-items:end}
 nav button,nav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;color:var(--dim);
   font:700 .68rem var(--sans);text-decoration:none}
 nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -304,6 +311,8 @@ body.adding #v-add.hide{visibility:visible}
   <div class="mark" aria-hidden="true"><img src="kea-icon.svg" alt="" width="34" height="34"></div>
   <div class="ttlwrap"><h1 id="ttl">Kea</h1><div class="hsub" id="hsub"></div></div>
   <button class="chip" id="sync">local</button>
+  <button class="ib" data-v="set" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
+  <a class="ib loopbtn" href="trip/" aria-label="Open Loop, the trip planner"><img src="trip/icon-192.png" alt="" width="26" height="26"></a>
 </header>
 
 <main>
@@ -513,10 +522,8 @@ body.adding #v-add.hide{visibility:visible}
 
 <nav>
   <button data-v="home" class="sel"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-  <button data-v="list"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Expenses</button>
   <button data-v="add" class="fab" aria-label="Add expense"><i><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i><span>Add</span></button>
-  <a class="navloop" href="trip/"><img src="trip/icon-192.png" alt="" width="24" height="24">Loop</a>
-  <button data-v="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.89 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.95-1.14l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3.1 14.5H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.24 7.5l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9.9 3.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.95 1.14l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0 1.2 2.89H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.04z"/></svg>Settings</button>
+  <button data-v="list"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Expenses</button>
 </nav>
 <div id="scrim"></div>
 
@@ -1589,8 +1596,9 @@ const sbURL = path => S.sync.url.replace(/\/+$/,'') + '/rest/v1/' + path;
 
 function setChip(cls, text){
   const c = document.getElementById('sync');
-  c.className = 'chip' + (cls ? ' ' + cls : '');
-  c.textContent = text;
+  c.className = 'chip' + (cls ? ' ' + cls : '') + (/to sync/.test(text) ? ' pending' : '');
+  c.textContent = /to sync/.test(text) ? text.replace(' to sync', '') : text;
+  c.title = text; c.setAttribute('aria-label', 'Sync: ' + text);
 }
 function chipIdle(){
   if (!syncOn()) return setChip('', 'local only');
@@ -1778,7 +1786,7 @@ function show(v){
   view = v;
   ['home','list','set'].forEach(k =>
     document.getElementById('v-' + k).classList.toggle('hide', k !== v));
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
+  document.querySelectorAll('nav button, header .ib[data-v]').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
   document.getElementById('ttl').textContent = TITLES[v];
   window.scrollTo(0,0);
   if (v === 'set') fillSettings();
@@ -1801,6 +1809,7 @@ function toast(m){
 /* ---- wiring ---- */
 document.querySelectorAll('nav button').forEach(b =>
   b.addEventListener('click', () => b.dataset.v === 'add' ? openAdd(null) : show(b.dataset.v)));
+document.querySelector('header .ib[data-v="set"]').addEventListener('click', () => show(view === 'set' ? 'home' : 'set'));
 
 document.getElementById('scrim').addEventListener('click', closeAdd);
 document.getElementById('a-close').addEventListener('click', closeAdd);

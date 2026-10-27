@@ -248,6 +248,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .group{display:flex;align-items:center;gap:10px;margin:14px 2px 10px;font:700 .72rem var(--sans);text-transform:uppercase;letter-spacing:1.1px;color:var(--accent)}
 .group::after{content:"";flex:1;height:1px;background:var(--line)}
 .group.mid{margin-top:22px}
+.group .gsub{font-weight:600;text-transform:none;letter-spacing:0;color:var(--dim);font-size:.72rem}
+details.fold.sub2>summary{justify-content:flex-start;gap:8px}
+details.fold.sub2>summary::after{width:7px;height:7px}
+details.fold.sub2[open]>summary{margin-bottom:0}
 code{background:var(--card2);padding:1px 5px;border-radius:6px;font-size:.78rem;font-family:ui-monospace,Menlo,monospace;word-break:break-all}
 pre{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;font:11px/1.5 ui-monospace,Menlo,monospace}
 .calc{display:flex;gap:7px;margin:-4px 0 14px}
@@ -431,17 +435,16 @@ body.adding #v-add.hide{visibility:visible}
 
   <!-- ============ SETTINGS ============ -->
   <section id="v-set" class="hide">
-    <div class="group">Shared with the other phone</div>
+    <div class="group">Trip &amp; budget <span class="gsub">shared by both phones</span></div>
     <div class="card">
-      <h2>The trip</h2>
-      <div class="grid2" style="margin-bottom:0">
-        <label class="f"><span>First day</span><input id="s-start" type="date"></label>
-        <label class="f"><span>Last day</span><input id="s-end" type="date"></label>
+      <h2>Dates</h2>
+      <div class="grid2">
+        <label class="f" style="margin:0"><span>First day</span><input id="s-start" type="date"></label>
+        <label class="f" style="margin:0"><span>Last day</span><input id="s-end" type="date"></label>
       </div>
     </div>
-
     <div class="card">
-      <h2>The budget</h2>
+      <h2>Budget</h2>
       <div class="seg four" id="s-mode">
         <button data-mode="daily">Day</button>
         <button data-mode="weekly">Week</button>
@@ -450,78 +453,67 @@ body.adding #v-add.hide{visibility:visible}
       </div>
       <label class="f"><span id="s-budget-lbl">Total budget for the whole trip (NZD)</span>
         <input id="s-budget" type="text" inputmode="decimal" placeholder="16000"></label>
-      <span class="cap">And that figure is…</span>
       <div class="seg two" id="s-for">
         <button data-for="2" class="sel">For both of us</button>
         <button data-for="1">Per person</button>
       </div>
-      <label class="f"><span>Already spent, but not logged here (optional, NZD)</span>
-        <input id="s-pre" type="text" inputmode="decimal" placeholder="0"></label>
-      <div class="note" id="s-derived"></div>
+      <div class="note" id="s-derived" style="margin-top:0"></div>
+      <details class="fold sub2"><summary><span class="cap" style="margin:0">Spent before you started logging</span></summary>
+        <label class="f" style="margin:8px 0 0"><span>Amount (NZD)</span><input id="s-pre" type="text" inputmode="decimal" placeholder="0"></label></details>
     </div>
-
-    <div class="card">
-      <h2>Planned big costs</h2>
+    <details class="card fold">
+      <summary><h2>Planned big costs</h2></summary>
       <div id="p-list"></div>
       <div style="display:flex;gap:7px;align-items:flex-start">
         <input id="p-label" type="text" placeholder="Interislander" autocomplete="off">
         <input id="p-amt" type="text" inputmode="decimal" placeholder="220" style="max-width:104px">
         <button class="btn ghost" id="p-add" style="width:auto;padding:11px 15px">Add</button>
       </div>
-      <div class="note">Held back from your daily allowance. Delete one once you’ve
-        logged the real expense.</div>
-    </div>
-
-    <div class="card">
-      <h2>Accounts</h2>
-      <div class="pills" id="s-accounts"></div>
-      <div class="note">Tap × to remove one. Expenses already logged keep their label.</div>
-    </div>
-
-    <div class="card">
-      <h2>Euro rate</h2>
-      <label class="f"><span>1 NZD = ? EUR — edit to match your card’s rate</span><input id="s-rate" type="text" inputmode="decimal"></label>
+      <div class="note">Held back from your daily allowance. Plans with a price in Loop are held back automatically.</div>
+    </details>
+    <details class="card fold">
+      <summary><h2>Accounts &amp; euro rate</h2></summary>
+      <span class="cap">Accounts you pay from — tap × to remove one</span>
+      <div class="pills" id="s-accounts" style="margin-bottom:14px"></div>
+      <label class="f"><span>1 NZD = ? EUR — match your card’s rate</span><input id="s-rate" type="text" inputmode="decimal"></label>
       <div class="row">
         <span class="note" id="s-rate-age" style="margin:0"></span>
         <button class="btn ghost" id="s-rate-fetch" style="width:auto;padding:9px 15px">Update rate</button>
       </div>
-    </div>
+    </details>
 
-    <div class="group mid">This phone only</div>
+    <div class="group mid">This phone</div>
     <div class="card">
-      <h2>Evening reminder</h2>
-      <div class="row"><div class="note" style="margin:0">A notification at 8 pm: “Spent anything today?”, with what’s logged so far.</div>
-        <button class="btn ghost" id="nudge-btn" style="width:auto;padding:9px 14px;white-space:nowrap">Turn on</button></div>
+      <div class="row"><h2 style="margin:0">Whose phone is this?</h2>
+        <div class="seg mini2" id="s-me"><button data-me="p1" class="sel">Tanguy</button><button data-me="p2">Zita</button></div></div>
+      <div class="note">Names the “Just me” view and stamps who added each expense.</div>
+    </div>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">Evening reminder</h2>
+        <button class="btn ghost" id="nudge-btn" style="width:auto;padding:8px 13px;white-space:nowrap">Turn on</button></div>
+      <div class="note">A notification at 8 pm: “Spent anything today?”, with what’s logged so far.</div>
       <button class="btn ghost hide" id="nudge-test" style="margin-top:10px">Send me a test now</button>
     </div>
-    <div class="card">
-      <h2>Whose phone is this?</h2>
-      <div class="seg two" id="s-me">
-        <button data-me="p1" class="sel">Tanguy</button>
-        <button data-me="p2">Zita</button>
-      </div>
-      <div class="note" style="margin-top:0">Names the “Just me” view on Home and stamps
-        who added each expense.</div>
-    </div>
 
+    <div class="group mid">Sync &amp; backup</div>
     <div class="card">
-      <h2>Sync with the other phone</h2>
-      <label class="f"><span>Supabase project URL</span>
-        <input id="s-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
-      <label class="f"><span>Supabase anon (publishable) key</span>
-        <textarea id="s-key" rows="3" placeholder="eyJhbGci..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label>
-      <button class="btn ghost" id="s-test">Save &amp; test connection</button>
+      <div class="row"><h2 style="margin:0">Sync with the other phone</h2><span class="note" id="s-sync-state" style="margin:0"></span></div>
+      <details class="fold sub2"><summary><span class="cap" style="margin:0">Connection details</span></summary>
+        <label class="f" style="margin-top:8px"><span>Supabase project URL</span>
+          <input id="s-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <label class="f"><span>Supabase anon (publishable) key</span>
+          <textarea id="s-key" rows="3" placeholder="eyJhbGci..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label>
+        <button class="btn ghost" id="s-test">Save &amp; test connection</button>
+        <div class="note">Use the <b>same</b> URL and key on both phones. Leave blank to keep everything on this phone.</div>
+      </details>
       <div class="note" id="s-sync-msg"></div>
-      <div class="note" style="margin-top:12px">Use the <b>same</b> URL and key on both phones.
-        Leave blank to keep everything on this phone.</div>
     </div>
-
     <div class="card">
-      <h2>Backup &amp; reset</h2>
-      <button class="btn ghost" id="s-export">Export all data (.json)</button>
-      <button class="btn ghost" id="s-import" style="margin-top:9px">Import from file</button>
+      <h2>Backup</h2>
+      <div class="grid2"><button class="btn ghost" id="s-export">Export (.json)</button><button class="btn ghost" id="s-import">Import file</button></div>
       <input type="file" id="s-file" accept=".json,application/json" class="hide">
-      <button class="btn danger" id="s-wipe" style="margin-top:18px">Erase everything on this phone</button>
+      <details class="fold sub2" style="margin-top:12px"><summary><span class="cap" style="margin:0;color:var(--bad)">Danger zone</span></summary>
+        <button class="btn danger" id="s-wipe" style="margin-top:8px">Erase everything on this phone</button></details>
     </div>
 
     <div class="note" style="text-align:center;padding-bottom:10px">Kea · trip kitty for two</div>
@@ -1607,6 +1599,7 @@ function setChip(cls, text){
   c.className = 'chip' + (cls ? ' ' + cls : '') + (/to sync/.test(text) ? ' pending' : '');
   c.textContent = /to sync/.test(text) ? text.replace(' to sync', '') : text;
   c.title = text; c.setAttribute('aria-label', 'Sync: ' + text);
+  const st = document.getElementById('s-sync-state'); if (st) st.textContent = text === 'synced' ? '✓ up to date' : text;
 }
 function chipIdle(){
   if (!syncOn()) return setChip('', 'local only');

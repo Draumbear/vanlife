@@ -1322,14 +1322,19 @@ function rainAlt(d){const s=stopFor(d),w=wxFor(d);if(!s||!w)return null;return s
 function rainRow(x,d){if(!d||d<today()||x.done||!OUTDOOR.has(x.kind||"place"))return "";const w=wxFor(d);if(!wet(w))return "";const alt=rainAlt(d),aw=alt&&wxFor(alt);
   return `<div class="rainrow">🌧️ ${Math.round(w.p)} mm forecast${alt?` · <button type="button" class="pill go" data-mvplan="${esc(x.id)}:${alt}">Move to ${wd(alt)} ${fmt(alt)} ${WMO(aw.c)} ${Math.round(aw.p)} mm</button>`:" · no drier day at this stop"}</div>`}
 /* the day as one Google Maps route: from last night's campsite, past every plan (in your order), to tonight's campsite if you have one */
-function dayRouteUrl(d){const t=today(),from=nightLoc(addDays(d,-1)),n=nightInfo(d),to=n.camp?nightLoc(d):null;
-  const stops=planFor(d).filter(x=>x.kind!=="task"&&!(d===t&&x.done)).map(x=>ptOf(x)).filter(Boolean);
-  const ll=p=>`${(+p.lat).toFixed(5)},${(+p.lng).toFixed(5)}`;
+/* places go to Google by name (+ town), so it lands on the real place with its reviews; coordinates only when there's no name */
+function placeQ(x,kind){const nm=(x.osm||x.name||"").trim();if(!nm&&!ptOf(x))return null;
+  if(!nm){const p=ptOf(x);return `${(+p.lat).toFixed(5)},${(+p.lng).toFixed(5)}`}
+  const tw=ptOf(x)?townOf(x):"",town=tw&&!/km from/.test(tw)?tw:"",ctx=town||(kind==="camp"?(x.region||""):ctxName(x));
+  return `${nm}${kind==="camp"&&!/camp|domain|reserve|holiday park|freedom|top 10|doc\b/i.test(nm)?" campsite":""}${ctx&&!nm.toLowerCase().includes(ctx.toLowerCase())?", "+ctx:""}, New Zealand`}
+function campQ(d){const n=nightInfo(d);if(!n.camp)return null;const c=state.camps.find(x=>sameCamp(x.name,n.camp));return placeQ(c||{name:n.camp,region:n.stop?.region},"camp")}
+function dayRouteUrl(d){const t=today(),from=campQ(addDays(d,-1)),to=campQ(d);
+  const stops=planFor(d).filter(x=>x.kind!=="task"&&x.kind!=="chore"&&!(d===t&&x.done)).map(x=>placeQ(x,x.kind)).filter(Boolean);
   const pts=[...stops];let dest=to;if(!dest){if(!pts.length)return null;dest=pts.pop()}
   if(!pts.length&&!from)return null;
-  const q=new URLSearchParams({api:"1",travelmode:"driving",destination:ll(dest)});
-  if(from&&!(d===t&&planFor(d).some(x=>x.done)))q.set("origin",ll(from));
-  if(pts.length)q.set("waypoints",pts.slice(0,9).map(ll).join("|"));
+  const q=new URLSearchParams({api:"1",travelmode:"driving",destination:dest});
+  if(from&&!(d===t&&planFor(d).some(x=>x.done)))q.set("origin",from);
+  if(pts.length)q.set("waypoints",pts.slice(0,9).join("|"));
   return "https://www.google.com/maps/dir/?"+q.toString()}
 /* drag the ⠿ handle to put a day's plans in your own order */
 (()=>{let dr=null;

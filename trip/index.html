@@ -220,6 +220,8 @@ textarea{min-height:72px;resize:vertical}
 #van{position:absolute;left:0;top:0;width:18px;height:28px;pointer-events:none;will-change:transform;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
 .day .wx{display:block;font-style:normal;font-size:.72rem;margin-top:2px;color:var(--ink)}
 .mem img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block}
+.recap img{width:100%;border-radius:12px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.recapbtn{width:100%;margin:2px 0 8px}
 .memnote{margin:0;font-size:.95rem;font-style:italic}
 .mem .btn input{display:none}
 .card.alert{border-color:var(--tussock);background:color-mix(in srgb,var(--tussock-soft) 70%,var(--card))}
@@ -862,11 +864,98 @@ function memoryCard(d){const j=S.docs.journal[d]||{};
   return `<div class="card mem"><div class="mini-h"><span class="label">Memory</span>${j.photo||j.note?`<button type="button" class="pill" data-memedit="${d}">Edit note</button>`:""}</div>
     ${j.photo?`<img data-photo="${d}" alt="Photo of ${wd(d)} ${fmt(d)}" hidden>`:""}
     ${j.note?`<p class="memnote">${esc(j.note)}</p>`:""}
+    <button type="button" class="btn primary recapbtn" data-recap="${d}">📤 Share day recap</button>
     <div class="row2"><label class="btn"><input type="file" accept="image/*" data-memphoto="${d}" hidden>📷 ${j.photo?"Change photo":"Add photo"}</label>${j.note?"":`<button type="button" class="btn ghost" data-memedit="${d}">✏️ Add a note</button>`}</div></div>`}
 function openMemNote(d){const j=S.docs.journal[d]||{};
   sheet(head(`${wd(d)} ${fmt(d)}`)+`<label>What do you want to remember?<textarea name="note" placeholder="Swam at the Wānaka pool, Zita won disc golf…">${esc(j.note||"")}</textarea></label>
     <div class="end"><div></div><div><button class="btn primary" type="submit">Save</button></div></div>`,"memnote",d)}
 
+/* ================= daily recap: one shareable picture per day ================= */
+// weather we saw: kept per date so past days keep their emoji after the forecast moves on
+const WXLOG="sil-wxlog";let wxlog={};try{wxlog=JSON.parse(localStorage.getItem(WXLOG))||{}}catch{}
+function logWx(){const t=today();let ch=false;
+  Object.values(wx).forEach(c=>Object.entries(c.days||{}).forEach(([d,w])=>{if(d<=t){const s=stopFor(d);if(s&&hasLL(s)&&wx[wxKey(s)]===c&&JSON.stringify(wxlog[d])!==JSON.stringify(w)){wxlog[d]=w;ch=true}}}));
+  if(ch)try{localStorage.setItem(WXLOG,JSON.stringify(wxlog))}catch{}}
+const wxDay=d=>wxFor(d)||wxlog[d]||null;
+function nightLoc(d){const n=nightInfo(d),c=n.camp?state.camps.find(x=>sameCamp(x.name,n.camp)&&hasLL(x)):null,p=c||(n.stop&&hasLL(n.stop)?n.stop:null);
+  return p?{lat:+p.lat,lng:+p.lng,name:n.camp||n.stop?.name||"",type:n.type}:null}
+function dayRoute(d){const a=nightLoc(addDays(d,-1)),b=nightLoc(d),acts=planFor(d).filter(x=>x.done&&x.kind!=="chore"&&x.kind!=="task"),pts=[];
+  if(a)pts.push({...a,k:"from"});acts.forEach(x=>{const p=ptOf(x);if(p)pts.push({lat:+p.lat,lng:+p.lng,name:x.name,k:"act",ic:MK[x.kind]||"📸"})});if(b)pts.push({...b,k:"to"});
+  let km=0;for(let i=1;i<pts.length;i++)km+=hopKm(pts[i-1],pts[i]);return {pts,acts,km}}
+function kmSoFar(d){const pts=nightPts();let km=0;for(let i=1;i<pts.length&&pts[i].d<=d;i++)km+=hopKm(pts[i-1],pts[i]);return km}
+function wrapLines(ctx,text,maxW,maxL){const words=String(text).split(/\s+/),out=[];let line="";
+  for(const w of words){const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w;if(out.length===maxL)break}else line=t}
+  if(out.length<maxL&&line)out.push(line);
+  if(out.length===maxL&&words.join(" ").length>out.join(" ").length){let l=out[maxL-1];while(ctx.measureText(l+"…").width>maxW&&l)l=l.slice(0,-1);out[maxL-1]=l.trimEnd()+"…"}
+  return out}
+const loadImg=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=src});
+async function buildRecap(d){
+  await document.fonts?.ready;
+  const W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  const DF='"Bricolage Grotesque","Avenir Next",system-ui,sans-serif',BF='"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif';
+  const r=tripRange(),dayN=r?daysBetween(r.first,d)+1:null,total=r?daysBetween(r.first,r.last):null;
+  const n=nightInfo(d),s=n.stop,w=wxDay(d),j=S.docs.journal[d]||{},R=dayRoute(d),photo=j.photo?await getPhoto(d):null;
+  // paper + header band
+  g.fillStyle="#f4f1e8";g.fillRect(0,0,W,H);
+  g.fillStyle="#2f6b4f";g.fillRect(0,0,W,200);
+  g.fillStyle="#cfe3d6";g.font=`700 30px ${BF}`;g.fillText((dayN?`DAY ${dayN}${total?" OF "+total:""}`:"OUR TRIP")+(s?"  ·  "+shortStop(s.name).toUpperCase():""),60,70);
+  g.fillStyle="#fff";g.font=`800 66px ${DF}`;g.fillText(new Date(d+"T12:00").toLocaleDateString("en-NZ",{weekday:"long",day:"numeric",month:"long"}),60,148);
+  if(w){g.textAlign="right";g.font=`86px ${BF}`;g.fillText(WMO(w.c),W-60,130);g.font=`700 30px ${BF}`;g.fillStyle="#cfe3d6";g.fillText(`${Math.round(w.hi)}° / ${Math.round(w.lo)}°${w.p>=1?` · ${Math.round(w.p)} mm`:""}`,W-60,178);g.textAlign="left"}
+  // layout: route + list block is fixed at the bottom; the photo takes what's left above the note
+  const BH=400,by=H-150-BH-10,bh=BH,lx=60,lw=470,rx=lx+lw+40,rw=W-rx-60;
+  g.font=`italic 400 36px ${BF}`;let L=j.note?wrapLines(g,j.note,W-180,photo?3:7):[];
+  const noteH=L.length?L.length*46+40:0;let y=230;
+  if(photo){try{const im=await loadImg(photo),bw=W-120,bh2=Math.max(260,by-30-noteH-y),sc=Math.max(bw/im.width,bh2/im.height),sw=bw/sc,sh=bh2/sc;
+    g.save();g.beginPath();g.roundRect(60,y,bw,bh2,28);g.clip();g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,60,y,bw,bh2);g.restore();y+=bh2+34}catch{}}
+  if(L.length){g.fillStyle="#2f6b4f";g.font=`800 64px ${DF}`;g.fillText("“",54,y+40);g.fillStyle="#1d2621";g.font=`italic 400 36px ${BF}`;
+    L.forEach((l,i)=>g.fillText(l,110,y+30+i*46))}
+  g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,24);g.fill();
+  g.save();g.beginPath();g.roundRect(lx,by,lw,bh,24);g.clip();g.strokeStyle="#d2dcc8";g.lineWidth=2;
+  for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}
+  const P=R.pts;
+  if(P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng)){
+    let la0=Math.min(...P.map(p=>p.lat)),la1=Math.max(...P.map(p=>p.lat)),ln0=Math.min(...P.map(p=>p.lng)),ln1=Math.max(...P.map(p=>p.lng));
+    const kx=Math.cos(la0*Math.PI/180),span=Math.max((la1-la0),(ln1-ln0)*kx,0.04),pad=70,sc=Math.min((lw-2*pad)/Math.max((ln1-ln0)*kx,1e-6),(bh-2*pad-30)/Math.max(la1-la0,1e-6),(lw-2*pad)/span);
+    const cx=(ln0+ln1)/2,cy=(la0+la1)/2,X=p=>lx+lw/2+(p.lng-cx)*kx*sc,Y=p=>by+(bh-30)/2+15-(p.lat-cy)*sc;
+    g.strokeStyle="#4b5157";g.lineWidth=12;g.lineCap="round";g.lineJoin="round";g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
+    g.strokeStyle="#f1e3a6";g.lineWidth=3;g.setLineDash([14,14]);g.stroke();g.setLineDash([]);
+    P.forEach((p,i)=>{const x=X(p),yy=Y(p),camp=p.k!=="act";g.fillStyle=camp?(p.k==="to"?"#2f6b4f":"#8d9493"):"#fff";g.strokeStyle=camp?"#fff":"#2f6b4f";g.lineWidth=4;
+      g.beginPath();g.arc(x,yy,camp?17:24,0,7);g.fill();g.stroke();g.font=`${camp?18:26}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(camp?(p.k==="to"?"⛺":"•"):p.ic,x,yy+1);g.textBaseline="alphabetic";g.textAlign="left"});
+    const f=P[0];if(f.k==="from"){const lab="from "+(townOf(f).replace(/^\d+ km from /,"near ")||f.name);g.font=`700 22px ${BF}`;const tw=g.measureText(lab).width;
+      let tx=Math.min(Math.max(X(f)-tw/2,lx+12),lx+lw-tw-12),ty=Y(f)-28;if(ty<by+28)ty=Y(f)+44;g.fillStyle="rgba(244,241,232,.9)";g.beginPath();g.roundRect(tx-8,ty-22,tw+16,30,10);g.fill();g.fillStyle="#56645a";g.fillText(lab,tx,ty)}
+  }
+else{g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText(P.length?"Stayed put today 😌":"",lx+lw/2,by+bh/2);g.textAlign="left"}
+  g.restore();
+  g.fillStyle="rgba(244,241,232,.92)";g.beginPath();g.roundRect(lx+14,by+bh-62,lw-28,48,14);g.fill();
+  g.fillStyle="#1d2621";g.font=`700 26px ${BF}`;const tn=n.camp?`⛺ ${n.camp}`:"⛺ campsite tbd";g.fillText(wrapLines(g,tn,lw-60,1)[0]||"",lx+30,by+bh-29);
+  // what we did
+  g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE DID",rx,by+30);
+  let ly=by+80;const MX=nightLoc(d)?.lat<-40.3?5:7,acts=R.acts.slice(0,MX);
+  if(!acts.length){g.fillStyle="#1d2621";g.font=`700 34px ${DF}`;g.fillText(d===today()?"Still to come…":"A lazy day 😌",rx,ly)}
+  acts.forEach(x=>{g.font=`34px ${BF}`;g.fillText(MK[x.kind]||"📸",rx,ly);g.fillStyle="#1d2621";g.font=`700 31px ${BF}`;g.fillText(wrapLines(g,x.name,rw-58,1)[0],rx+56,ly);ly+=52});
+  if(R.acts.length>MX){g.fillStyle="#56645a";g.font=`700 26px ${BF}`;g.fillText(`+${R.acts.length-MX} more`,rx+56,ly)}
+  // where in Aotearoa: a small outline of the South Island with a dot
+  {const p=nightLoc(d);if(p&&p.lat<-40.3){const ix=rx+rw-104,iy=by+bh-126,iw=100,ih=118,LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
+    g.fillStyle="rgba(244,241,232,.85)";g.beginPath();g.roundRect(ix-6,iy-6,iw+12,ih+12,12);g.fill();
+    g.fillStyle="#b9c9b0";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
+    g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),6,0,7);g.fill();g.stroke()}}
+  // stats strip
+  const so=kmSoFar(d),sy=H-120;g.fillStyle="#2f6b4f";g.beginPath();g.roundRect(60,sy,W-120,74,20);g.fill();
+  g.fillStyle="#fff";g.font=`700 30px ${BF}`;
+  const stats=[R.km?`🚐 ≈${Math.round(R.km)} km today`:"🚐 no driving",so?`🗺️ ${Math.round(so).toLocaleString("en-NZ")} km so far`:"",w&&w.sr&&w.ss?`🌅 ${w.sr} · 🌇 ${w.ss}`:""].filter(Boolean);
+  const gap=(W-120)/stats.length;stats.forEach((t,i)=>{g.textAlign="center";g.fillText(t,60+gap*i+gap/2,sy+48)});g.textAlign="left";
+  g.fillStyle="#8d9493";g.font=`700 22px ${BF}`;g.textAlign="right";g.fillText("Aotearoa Loop · Tanguy & Zita",W-60,H-18);g.textAlign="left";
+  try{const ic=await loadImg("icon.svg");g.save();g.beginPath();g.roundRect(60,H-42,30,30,7);g.clip();g.drawImage(ic,60,H-42,30,30);g.restore()}catch{}
+  return cv}
+let recapFile=null;
+async function openRecap(d){sheet(head(`Day recap · ${wd(d)} ${fmt(d)}`)+`<div id="recap-prev" class="recap"><p class="muted">Making your picture…</p></div>
+    <div class="end"><div><a class="btn" id="recap-dl" download="loop-${d}.jpg" hidden>Save</a></div><div><button class="btn primary" type="button" id="recap-share" disabled>📤 Share</button></div></div>`,"recap",d);
+  logWx();const cv=await buildRecap(d);const blob=await new Promise(ok=>cv.toBlob(ok,"image/jpeg",.9));
+  recapFile=new File([blob],`loop-${d}.jpg`,{type:"image/jpeg"});const url=URL.createObjectURL(blob);
+  const pv=$("#recap-prev");if(!pv)return;pv.innerHTML=`<img src="${url}" alt="Recap of ${wd(d)} ${fmt(d)}">`;
+  const dl=$("#recap-dl");dl.href=url;dl.hidden=false;const b=$("#recap-share");
+  if(navigator.canShare?.({files:[recapFile]})){b.disabled=false;b.onclick=async()=>{try{await navigator.share({files:[recapFile],title:`${wd(d)} ${fmt(d)} · Aotearoa Loop`})}catch{}}}
+  else{b.textContent="Save to share";b.disabled=false;b.onclick=()=>dl.click()}}
 /* ================= selling the van: a countdown of jobs with "do by" dates ================= */
 function sellCard(){const t=today(),tasks=state.spots.filter(x=>x.kind==="task"&&!x.done).sort((a,b)=>(a.by||"9").localeCompare(b.by||"9"));
   if(!tasks.length)return "";const soon=tasks.some(x=>x.by&&x.by<=addDays(t,7));
@@ -1229,14 +1318,14 @@ const wxKey=s=>(+s.lat).toFixed(2)+","+(+s.lng).toFixed(2);
 function wxFor(d){const s=stopFor(d);if(!s||!hasLL(s))return null;return wx[wxKey(s)]?.days?.[d]||null}
 let wxBusy=false;
 async function pullWx(){if(wxBusy||!navigator.onLine)return;wxBusy=true;const t=today(),until=addDays(t,13);let changed=false;
-  try{for(const s of sortStops().filter(s=>hasLL(s)&&(s.end||s.start)>=t&&s.start<=until)){
+  try{for(const s of sortStops().filter(s=>hasLL(s)&&(s.end||s.start)>=addDays(t,-7)&&s.start<=until)){
     const k=wxKey(s),c=wx[k];if(c&&Date.now()-c.at<3*3600e3)continue;
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=Pacific%2FAuckland&forecast_days=14`);
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=Pacific%2FAuckland&forecast_days=14&past_days=7`);
       if(!r.ok)continue;const j=await r.json(),D=j.daily,days={};
       D.time.forEach((d,i)=>days[d]={c:D.weather_code[i],hi:D.temperature_2m_max[i],lo:D.temperature_2m_min[i],p:D.precipitation_sum[i],w:D.wind_speed_10m_max[i],sr:(D.sunrise[i]||"").slice(11),ss:(D.sunset[i]||"").slice(11)});
       wx[k]={at:Date.now(),days};changed=true}catch{}}
     Object.keys(wx).forEach(k=>{if(Date.now()-wx[k].at>14*864e5)delete wx[k]});
-    if(changed){try{localStorage.setItem(WXK,JSON.stringify(wx))}catch{}render()}}finally{wxBusy=false}}
+    if(changed){try{localStorage.setItem(WXK,JSON.stringify(wx))}catch{}render()}logWx()}finally{wxBusy=false}}
 const wxShort=w=>w?`${WMO(w.c)} ${Math.round(w.hi)}°`:"";
 function wxCard(d,links=""){const w=wxFor(d);if(!w)return "";
   return `<div class="card wxline"><span class="big">${WMO(w.c)} ${Math.round(w.hi)}°</span><span class="muted">low ${Math.round(w.lo)}°</span>
@@ -1753,6 +1842,7 @@ document.addEventListener("click",e=>{
   else if(ds.plan){const d=state.day;patch("spots",ds.plan,{day:d,order:planFor(d).length});toast("Added")}
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:t==="stop"?openStop:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
+  else if(ds.recap)openRecap(ds.recap);
   else if(ds.stay){const n=nightInfo(ds.stay);lmap?.closePopup();setStayed(ds.stay,!n.stayed)}
   else if("nightsall" in ds){state.nightsAll=true;refresh()}
   else if(ds.tog){const [c,f,id]=ds.tog.split(":"),it=S.docs[c][id];if(!it)return;if(c==="camps"&&f==="done"){lmap?.closePopup();const on=!isStayed({...it,id});patch(c,id,{done:on});if(!on)Object.entries(S.docs.nights).forEach(([d,n])=>{if(n.stayed&&sameCamp(n.camp,it.name))setNight(d,n.camp,n.campType||"unknown",n.notes,!!n.flex,false)});return toast(on?`Stayed at ${it.name} ✓`:"Unticked")}if(c==="spots"&&f==="done")setDone(id,!it.done);else patch(c,id,{[f]:!it[f]})}

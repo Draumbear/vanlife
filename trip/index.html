@@ -1096,12 +1096,21 @@ function openPaid(id){const x=S.docs.spots[id];if(!x)return;const me=keaMe(),acc
     <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),acc.last||acc.list[0])}</div>
     <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],"")}</div>
     <div class="end"><div><button type="button" class="btn" id="pd-skip">We didn't pay</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
-  $("#pd-skip").onclick=()=>{patch("spots",id,{done:true,nopay:true});closeSheet();toast("Done ✓ · nothing added to Kea")};
+  $("#pd-skip").onclick=()=>{markDone(id,true,{nopay:true});closeSheet();toast("Done ✓ · nothing added to Kea")};
   if(x.pp)$("#form").querySelectorAll("[name=personal]").forEach(r=>r.onchange=()=>{$("#form [name=amount]").value=r.value?Math.round(x.price/2*100)/100:x.price})}
+/* ticking a plan off moves it up: done things first, in the order you did them, then what's still to do.
+   That order is what the day recap and its route use. */
+function orderDay(d){if(!d)return;const items=Object.entries(S.docs.spots).filter(([,x])=>x.day===d).map(([id,x])=>({id,x}))
+    .sort((a,b)=>(a.x.order??0)-(b.x.order??0)||(a.x.name||"").localeCompare(b.x.name||""));
+  const done=items.filter(o=>o.x.done).sort((a,b)=>(a.x.doneAt||"").localeCompare(b.x.doneAt||"")),todo=items.filter(o=>!o.x.done);
+  [...done,...todo].forEach((o,i)=>{if(o.x.order!==i){S.docs.spots[o.id]={...o.x,order:i};S.pending["spots/"+o.id]=1}})}
+function markDone(id,on,extra={}){const x=S.docs.spots[id];if(!x)return;
+  S.docs.spots[id]={...x,...extra,done:on,doneAt:on?(x.done&&x.doneAt?x.doneAt:new Date().toISOString()):null,by:keaMe()};S.pending["spots/"+id]=1;
+  orderDay(x.day);persist();refresh();scheduleSync()}
 function setDone(id,on){const x=S.docs.spots[id];if(!x)return;
   if(on&&+x.price>0&&!x.keaId)return openPaid(id);
-  if(!on&&x.keaId){keaUnpay(id,true);patch("spots",id,{done:false});return toast("Not done · removed from Kea")}
-  patch("spots",id,{done:on,...(on?{}:{nopay:false})});toast(on?"Done ✓":"Not done")}
+  if(!on&&x.keaId){keaUnpay(id,true);markDone(id,false);return toast("Not done · removed from Kea")}
+  markDone(id,on,on?{}:{nopay:false});toast(on?"Done ✓":"Not done")}
 loadKea();
 function renderToday(){
   const el=$("#todaycard"),t=today(),cur=currentStop();
@@ -1757,8 +1766,8 @@ $("#form").addEventListener("submit",e=>{
   if(type==="paid"){const x=S.docs.spots[id];if(!x)return closeSheet();
     const amt=parseFloat(String(v.amount||"").replace(",","."));if(!(amt>0)){toast("Enter an amount");return}
     const keaId=x.keaId||newId(),meta={payer:v.payer||keaMe(),account:v.account||"",personal:v.personal||""};
-    const nx={...x,price:Math.round(amt*100)/100,cat:v.cat||"activity",done:true,paid:true,keaId,keaMeta:meta};
-    S.docs.spots[id]=nx;S.pending["spots/"+id]=1;persist();refresh();scheduleSync();
+    const nx={...x,price:Math.round(amt*100)/100,cat:v.cat||"activity",done:true,doneAt:x.doneAt||new Date().toISOString(),paid:true,keaId,keaMeta:meta};
+    S.docs.spots[id]=nx;S.pending["spots/"+id]=1;orderDay(x.day);persist();refresh();scheduleSync();
     keaWrite(keaRec(nx,meta));
     try{const k=keaLocal();if(k&&k.settings&&meta.account){k.settings.lastAccount=meta.account;localStorage.setItem(KEA_LS,JSON.stringify(k))}}catch{}
     closeSheet();toast(`Logged ${nzd(amt)} in Kea`);return}

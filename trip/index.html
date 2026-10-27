@@ -220,7 +220,7 @@ textarea{min-height:72px;resize:vertical}
 #van{position:absolute;left:0;top:0;width:18px;height:28px;pointer-events:none;will-change:transform;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
 .day .wx{display:block;font-style:normal;font-size:.72rem;margin-top:2px;color:var(--ink)}
 .mem img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block}
-.recap img{width:100%;border-radius:12px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.recapprev img{width:100%;border-radius:12px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .recapbtn{width:100%;margin:2px 0 8px}
 .memnote{margin:0;font-size:.95rem;font-style:italic}
 .mem .btn input{display:none}
@@ -246,6 +246,7 @@ textarea{min-height:72px;resize:vertical}
 .named .mk.nolbl .nm{display:none}
 .mk.hid{display:none}
 .mk .more{position:absolute;left:-6px;bottom:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#1d2621;color:#fff;font:800 10px/17px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
+.offpill{color:var(--fern);border-color:var(--fern)}
 .daypick{display:inline-flex;align-items:center;gap:2px;padding-right:4px}
 .daypick select{border:0;background:transparent;font:inherit;color:inherit;padding:0 2px;max-width:150px}
 .daypick.on{background:#2f6b4f;color:#fff;border-color:#2f6b4f}
@@ -340,7 +341,7 @@ textarea{min-height:72px;resize:vertical}
 .pill{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font:700 .82rem var(--body);color:var(--muted);cursor:pointer}
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .reg{font:800 .95rem var(--display);margin:18px 0 0}
-.itemr{display:flex;align-items:center;gap:2px}
+.itemr{display:flex;align-items:center;gap:4px;padding-right:6px}
 .locpick{display:grid;gap:8px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--fern-soft)}
 .locpick .locstat{font-size:.88rem}.locpick .locbtns{display:flex;flex-wrap:wrap;gap:6px}
 .linkx{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:.82rem;cursor:pointer;padding:0 4px}
@@ -351,7 +352,10 @@ textarea{min-height:72px;resize:vertical}
 @keyframes hintOut{to{opacity:0}}
 .itemr .mapgo{width:36px;height:36px;border:0;background:none;color:var(--muted);display:grid;place-items:center}
 .itemr .mapgo .svg{width:19px;height:19px}
-.meta .tw{white-space:nowrap}.meta .away{color:var(--fern);white-space:nowrap}
+.meta .tw{white-space:nowrap}
+.favdot{color:#e0705a;font-size:.85em}
+.favpill{justify-self:start}.favpill.on{background:#fbe3dc;border-color:#e0705a;color:#b44a33}
+.sumrow .n{color:var(--muted);font-size:1.1rem}.meta .away{color:var(--fern);white-space:nowrap}
 .linkbtn{display:inline-flex;align-items:center;font:700 .82rem var(--body);color:var(--fern);border:1px solid var(--fern);border-radius:999px;padding:5px 11px;background:var(--card);cursor:pointer}
 .item.done .nm{text-decoration:line-through;color:var(--muted)}
 .item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
@@ -404,6 +408,9 @@ textarea{min-height:72px;resize:vertical}
 .mk.stayed .ic{border-color:#3f9a5c}
 .sleep .nm{flex:1;min-width:0;font:700 1.05rem/1.25 var(--display)}
 .actlist .act:has(.drag){grid-template-columns:auto auto minmax(0,1fr) auto}
+.rainrow{grid-column:1/-1;font-size:.8rem;color:#2b6f86;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:-2px}
+.rainrow .pill{font-size:.76rem;padding:4px 10px}.rainrow .pill.go{background:#2b6f86;color:#fff;border-color:#2b6f86}
+.ratebox{font-size:.9rem}.pick.big span{font-size:1rem;padding:12px 16px}
 .act .drag{touch-action:none;cursor:grab;color:var(--muted);font-size:1.15rem;padding:8px 2px;margin-left:-4px;user-select:none;-webkit-user-select:none}
 .act.dragging{position:relative;z-index:5;background:var(--card);box-shadow:0 6px 18px rgba(0,0,0,.18);border-radius:12px;transition:none}
 .act.shift{transition:transform .15s}
@@ -768,10 +775,11 @@ function openMap(){const t=today(),st=sortStops(),L=legs();let left=0;st.forEach
 function renderMapBar(){$("#msrc").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-msrc="${k}">${l}</button>`).join("");
   const t=today(),days=[...new Set(state.spots.filter(x=>x.day&&x.day>=t&&x.kind!=="task").map(x=>x.day))].sort().slice(0,40);
   if(state.mapDay&&state.mapDay<t)state.mapDay="";
-  $("#mkinds").innerHTML=`<label class="pill daypick ${state.mapDay?"on":""}">📅 <select id="mday" aria-label="Show one day">${[["","Any day"],...days.map(d=>[d,`${d===t?"Today":d===addDays(t,1)?"Tomorrow":wd(d)} ${fmt(d)}`])].map(([v,l])=>`<option value="${v}" ${state.mapDay===v?"selected":""}>${l}</option>`).join("")}</select></label>`+MAPK.map(([k,l])=>k==="done"?`<button class="pill" type="button" aria-pressed="${state.mapDone!==false}" data-mdonetog>${l}</button>`:`<button class="pill" type="button" aria-pressed="${state.mapKind===k}" data-mkind="${k}">${l}</button>`).join("")}
+  const off=(()=>{try{return JSON.parse(localStorage.getItem("sil-offline")||"null")}catch{return null}})();
+  $("#mkinds").innerHTML=`<button class="pill offpill" type="button" id="offbtn" title="Save the map for the next 10 days, for when there's no signal">${offBusy?"⬇ …":off&&Date.now()-off.at<3*864e5?"⬇ Saved":"⬇ Save offline"}</button><label class="pill daypick ${state.mapDay?"on":""}">📅 <select id="mday" aria-label="Show one day">${[["","Any day"],...days.map(d=>[d,`${d===t?"Today":d===addDays(t,1)?"Tomorrow":wd(d)} ${fmt(d)}`])].map(([v,l])=>`<option value="${v}" ${state.mapDay===v?"selected":""}>${l}</option>`).join("")}</select></label>`+MAPK.map(([k,l])=>k==="done"?`<button class="pill" type="button" aria-pressed="${state.mapDone!==false}" data-mdonetog>${l}</button>`:`<button class="pill" type="button" aria-pressed="${state.mapKind===k}" data-mkind="${k}">${l}</button>`).join("")}
 function buildMap(L){const el=$("#lmap");el.innerHTML="";
   lmap=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:false}).setView([-44.5,170],7);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(lmap);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,crossOrigin:true,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(lmap);
   L.control.zoom({position:"bottomright"}).addTo(lmap);
   const zc=()=>el.classList.toggle("named",lmap.getZoom()>=11);lmap.on("zoomend",zc);zc();
   lmap.on("zoomend moveend",()=>declutter());
@@ -786,6 +794,26 @@ function buildMap(L){const el=$("#lmap");el.innerHTML="";
   lyr=L.layerGroup().addTo(lmap);drawMarkers();
   if(state.mapFocus)focusMap();else if(cur&&hasLL(cur))lmap.setView([cur.lat,cur.lng],9);
   locate(false)}
+/* ---- offline map: save the tiles around the next stops and the roads between them ---- */
+const t2x=(ln,z)=>Math.floor((ln+180)/360*2**z),t2y=(la,z)=>{const r=la*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z)};
+function offlinePlan(days=10){const t=today(),pts=[],seen=new Set(),add=p=>{if(!p)return;const k=(+p.lat).toFixed(3)+","+(+p.lng).toFixed(3);if(!seen.has(k)){seen.add(k);pts.push({lat:+p.lat,lng:+p.lng})}};
+  for(let i=0;i<=days;i++){const d=addDays(t,i);add(nightLoc(d));planFor(d).forEach(x=>add(ptOf(x)))}
+  const tiles=new Set(),box=(p,z,r)=>{const x=t2x(p.lng,z),y=t2y(p.lat,z);for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++)tiles.add(`${z}/${x+dx}/${y+dy}`)};
+  pts.forEach(p=>{box(p,9,1);box(p,11,1);box(p,12,2);box(p,13,2);box(p,14,1)});
+  // the road between consecutive nights
+  const ns=[];for(let i=-1;i<=days;i++){const n=nightLoc(addDays(t,i));if(n)ns.push(n)}
+  for(let i=1;i<ns.length;i++){const a=ns[i-1],b=ns[i],km=hav(a,b),steps=Math.ceil(km/6);for(let k=0;k<=steps;k++){const p={lat:a.lat+(b.lat-a.lat)*k/steps,lng:a.lng+(b.lng-a.lng)*k/steps};box(p,10,0);box(p,11,1);box(p,12,0)}}
+  return {pts:pts.length,tiles:[...tiles]}}
+let offBusy=false;
+async function saveOffline(){if(offBusy)return;if(!navigator.onLine)return toast("Needs a connection");const {tiles,pts}=offlinePlan();if(!tiles.length)return toast("Nothing planned to save yet");
+  offBusy=true;let done=0,got=0,fail=0;const cache=await caches.open("tiles-v1");
+  const el=$("#offbtn");const upd=()=>{if(el)el.textContent=`⬇ ${Math.round(done/tiles.length*100)}%`};
+  toast(`Saving the map for your next 10 days (${tiles.length} tiles)…`);
+  const q=tiles.slice();const work=async()=>{while(q.length){const t=q.shift(),u=`https://tile.openstreetmap.org/${t}.png`;
+    try{if(!(await cache.match(u))){const r=await fetch(u,{mode:"cors"});if(r.ok){await cache.put(u,r.clone());got++}else fail++}}catch{fail++}done++;if(done%10===0)upd()}};
+  await Promise.all([work(),work(),work(),work()]);offBusy=false;if(el)el.textContent="⬇ Saved";
+  try{localStorage.setItem("sil-offline",JSON.stringify({at:Date.now(),n:tiles.length}))}catch{}
+  toast(fail>tiles.length/3?"Saved part of the map — try again with better signal":`Map saved for offline · ${pts} places, next 10 days`,5000)}
 function mapItems(){const k=state.mapKind;const out=[];
   const fo=state.mapFocus,fx=fo&&S.docs[fo.c]?.[fo.id];
   if(state.mapDay){const d=state.mapDay,n=nightInfo(d),c=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp));
@@ -802,7 +830,7 @@ function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();
     const html=`<div class="${cls}"><span class="ic">${ic}</span>${state.mapDay&&!camp?`<span class="num">${planFor(state.mapDay).indexOf(x)+1}</span>`:""}${x.done||st?`<span class="ok">✓</span>`:x.day&&!state.mapDay?`<span class="dt">${fmt(x.day)}</span>`:""}<span class="nm">${esc(x.name)}</span></div>`;
     const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html,iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:x.day?400:x.suggested?0:200});
     const kind=camp?(CAMPTYPES[x.type]||"Campsite"):kindLabel(x);
-    m.bindPopup(()=>`<div class="mpop"><b>${x.suggested?"✦ ":""}${esc(x.name)}</b><span class="muted">${esc(kind)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}${st?" · "+esc(stayLabel(x)):x.done?" · done":""}</span>
+    m.bindPopup(()=>`<div class="mpop"><b>${x.suggested?"✦ ":""}${esc(x.name)}</b><span class="muted">${esc(kind)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}${st?" · "+esc(stayLabel(x))+(x.rate?" "+rateTag(x):""):x.done?" · done":""}</span>${camp&&x.review?`<span class="clamp2">“${esc(x.review)}”</span>`:""}
       ${x.notes?`<span class="clamp2">${esc(x.notes)}</span>`:""}
       <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}" target="_blank" rel="noopener">Google Maps</a></div>
       <div class="row2">${camp?`<button type="button" class="pill ${st?"":"go"}" data-tog="camps:done:${esc(x.id)}">${st?"Undo stayed":"✓ Stayed here"}</button>`:`<button type="button" class="pill ${x.done?"":"go"}" data-mdone="${esc(x.id)}">${x.done?"Undo done":"✓ Done"}</button>`}<button type="button" class="pill warn" data-mdel="${camp?"camp":"spot"}:${esc(x.id)}">Remove</button></div></div>`,{maxWidth:260});
@@ -849,7 +877,7 @@ function closeMap(){state.mapFocus=null;if(meWatch!=null){navigator.geolocation.
 function renderHeader(){const r=tripRange(),t=today();if(!r)return;
   const total=Math.max(1,daysBetween(r.first,r.last)),n=Math.min(total,Math.max(0,daysBetween(r.first,t)+1));
   $("#bar").style.width=(n/total*100)+"%";
-  $("#dayline").textContent=t<r.first?`Starts ${fmt(r.first)}`:t>=r.last?"Trip done":`Day ${n} of ${total} · ${total-n} to go`}
+  $("#dayline").textContent=t<r.first?`Starts ${fmt(r.first)}`:t>=r.last?"Trip done":`Day ${n}/${total} · ${total-n} left`}
 /* ================= memories: one photo + note per day ================= */
 const IDB=(()=>{let db;const open=()=>db||(db=new Promise((ok,no)=>{const r=indexedDB.open("loop-photos",1);r.onupgradeneeded=()=>r.result.createObjectStore("p");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}));
   const tx=(m,f)=>open().then(d=>new Promise((ok,no)=>{const t=d.transaction("p",m),st=t.objectStore("p"),q=f(st);t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>no(t.error)}));
@@ -940,7 +968,7 @@ async function buildRecap(d){
 else{g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText(P.length?"Stayed put today 😌":"",lx+lw/2,by+bh/2);g.textAlign="left"}
   g.restore();
   g.fillStyle="rgba(244,241,232,.92)";g.beginPath();g.roundRect(lx+14,by+bh-62,lw-28,48,14);g.fill();
-  g.fillStyle="#1d2621";g.font=`700 26px ${BF}`;const tn=n.camp?`⛺ ${n.camp}`:"⛺ campsite tbd";g.fillText(wrapLines(g,tn,lw-60,1)[0]||"",lx+30,by+bh-29);
+  g.fillStyle="#1d2621";g.font=`700 26px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd";g.fillText(wrapLines(g,tn,lw-60,1)[0]||"",lx+30,by+bh-29);
   // what we did
   g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE DID",rx,by+30);
   let ly=by+80;const MX=nightLoc(d)?.lat<-40.3?5:7,acts=R.acts.slice(0,MX);
@@ -961,7 +989,7 @@ else{g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillTe
   try{const ic=await loadImg("icon.svg");g.save();g.beginPath();g.roundRect(60,H-42,30,30,7);g.clip();g.drawImage(ic,60,H-42,30,30);g.restore()}catch{}
   return cv}
 let recapFile=null;
-async function openRecap(d){sheet(head(`Day recap · ${wd(d)} ${fmt(d)}`)+`<div id="recap-prev" class="recap"><p class="muted">Making your picture…</p></div>
+async function openRecap(d){sheet(head(`Day recap · ${wd(d)} ${fmt(d)}`)+`<div id="recap-prev" class="recapprev"><p class="muted">Making your picture…</p></div>
     <div class="end"><div><a class="btn" id="recap-dl" download="loop-${d}.jpg" hidden>Save</a></div><div><button class="btn primary" type="button" id="recap-share" disabled>📤 Share</button></div></div>`,"recap",d);
   logWx();const cv=await buildRecap(d);const blob=await new Promise(ok=>cv.toBlob(ok,"image/jpeg",.9));
   recapFile=new File([blob],`loop-${d}.jpg`,{type:"image/jpeg"});const url=URL.createObjectURL(blob);
@@ -969,6 +997,66 @@ async function openRecap(d){sheet(head(`Day recap · ${wd(d)} ${fmt(d)}`)+`<div 
   const dl=$("#recap-dl");dl.href=url;dl.hidden=false;const b=$("#recap-share");
   if(navigator.canShare?.({files:[recapFile]})){b.disabled=false;b.onclick=async()=>{try{await navigator.share({files:[recapFile],title:`${wd(d)} ${fmt(d)} · Aotearoa Loop`})}catch{}}}
   else{b.textContent="Save to share";b.disabled=false;b.onclick=()=>dl.click()}}
+/* ---- the trip so far (or just this week) as one picture to send home ---- */
+async function buildTripRecap(mode){
+  await document.fonts?.ready;const r=tripRange();if(!r)return null;const t=today(),end=t>r.last?r.last:t;
+  const from=mode==="week"?(addDays(end,-7)<r.first?r.first:addDays(end,-7)):r.first;
+  const days=[];for(let d=from;d<end;d=addDays(d,1))days.push(d);
+  const W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  const DF='"Bricolage Grotesque","Avenir Next",system-ui,sans-serif',BF='"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif';
+  const dayN=daysBetween(r.first,end),total=daysBetween(r.first,r.last);
+  const acts=days.flatMap(d=>planFor(d).filter(x=>x.done&&x.kind!=="chore"&&x.kind!=="task"));
+  const byKind={};acts.forEach(x=>{const k=x.kind||"place";byKind[k]=(byKind[k]||0)+1});
+  const ty=nightTypes(from,end),km=kmSoFar(addDays(end,-1))-(mode==="week"?kmSoFar(addDays(from,-1)):0);
+  // header
+  g.fillStyle="#f4f1e8";g.fillRect(0,0,W,H);g.fillStyle="#2f6b4f";g.fillRect(0,0,W,210);
+  g.fillStyle="#cfe3d6";g.font=`700 30px ${BF}`;g.fillText(`AOTEAROA · DAY ${dayN} OF ${total}`,60,72);
+  g.fillStyle="#fff";g.font=`800 70px ${DF}`;g.fillText(mode==="week"?"Our week":"Our trip so far",60,152);
+  g.fillStyle="#cfe3d6";g.font=`700 30px ${BF}`;g.fillText(`${fmt(from)} – ${fmt(addDays(end,-1))}`,60,192);
+  // map: South Island with the whole route faint, this stretch bold
+  const mx=60,my=240,mw=420,mh=520;g.fillStyle="#dfe9ec";g.beginPath();g.roundRect(mx,my,mw,mh,26);g.fill();
+  const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min((mw-30)/((LN1-LN0)*kx),(mh-30)/(LA0-LA1));
+  const ox=mx+(mw-(LN1-LN0)*kx*sc)/2,oy=my+(mh-(LA0-LA1)*sc)/2,PX=(la,ln)=>ox+(ln-LN0)*kx*sc,PY=la=>oy+(LA0-la)*sc;
+  g.save();g.beginPath();g.roundRect(mx,my,mw,mh,26);g.clip();
+  g.fillStyle="#e4e8dc";g.strokeStyle="#b9c9b0";g.lineWidth=2;g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(PX(la,ln),PY(la)):g.moveTo(PX(la,ln),PY(la)));g.closePath();g.fill();g.stroke();
+  const pts=nightPts(),line=(arr,col,w,dash)=>{if(arr.length<2)return;g.strokeStyle=col;g.lineWidth=w;g.setLineDash(dash||[]);g.lineJoin="round";g.lineCap="round";g.beginPath();arr.forEach((p,i)=>i?g.lineTo(PX(p.lat,p.lng),PY(p.lat)):g.moveTo(PX(p.lat,p.lng),PY(p.lat)));g.stroke();g.setLineDash([])};
+  line(pts.filter(p=>p.d>=end),"#9aa79b",3,[6,8]);line(pts.filter(p=>p.d<end&&p.d>=r.first),mode==="week"?"#9aa79b":"#2f6b4f",5);
+  if(mode==="week"){const wk=pts.filter(p=>p.d>=addDays(from,-1)&&p.d<end);line(wk,"#2f6b4f",6)}
+  pts.filter(p=>p.d>=from&&p.d<end).forEach(p=>{g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.arc(PX(p.lat,p.lng),PY(p.lat),6,0,7);g.fill();g.stroke()});
+  const here=nightLoc(addDays(end,-1));if(here){g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=3;g.beginPath();g.arc(PX(here.lat,here.lng),PY(here.lat),11,0,7);g.fill();g.stroke()}
+  g.restore();
+  // stat tiles
+  const tiles=[[`${Math.round(km).toLocaleString("en-NZ")}`,"km driven"],[`${days.length}`,"nights"],[`${acts.length}`,"things done"],[`${ty.free}`,"🚐 free nights"],[`${ty.doc}`,"⛺ DOC nights"],[`${ty.paid}`,"🏕️ paid nights"]];
+  const tx=510,tw=(W-60-tx-20)/2;tiles.forEach(([v,l],i)=>{const x=tx+(i%2)*(tw+20),y=my+Math.floor(i/2)*176;g.fillStyle="#fff";g.beginPath();g.roundRect(x,y,tw,156,22);g.fill();
+    g.fillStyle="#1d2621";g.font=`800 60px ${DF}`;g.fillText(v,x+24,y+80);g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText(l,x+24,y+124)});
+  // what we did, by kind
+  let y=my+mh+56;g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE GOT UP TO",60,y);y+=48;
+  const kinds=Object.entries(byKind).sort((a,b)=>b[1]-a[1]).slice(0,6);g.font=`700 32px ${BF}`;let x=60;
+  kinds.forEach(([k,n])=>{const lab=`${MK[k]||"📸"} ${n} ${({place:"sights",hike:"hikes",multi:"overnight hikes",bike:"rides",disc:"disc golf rounds",paid:"paid activities",quirky:"quirky stops",food:"food stops",plan:"other things"}[k]||"sights")}`,w=g.measureText(lab).width+40;if(x+w>W-60){x=60;y+=64}
+    g.fillStyle="#e3eadb";g.beginPath();g.roundRect(x,y-40,w,54,27);g.fill();g.fillStyle="#1d2621";g.fillText(lab,x+20,y-3);x+=w+14});
+  if(!kinds.length){g.fillStyle="#1d2621";g.fillText("Taking it easy 😌",60,y)}
+  y+=70;
+  // photos: up to four, spread over the period
+  const ph=days.filter(d=>S.docs.journal[d]?.photo),pick=ph.length<=4?ph:[0,1,2,3].map(i=>ph[Math.round(i*(ph.length-1)/3)]);
+  const imgs=(await Promise.all(pick.map(async d=>{try{const src=await getPhoto(d);return src?await loadImg(src):null}catch{return null}}))).filter(Boolean);
+  const favs=[...new Set([...acts.filter(x=>x.fav).map(x=>x.name),...state.camps.filter(c=>c.rate==="up"&&stayedDates(c).some(d=>d>=from&&d<end)).map(c=>"⛺ "+c.name)])];
+  const bottom=H-140-(favs.length?86:0);
+  if(imgs.length){const n=imgs.length,gap=16,size=Math.max(80,Math.min((W-120-gap*(n-1))/n,bottom-y));const x0=(W-(n*size+(n-1)*gap))/2;imgs.forEach((im,i)=>{const sx=x0+i*(size+gap),s=Math.min(im.width,im.height);
+    g.save();g.beginPath();g.roundRect(sx,y,size,size,20);g.clip();g.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,sx,y,size,size);g.restore()});y+=size+50}
+  y=Math.max(y,bottom+40);if(favs.length){g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("FAVOURITES",60,y);g.fillStyle="#1d2621";g.font=`700 30px ${BF}`;
+    g.fillText(wrapLines(g,"♥ "+favs.join(" · "),W-120,1)[0]||"",60,y+42)}
+  // footer
+  g.fillStyle="#2f6b4f";g.beginPath();g.roundRect(60,H-110,W-120,70,20);g.fill();g.fillStyle="#fff";g.font=`700 30px ${BF}`;g.textAlign="center";
+  const left=daysBetween(end,r.last);g.fillText(left>0?`${left} days to go · now in ${shortStop(currentStop()?.name||"")}`:"Home again 🇧🇪",W/2,H-64);g.textAlign="right";
+  g.fillStyle="#8d9493";g.font=`700 22px ${BF}`;g.fillText("Aotearoa Loop · Tanguy & Zita",W-60,H-12);g.textAlign="left";
+  return cv}
+async function openTripRecap(mode){const title=mode==="week"?"This week":"The trip so far";
+  sheet(head(title)+`<div id="recap-prev" class="recapprev"><p class="muted">Making your picture…</p></div>
+    <div class="end"><div><a class="btn" id="recap-dl" download="loop-${mode}.jpg" hidden>Save</a></div><div><button class="btn primary" type="button" id="recap-share" disabled>📤 Share</button></div></div>`,"recap","");
+  const cv=await buildTripRecap(mode);if(!cv)return;const blob=await new Promise(ok=>cv.toBlob(ok,"image/jpeg",.9));
+  const file=new File([blob],`loop-${mode}-${today()}.jpg`,{type:"image/jpeg"}),url=URL.createObjectURL(blob);const pv=$("#recap-prev");if(!pv)return;
+  pv.innerHTML=`<img src="${url}" alt="${title}">`;const dl=$("#recap-dl");dl.href=url;dl.hidden=false;const b=$("#recap-share");
+  if(navigator.canShare?.({files:[file]})){b.disabled=false;b.onclick=async()=>{try{await navigator.share({files:[file],title:`${title} · Aotearoa Loop`})}catch{}}}else{b.textContent="Save to share";b.disabled=false;b.onclick=()=>dl.click()}}
 /* ================= selling the van: a countdown of jobs with "do by" dates ================= */
 function sellCard(){const t=today(),tasks=state.spots.filter(x=>x.kind==="task"&&!x.done).sort((a,b)=>(a.by||"9").localeCompare(b.by||"9"));
   if(!tasks.length)return "";const soon=tasks.some(x=>x.by&&x.by<=addDays(t,7));
@@ -1111,6 +1199,12 @@ function orderDay(d,last){if(!d)return;const items=Object.entries(S.docs.spots).
 function markDone(id,on,extra={}){const x=S.docs.spots[id];if(!x)return;
   S.docs.spots[id]={...x,...extra,done:on,doneAt:on?(x.done&&x.doneAt?x.doneAt:new Date().toISOString()):null,by:keaMe()};S.pending["spots/"+id]=1;
   orderDay(x.day,id);persist();refresh();scheduleSync()}
+/* heavy rain on a day with outdoor plans: say so, and offer the driest other day at the same stop */
+const OUTDOOR=new Set(["hike","multi","bike","disc","place","quirky"]);
+const wet=w=>w&&(w.p>=12||(w.c>=63&&w.c<=67&&w.p>=6)||w.c>=95);
+function rainAlt(d){const s=stopFor(d),w=wxFor(d);if(!s||!w)return null;return stopDays(s).filter(x=>x>=today()&&x!==d).map(x=>[x,wxFor(x)]).filter(([,v])=>v&&v.p<Math.max(3,w.p*.35)).sort((a,b)=>a[1].p-b[1].p||a[0].localeCompare(b[0]))[0]?.[0]||null}
+function rainRow(x,d){if(!d||d<today()||x.done||!OUTDOOR.has(x.kind||"place"))return "";const w=wxFor(d);if(!wet(w))return "";const alt=rainAlt(d),aw=alt&&wxFor(alt);
+  return `<div class="rainrow">🌧️ ${Math.round(w.p)} mm forecast${alt?` · <button type="button" class="pill go" data-mvplan="${esc(x.id)}:${alt}">Move to ${wd(alt)} ${fmt(alt)} ${WMO(aw.c)} ${Math.round(aw.p)} mm</button>`:" · no drier day at this stop"}</div>`}
 /* drag the ⠿ handle to put a day's plans in your own order */
 (()=>{let dr=null;
   document.addEventListener("pointerdown",e=>{const h=e.target.closest?.(".act .drag");if(!h)return;const row=h.closest(".act"),list=row.parentElement,rows=[...list.querySelectorAll(":scope>.act")];
@@ -1180,12 +1274,16 @@ function planTag(s){const days=stopDays(s);if(!days.length||days[days.length-1]<
   const c=state.spots.filter(x=>x.day&&days.includes(x.day)&&+x.price>0&&!x.keaId).reduce((t,x)=>t+(+x.price),0);if(!c)return "";
   const pd=keaPerDay(),heavy=pd&&c>pd*days.length*.5;
   return ` · <span class="${heavy?"heavy":""}" title="${heavy?"Over half the budget for these nights":""}">${nzd(c)} planned</span>`}
-function stopBlock(s,days,t,L,i,showLeg){
+function stopSummary(s,days){const acts=days.flatMap(d=>planFor(d).filter(x=>x.done&&x.kind!=="chore"&&x.kind!=="task")),mem=days.filter(d=>S.docs.journal[d]?.photo||S.docs.journal[d]?.note).length;
+  const a=days[days.length-1],b=days[0],rng=a===b?`${wd(a)} ${fmt(a)}`:`${fmt(a<b?a:b)} – ${fmt(a<b?b:a)}`;
+  return `<button type="button" class="day past sumrow" data-expand="${esc(s.id)}"><span class="dt"><b>${days.length}</b>${days.length>1?"days":"day"}</span>
+    <span class="what"><span class="clamp2">${acts.length?acts.map(x=>esc(x.name)).join(", "):`<span class="none">Nothing ticked off</span>`}</span><span class="memline">${rng}${mem?` · 📷 ${mem}`:""}</span></span><span class="n">▸</span></button>`}
+function stopBlock(s,days,t,L,i,showLeg,collapse){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ${legReal(i)?"":"~"}${L[i]} km</div>`:"")+
    `<div class="stop-h" data-sid="${esc(s.id)}">${lmFor(s)}<button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${planTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
    (s.fuel&&days.some(d=>d>=t)?`<div class="fuel">⛽ ${esc(s.fuel)}</div>`:"")+
-   days.map(d=>dayRow(d,t)).join("")}
+   (collapse?stopSummary(s,days):days.map(d=>dayRow(d,t)).join(""))}
 /* ---- the road down the side of the day list, with our van driving along it as you scroll ---- */
 const VAN=`<svg viewBox="-2 -6 22 34" width="18" height="27.8" style="margin-top:-4.9px"><g stroke-linecap="round"><path d="M9 0.5V-4.5" stroke="#2a2e2b" stroke-width="1.6"/><path d="M-0.5 -2.2H18.5M0 -4.6H18" stroke="#2b2f33" stroke-width="1.1"/><path d="M-0.5 -2.2H4.5M13.5 -2.2H18.5M0 -4.6H5M13 -4.6H18" stroke="#111" stroke-width="2"/><path d="M14.5 -3.6V-0.8M4 -6V-3.2" stroke="#444" stroke-width=".9"/></g><g fill="#1b1f1c"><rect x="-1.5" y="5" width="3" height="5" rx="1"/><rect x="16.5" y="5" width="3" height="5" rx="1"/><rect x="-1.5" y="18" width="3" height="5" rx="1"/><rect x="16.5" y="18" width="3" height="5" rx="1"/></g>
   <rect x="0.5" y="0.5" width="17" height="27" rx="4.5" fill="#cfc8ab" stroke="#8f886f"/><rect x="2.5" y="20" width="13" height="5.5" rx="1.6" fill="#1f3a2d"/>
@@ -1370,8 +1468,20 @@ function bookItems(){const t=today(),out=[];
   state.spots.forEach(x=>{if(x.book&&!x.booked&&x.day&&x.day>=t)out.push({k:"spot:"+x.id,name:x.name,day:x.day,by:addDays(x.day,-(+x.lead||14))})});
   state.stops.forEach(x=>{if(x.book&&!x.booked&&x.start&&x.start>=t)out.push({k:"stop:"+x.id,name:`⛺ ${x.camp||"Campsite"} · ${x.name}`,day:x.start,by:addDays(x.start,-(+x.lead||14))})});
   return out.sort((a,b)=>a.by.localeCompare(b.by))}
+/* booking reminders as phone notifications: on opening the app, and in the background where the phone allows it (installed app on Android) */
+const notifOn=()=>"Notification" in window&&Notification.permission==="granted";
+async function syncReminders(){if(!("serviceWorker" in navigator))return;const t=today();
+  const list=bookItems().filter(x=>x.by<=addDays(t,21)).map(x=>({id:x.k+"@"+x.by,by:x.by,title:`Book ${x.name}`,body:`For ${wd(x.day)} ${fmt(x.day)} · ${x.by<t?"book now":x.by===t?"book today":"book by "+wd(x.by)+" "+fmt(x.by)}`}));
+  try{const c=await caches.open("loop-reminders");await c.put("reminders.json",new Response(JSON.stringify({list,at:Date.now()}),{headers:{"Content-Type":"application/json"}}))}catch{}
+  if(!notifOn())return;const reg=await navigator.serviceWorker.ready.catch(()=>null);if(!reg)return;
+  let sent={};try{sent=JSON.parse(localStorage.getItem("sil-notified")||"{}")}catch{}
+  for(const r of list)if(r.by<=addDays(t,2)&&sent[r.id]!==t){reg.showNotification(r.title,{body:r.body,tag:r.id,icon:"icon-192.png",badge:"icon-192.png"});sent[r.id]=t}
+  try{localStorage.setItem("sil-notified",JSON.stringify(sent))}catch{}
+  try{if(reg.periodicSync&&!(await reg.periodicSync.getTags()).includes("reminders"))await reg.periodicSync.register("reminders",{minInterval:12*3600e3})}catch{}}
+async function askNotif(){if(!("Notification" in window))return toast("This phone doesn't support notifications here");
+  const r=await Notification.requestPermission();if(r==="granted"){toast("🔔 Booking reminders on");syncReminders();renderExtras()}else toast("Notifications are blocked — allow them in the phone settings for Loop")}
 function bookCard(){const t=today(),items=bookItems().filter(x=>x.by<=addDays(t,21));if(!items.length)return "";
-  return `<div class="card"><div class="mini-h"><span class="label">To book</span></div>
+  return `<div class="card"><div class="mini-h"><span class="label">To book</span>${notifOn()?`<span class="muted" style="font-size:.78rem">🔔 on</span>`:`<button type="button" class="pill" data-asknotif>🔔 Remind me</button>`}</div>
     ${items.slice(0,5).map(x=>`<div class="bk"><button type="button" class="main" data-open="${x.k}" style="background:none;border:0;padding:0;text-align:left;min-width:0;cursor:pointer"><b class="clamp1">${esc(x.name)}</b>
       <span class="sub ${x.by<=t?"late":""}">for ${wd(x.day)} ${fmt(x.day)} · ${x.by<t?"book now":x.by===t?"book today":`book by ${wd(x.by)} ${fmt(x.by)}`}</span></button>
       <button type="button" class="pill" data-booked="${x.k}">Booked ✓</button></div>`).join("")}</div>`}
@@ -1399,7 +1509,8 @@ function reviewHTML(){const t=today(),open=state.spots.filter(x=>x.day&&x.day<t&
       <button type="button" class="tx" data-open="spot:${esc(x.id)}" style="background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer"><b>${esc(x.name)}</b><span class="sub">${wd(x.day)} ${fmt(x.day)}</span></button>
       <button type="button" class="rm" data-skip="${esc(x.id)}" aria-label="Didn't do it">×</button></div>`).join("")}
     ${open.length>5&&!state.reviewAll?`<button type="button" class="pill" data-reviewall>Show all ${open.length}</button>`:""}</div>`}
-function recapHTML(){const t=today(),st=sortStops(),L=legs();let km=0;st.forEach((s,i)=>{if(s.start&&s.start<=t)km+=L[i]||0});
+function nightTypes(a,b){const o={free:0,doc:0,paid:0,other:0};for(let d=a;d<b;d=addDays(d,1)){const ty=nightInfo(d).type;o[ty==="free"?"free":ty==="doc"?"doc":ty==="paid"||ty==="booked"?"paid":"other"]++}return o}
+function recapHTML(){const t=today(),st=sortStops(),L=legs();const km=Math.round(kmSoFar(addDays(t,-1)));
   const r=tripRange();if(!r)return "";const nights=[];for(let d=r.first;d<t;d=addDays(d,1))nights.push(d);
   const stayCats=["camp","stay"],paidN=nights.filter(d=>spentOn(d).some(e=>stayCats.includes(e.c))),paidSum=sumA(nights.flatMap(d=>spentOn(d).filter(e=>stayCats.includes(e.c))));
   const free=nights.length-paidN.length,allReal=st.every((s,i)=>!(s.start&&s.start<=t)||!L[i]||legReal(i));
@@ -1407,9 +1518,10 @@ function recapHTML(){const t=today(),st=sortStops(),L=legs();let km=0;st.forEach
   const regs=Object.entries(reg).sort((a,b)=>b[1]-a[1]),mx=regs[0]?.[1]||1;
   const doneN=state.spots.filter(x=>x.done).length,favs=state.spots.filter(x=>x.done&&x.fav).map(x=>x.name);
   return `<div class="card"><span class="label">Trip so far</span>
-    <div class="recap"><div><b>${nights.length}</b><span>nights</span></div><div><b>${allReal?"":"~"}${km.toLocaleString("en-NZ")}</b><span>km stop to stop</span></div><div><b>${doneN}</b><span>things done</span></div>
-      <div><b>${free}</b><span>free nights</span></div><div><b>${paidN.length}</b><span>paid nights${paidSum?` · ${nzd(paidSum)}`:""}</span></div><div><b>${tot?nzd(tot/Math.max(1,nights.length+1)):"–"}</b><span>a day</span></div></div>
-    <div class="muted" style="font-size:.75rem">km: road distance between your stops, without side trips or day drives. Paid nights: nights with a Campsites or Stays expense in Kea.</div>
+    <div class="recap"><div><b>${nights.length}</b><span>nights</span></div><div><b>${allReal?"":"~"}${km.toLocaleString("en-NZ")}</b><span>km driven</span></div><div><b>${doneN}</b><span>things done</span></div>
+      ${(()=>{const ty=nightTypes(r.first,t);return `<div><b>${ty.free}</b><span>🚐 free nights</span></div><div><b>${ty.doc}</b><span>⛺ DOC nights</span></div><div><b>${ty.paid}</b><span>🏕️ paid nights${paidSum?` · ${nzd(paidSum)}`:""}</span></div>`})()}</div>
+    <div class="muted" style="font-size:.75rem">km: from campsite to campsite, without side trips or day drives.${tot?` Spending ${nzd(tot/Math.max(1,nights.length+1))} a day.`:""}</div>
+    <div class="row2"><button type="button" class="btn" data-triprecap="week">📤 Share this week</button><button type="button" class="btn" data-triprecap="all">📤 Share the trip so far</button></div>
     ${regs.length?`<span class="label" style="margin-top:4px">Spent by region · ${nzd(tot)}</span><div class="bars">${regs.map(([k,v])=>`<div class="r"><span class="clamp1">${esc(k)}</span><i style="width:${Math.max(4,v/mx*100)}%"></i><span class="mono">${nzd(v)}</span></div>`).join("")}</div>`:""}
     ${favs.length?`<span class="label" style="margin-top:4px">Favourites</span><div style="font-size:.9rem">♥ ${favs.slice(0,8).map(esc).join(" · ")}</div>`:""}</div>`}
 function renderDays(){
@@ -1429,7 +1541,7 @@ function renderDays(){
     if(!past.length){el.innerHTML=`<p class="empty">No days behind you yet.</p>`;return}
     const days=past.flatMap(p=>p[1]),tot=sumA(days.flatMap(spentOn)),pd=keaPerDay();
     el.innerHTML=nightsReview()+reviewHTML()+recapHTML()+(tot?`<div class="muted" style="font-size:.88rem;margin:12px 0 4px">${nPast} days · spent ${nzd(tot)} · ${nzd(tot/nPast)} a day${pd?` (budget ${nzd(pd)})`:""}</div>`:"")+
-      past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false)).join("")+
+      past.slice().reverse().map(([s,pd,i])=>stopBlock(s,pd.slice().reverse(),t,L,i,false,!(state.openStops?.has(s.id))&&!pd.includes(addDays(t,-1)))).join("")+
       (st[0]?.start?`<div class="sea-end"><div class="fcap"><b>⛴ Arrived by ferry</b><span>${wd(st[0].start)} ${fmt(st[0].start)} · Wellington → Picton, where it all began</span></div></div>`:"");
     hydratePhotos(el);requestAnimationFrame(drawRoad);return}
   if(!html)html=`<p class="empty">No days ahead.</p>`;
@@ -1449,9 +1561,9 @@ function renderPlaces(){if(state.tab==="places")wantHere();const me=state.here,a
   const reg=state.region||"all";
   const sel=$("#region");sel.innerHTML=`<option value="all">All regions</option>`+REGIONS.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join("");sel.value=reg;
   const q=state.q.toLowerCase(),base=allPlaces().filter(x=>q||reg==="all"||x.region===reg);
-  const f={all:x=>x._c==="spot",fav:x=>x.fav,camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
+  const f={all:x=>x._c==="spot",noloc:x=>!ptOf(x),fav:x=>x.fav,camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
   Object.keys(KINDS).forEach(k=>f[k]=x=>x._c==="spot"&&(x.kind||"place")===k);
-  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],...Object.entries(KINDS_PL)];
+  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["noloc","📍 No location"],...Object.entries(KINDS_PL)];
   $("#src").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-src="${k}">${l}</button>`).join("");
   $("#kinds").innerHTML=labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
   const items=base.filter(x=>visSug(x)&&(f[state.kind]||f.all)(x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
@@ -1460,9 +1572,9 @@ function renderPlaces(){if(state.tab==="places")wantHere();const me=state.here,a
   const order=me?["Nearest first"].filter(r=>by[r]):[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
   $("#plist").innerHTML=items.length?order.map(r=>(order.length>1||me?`<div class="reg">${me?"📍 Nearest to you first":esc(r)}</div>`:"")+by[r].map(x=>{
     const st=x._c==="camp"&&isStayed(x),tw=townOf(x),ka=me&&ptOf(x)?Math.round(away(x)*1.25):null;
-    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${ka!=null?` · <b class="away">${ka<1?"here":ka+" km"}</b>`:""}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}</span>`:""}`:`${ka!=null?`<b class="away">${ka<1?"here":ka+" km"}</b> · `:""}${esc(kindLabel(x))}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
-    return `<div class="item ${x.done&&x._c==="spot"?"done":""} ${st?"stayedi":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
-      <span class="itemr">${ptOf(x)?`<button class="ib sm mapgo" type="button" data-mapfocus="${x._c}:${esc(x.id)}" aria-label="View ${esc(x.name)} on the map">${icon("map")}</button>`:""}${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:`<button class="chk sm ${st?"on":""}" type="button" data-tog="camps:done:${esc(x.id)}" aria-pressed="${st}" aria-label="${st?"Not stayed":"We stayed here"}">✓</button>`}<button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></span></div>`}).join("")).join("")
+    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${ka!=null?` · <b class="away">${ka<1?"here":ka+" km"}</b>`:""}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}${x.rate?" "+rateTag(x):""}</span>`:""}`:`${ka!=null?`<b class="away">${ka<1?"here":ka+" km"}</b> · `:""}${esc(kindLabel(x))}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
+    return `<div class="item ${x.done&&x._c==="spot"?"done":""} ${st?"stayedi":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}${x.fav?` <span class="favdot" aria-label="favourite">♥</span>`:""}</div><div class="meta">${meta}</div></button>
+      <span class="itemr">${ptOf(x)?`<button class="ib sm mapgo" type="button" data-mapfocus="${x._c}:${esc(x.id)}" aria-label="View ${esc(x.name)} on the map">${icon("map")}</button>`:""}${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:`<button class="chk sm ${st?"on":""}" type="button" data-tog="camps:done:${esc(x.id)}" aria-pressed="${st}" aria-label="${st?"Not stayed":"We stayed here"}">✓</button>`}</span></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
   $("#fab").setAttribute("aria-label",state.kind==="camp"?"Add campsite":"Add place")}
 
@@ -1496,7 +1608,7 @@ function renderDay(){
       <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
         ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
-        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
+        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div>${rainRow(x,d)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       </div>
     <div class="card" id="ideas-card"></div>
@@ -1574,7 +1686,7 @@ function wireLoc(f){const box=f.querySelector(".locpick");if(!box)return;const l
     navigator.geolocation.getCurrentPosition(p=>set(p.coords.latitude,p.coords.longitude),()=>toast("Couldn't get your location"),{enableHighAccuracy:true,timeout:15000})};
   box.querySelector("[data-lf=map]").onclick=async()=>{if(!mp.hidden){mp.hidden=true;return}mp.hidden=false;mp.innerHTML="";
     try{const L=await loadLeaflet(),c=near();mini=L.map(mp,{zoomControl:true,attributionControl:false}).setView([c.lat,c.lng],la.value?14:11);
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(mini);mini.on("click",e=>set(e.latlng.lat,e.latlng.lng));pin=null;show();
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,crossOrigin:true}).addTo(mini);mini.on("click",e=>set(e.latlng.lat,e.latlng.lng));pin=null;show();
       setTimeout(()=>mini.invalidateSize(),60)}catch{mp.innerHTML=`<p class="muted">The map needs a connection.</p>`}};
   const nameIn=f.querySelector("[name=name]");
   const fromLink=async t=>{res.innerHTML=`<p class="muted">Reading the Google Maps link…</p>`;const r=await resolveGLink(t);
@@ -1616,6 +1728,7 @@ function openSpot(it,fresh,ll){
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
     <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${townOf(it)?" · 📍 "+esc(townOf(it)):ctxName(it)?" · "+esc(ctxName(it)):""}${it.region?" · "+esc(it.region):""}</div>
+    ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="${spots}:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
     ${it.kind==="task"?`<label>Do by<input type="date" id="q-by" value="${esc(it.by||"")}"></label>`:""}
@@ -1651,7 +1764,9 @@ function openCamp(it,ll){
   if(!it){sheet(head("New campsite")+campFields({region:regionNear(ll)||(state.region!=="all"?state.region:""),type:"unknown",...(ll?{lat:ll.lat,lng:ll.lng}:{})})+saveRow(true),"camp");return}
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
-    <div><span class="chip c-${esc(it.type||"unknown")}">${esc(CAMPTYPES[it.type]||"To sort")}</span> <span class="muted" style="font-size:.85rem">${esc(it.region||"")}</span></div>
+    <div><span class="chip c-${esc(it.type||"unknown")}">${esc(CAMPTYPES[it.type]||"To sort")}</span> <span class="muted" style="font-size:.85rem">${townOf(it)?"📍 "+esc(townOf(it))+" · ":""}${esc(it.region||"")}</span></div>
+    ${isStayed(it)||it.rate?`<div class="ratebox">${it.rate?`<b>${rateTag(it)}</b> `:""}${it.review?`“${esc(it.review)}” `:""}<button type="button" class="linkx" data-rate="${esc(it.id)}">${it.rate?"change":"How was it?"}</button></div>`:""}
+    ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="${camps}:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,"camp")}
     <label>Sleep here<select id="q-sleep">${dayOpts("","Pick a night…")}</select></label>
@@ -1770,11 +1885,19 @@ function syncStayCamp(name,d){if(!name)return;const c=state.camps.find(x=>sameCa
 function setStayed(d,on){const n=nightInfo(d);
   if(!n.camp){openNight(d);return toast("Pick where you slept, then tick it")}
   setNight(d,n.camp,n.type,n.notes,n.flex,on);syncStayCamp(n.camp,d);
-  toast(on?`Slept at ${n.camp} ✓`:"Unticked")}
+  toast(on?`Slept at ${n.camp} ✓`:"Unticked");
+  if(on)setTimeout(()=>{const c=state.camps.find(x=>sameCamp(x.name,n.camp));if(c&&!c.rate&&$("#sheet").hidden)openRate(c.id)},450)}
+/* how was the campsite? a thumb and a line, shown on the map, in Places and in the recap */
+const rateTag=c=>c.rate==="up"?"👍":c.rate==="down"?"👎":"";
+function openRate(id){const c=S.docs.camps[id];if(!c)return;
+  sheet(head(`How was ${esc(c.name)}?`)+`<div class="pick big"><label><input type="radio" name="rate" value="up" ${c.rate==="up"?"checked":""}><span>👍 Good</span></label><label><input type="radio" name="rate" value="down" ${c.rate==="down"?"checked":""}><span>👎 Not again</span></label></div>
+    <label>One line for next time <span class="muted" style="font-weight:400">(optional)</span><input name="review" value="${esc(c.review||"")}" placeholder="Sandflies! · great showers · quiet spot by the river"></label>
+    <div class="end"><div><button type="button" class="btn" data-cancel>Later</button></div><div><button class="btn primary" type="submit">Save</button></div></div>`,"rate",id)}
 $("#form").addEventListener("submit",e=>{
   e.preventDefault();const f=e.target,type=f.dataset.type,id=f.dataset.id;if(type==="settings")return;
   const v={};for(const [k,x] of new FormData(f).entries())v[k]=typeof x==="string"?x.trim():x;
   if("name" in v&&!v.name){toast("Give it a name");f.querySelector("[name=name]").focus();return}
+  if(type==="rate"){patch("camps",id,{rate:v.rate||"",review:v.review||""});closeSheet();toast(v.rate==="up"?"👍 Noted":v.rate==="down"?"👎 Noted":"Saved");return}
   if(type==="memnote"){const j=S.docs.journal[id]||{};put("journal",id,{...j,date:id,note:v.note||""});closeSheet();toast("Saved");return}
   if(type==="newplan"){const d=id,name=v.name;
     const nid=add("spots",{name,kind:"plan",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
@@ -1927,6 +2050,7 @@ document.addEventListener("click",e=>{
     const [t,id]=ds.mdel.split(":"),c=t==="camp"?"camps":"spots",nm=S.docs[c][id]?.name||"";lmap?.closePopup();if(c==="spots")keaUnpay(id,true);del(c,id);toast(`Removed ${nm}`)}
   else if(ds.mkind){state.mapKind=ds.mkind;renderMapBar();drawMarkers()}
   else if(b.id==="locme")locate(true);
+  else if(b.id==="offbtn")saveOffline();
   else if(ds.hidealert){const h=hiddenAlerts();h[ds.hidealert]=1;try{localStorage.setItem(HIDK,JSON.stringify(h))}catch{}render();toast("Alert hidden")}
   else if("sellopen" in ds){state.sellOpen=!state.sellOpen;try{localStorage.setItem("sil-sellopen",state.sellOpen?"1":"0")}catch{}renderExtras()}
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
@@ -1940,6 +2064,12 @@ document.addEventListener("click",e=>{
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:t==="stop"?openStop:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}
   else if(ds.recap)openRecap(ds.recap);
+  else if(ds.triprecap)openTripRecap(ds.triprecap);
+  else if("asknotif" in ds)askNotif();
+  else if(ds.rate){lmap?.closePopup();openRate(ds.rate)}
+  else if(ds.mvplan){const [id,to]=ds.mvplan.split(":"),x=S.docs.spots[id];if(!x)return;patch("spots",id,{day:to,order:planFor(to).length});keaSyncSpot(id);toast(`Moved ${x.name} to ${wd(to)} ${fmt(to)}`)}
+  else if(ds.favsheet){const [c,id]=ds.favsheet.split(":"),it=S.docs[c][id];if(!it)return;const on=!it.fav;patch(c,id,{fav:on});b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);b.textContent="♥ "+(on?"Favourite":"Add to favourites")}
+  else if(ds.expand){state.openStops=state.openStops||new Set();state.openStops.has(ds.expand)?state.openStops.delete(ds.expand):state.openStops.add(ds.expand);renderDays()}
   else if(ds.stay){const n=nightInfo(ds.stay);lmap?.closePopup();setStayed(ds.stay,!n.stayed)}
   else if("nightsall" in ds){state.nightsAll=true;refresh()}
   else if(ds.tog){const [c,f,id]=ds.tog.split(":"),it=S.docs[c][id];if(!it)return;if(c==="camps"&&f==="done"){lmap?.closePopup();const on=!isStayed({...it,id});patch(c,id,{done:on});if(!on)Object.entries(S.docs.nights).forEach(([d,n])=>{if(n.stayed&&sameCamp(n.camp,it.name))setNight(d,n.camp,n.campType||"unknown",n.notes,!!n.flex,false)});return toast(on?`Stayed at ${it.name} ✓`:"Unticked")}if(c==="spots"&&f==="done")setDone(id,!it.done);else patch(c,id,{[f]:!it[f]})}
@@ -1980,6 +2110,7 @@ setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 try{if(localStorage.getItem("sil-tab")==="places")document.querySelector('[data-tab="places"]').click()}catch{}
 refresh();setChip();
 setTimeout(()=>$("#splash")?.remove(),2400);
+setTimeout(syncReminders,3000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncReminders()});
 (()=>{const q=new URLSearchParams(location.search),t=[q.get("title"),q.get("text"),q.get("url")].filter(Boolean).join("\n");
   if(!t||!isGLink(t))return;history.replaceState(null,"",location.pathname);
   setTimeout(()=>{if(/camp(site|ground)?\b|holiday park|freedom camp/i.test(t))openCamp(null);else openSpot(null);const f=$("#form");const go=()=>{const b=f.querySelector(".locpick");if(b?.fromLink)b.fromLink(t);else setTimeout(go,50)};go()},2500)})();

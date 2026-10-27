@@ -3,272 +3,286 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#13160d">
+<meta name="theme-color" content="#f3f4ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121815" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <title>Kea — trip kitty</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
+/* Kea — the money side of the trip. Same paper, cards and type as Loop;
+   Kea keeps its own colour: the orange flash under a kea's wing. */
 :root{
-  /* A kea, feather by feather: olive plumage edged in near-black, a bronze sheen,
-     the flash of orange-red under the wing and the blue in the flight feathers */
-  --bg:#13160d; --card:#1d2213; --card2:#272e18; --line:#3a4322;
-  --tx:#eef0dc; --dim:#a8ae88;
-  --ok:#a4c24f;            /* fresh olive */
-  --warn:#e3b13c;          /* bronze-gold */
-  --bad:#e5533a;           /* scarlet */
-  --accent:#f0632a;        /* kea underwing */
-  --pa:#4a8fc4;            /* flight-feather blue */
-  --pb:#c98a3a;            /* bronze */
+  --bg:#f3f4ee; --card:#fbfbf7; --card2:#eef0e7; --line:#dde1d6;
+  --tx:#1d2621; --dim:#64706a;
+  --ok:#2f8f4e; --warn:#b8761f; --bad:#c0442e;
+  --accent:#e0601f; --accent-soft:#fbe5d6; --on-accent:#ffffff;
+  --fern:#2f6b4f; --fern-soft:#dbe9df;
+  --pa:#2b6f86; --pa-soft:#d6e8ee; --pb:#b8761f; --pb-soft:#f3e3c8;
+  --shadow:0 1px 2px rgba(29,38,33,.06),0 6px 18px rgba(29,38,33,.05);
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --sans:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --serif:var(--display);
   --safe-b:env(safe-area-inset-bottom,0px);
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  --serif:Georgia,"Noto Serif","Times New Roman",serif;
-  /* overlapping feather scallops */
-  --contour:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='24'%3E%3Cg fill='none' stroke-width='1.2'%3E%3Cpath d='M0 12a9 9 0 0 1 18 0a9 9 0 0 1 18 0' stroke='%23d8e08a' stroke-opacity='.07'/%3E%3Cpath d='M-9 24a9 9 0 0 1 18 0a9 9 0 0 1 18 0a9 9 0 0 1 18 0' stroke='%23d8e08a' stroke-opacity='.07'/%3E%3Cpath d='M0 13.5a9 9 0 0 1 18 0a9 9 0 0 1 18 0' stroke='%23000' stroke-opacity='.18'/%3E%3C/g%3E%3C/svg%3E");
+  --feathers:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='24'%3E%3Cg fill='none' stroke='%232f6b4f' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M0 12a9 9 0 0 1 18 0a9 9 0 0 1 18 0'/%3E%3Cpath d='M-9 24a9 9 0 0 1 18 0a9 9 0 0 1 18 0a9 9 0 0 1 18 0'/%3E%3C/g%3E%3C/svg%3E");
 }
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121815; --card:#1a221e; --card2:#222c27; --line:#29332e;
+  --tx:#e7ece6; --dim:#97a49c;
+  --ok:#7cc49b; --warn:#e2a552; --bad:#e58a73;
+  --accent:#f0793a; --accent-soft:#3a2416; --on-accent:#1c1206;
+  --fern:#7cc49b; --fern-soft:#1d3629;
+  --pa:#79bdd3; --pa-soft:#183139; --pb:#e2a552; --pb-soft:#3a2c17;
+  --shadow:none;
+  --feathers:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='24'%3E%3Cg fill='none' stroke='%23a8d6b8' stroke-opacity='.05' stroke-width='1.2'%3E%3Cpath d='M0 12a9 9 0 0 1 18 0a9 9 0 0 1 18 0'/%3E%3Cpath d='M-9 24a9 9 0 0 1 18 0a9 9 0 0 1 18 0a9 9 0 0 1 18 0'/%3E%3C/g%3E%3C/svg%3E");
+  color-scheme:dark }}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-body{
-  background:var(--bg) var(--contour) repeat; color:var(--tx);
-  font:15px/1.45 var(--sans);
-  padding-bottom:calc(74px + var(--safe-b));
-  overscroll-behavior-y:contain;
-}
+body{background:var(--bg) var(--feathers) repeat;color:var(--tx);font:15.5px/1.45 var(--sans);
+  padding-bottom:calc(92px + var(--safe-b));overscroll-behavior-y:contain}
 button,input,select,textarea{font:inherit;color:inherit}
 button{background:none;border:none;padding:0;cursor:pointer}
 .hide{display:none!important}
+a{color:inherit}
 
-/* ---------- chrome ---------- */
-header{
-  position:sticky;top:0;z-index:20;background:rgba(19,22,13,.94);
-  backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
-  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;
-  display:flex;align-items:center;gap:10px;
-}
-header .mark{width:26px;height:26px;flex:none}
-header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--pb) 15%,var(--accent) 45%,#e5533a 60%,var(--pa) 85%,transparent);opacity:.75}
-header h1{margin:0;font-family:var(--serif);font-size:20px;font-weight:600;
-  letter-spacing:.5px;flex:1}
-.chip{
-  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
-  padding:5px 9px;border-radius:2px;
-  border:1px solid var(--line);color:var(--dim);white-space:nowrap;
-}
-.chip.on{color:var(--ok);border-color:#2f5c35;background:#16291a}
-.chip.off{color:var(--warn);border-color:#574a1f;background:#2c2611}
-.chip.err{color:var(--bad);border-color:#56241f;background:#2c1613}
-main{padding:14px 16px 20px;max-width:620px;margin:0 auto}
-#ksplash{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;align-content:center;gap:10px;overflow:hidden;animation:ksOut .45s ease 1.75s forwards}
+/* ---------- header (same shape as Loop's) ---------- */
+header{position:sticky;top:0;z-index:20;background:var(--bg);
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid transparent;transition:border-color .2s}
+header.scrolled{border-bottom-color:var(--line)}
+header .mark{width:34px;height:34px;flex:none;border-radius:10px;background:#1d2621;display:grid;place-items:center}
+header .mark svg{width:24px;height:24px}
+header .ttlwrap{flex:1;min-width:0}
+header h1{margin:0;font:800 1.25rem/1.1 var(--display);letter-spacing:-.2px}
+header .hsub{font:500 .78rem/1.3 var(--sans);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .loop{flex:none;display:block;width:38px;height:38px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
+header .loop img{width:100%;height:100%;display:block}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 .72rem var(--sans);padding:7px 10px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--dim);white-space:nowrap}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.chip.on::before{background:var(--ok)}.chip.off::before{background:var(--warn)}.chip.err::before{background:var(--bad)}
+.chip.err{color:var(--bad)}
+main{padding:6px 16px 20px;max-width:620px;margin:0 auto}
+
+/* ---------- splash ---------- */
+#ksplash{position:fixed;inset:0;z-index:200;background:#1d2621;display:grid;place-items:center;align-content:center;gap:10px;overflow:hidden;animation:ksOut .45s ease 1.75s forwards}
 @keyframes ksOut{to{opacity:0;visibility:hidden}}
 .ks-sky{position:relative;width:100vw;height:140px}
 .kb{position:absolute;left:0;top:20px;width:150px;animation:ksFly 1.9s cubic-bezier(.3,.1,.4,1) forwards}
 @keyframes ksFly{0%{transform:translate(-140px,60px) rotate(-14deg)}35%{transform:translate(18vw,-6px) rotate(-6deg)}60%{transform:translate(calc(50vw - 75px),10px) rotate(0)}80%{transform:translate(calc(50vw - 75px),4px) rotate(0)}100%{transform:translate(calc(50vw - 75px),8px) rotate(0)}}
 .kb-wing{transform-box:fill-box;transform-origin:bottom center;animation:ksFlap .2s ease-in-out 7 alternate}
 @keyframes ksFlap{from{transform:scaleY(1)}to{transform:scaleY(-.75)}}
-.ks-title{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:.5px;color:var(--accent);opacity:0;animation:ksUp .5s ease .9s forwards}
+.ks-title{font:800 30px var(--display);color:#f0793a;opacity:0;animation:ksUp .5s ease .9s forwards}
 @keyframes ksUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){#ksplash{animation-delay:.5s}.kb{animation:none;transform:translateX(calc(50vw - 75px))}.kb-wing{animation:none}.ks-title{animation-delay:0s}}
-header .loop{flex:none;display:block;width:30px;height:30px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
-header .loop img{width:100%;height:100%;display:block}
-.feed{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid #ffffff10;font-size:13.5px}
-.feed:first-child{border-top:0}.feed .w{flex:1;min-width:0}.feed .when{flex:none;font-size:11.5px;color:var(--dim)}
-.feed .who{font-weight:700}.feed.new .who::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:5px;vertical-align:middle}
-.feed.del .what{text-decoration:line-through;text-decoration-color:#ffffff55}
-.feedmore summary{list-style:none;cursor:pointer;font-size:12px;color:var(--dim);padding-top:6px}.feedmore summary::-webkit-details-marker{display:none}
-.tag.loop{color:var(--dim);background:#ffffff0d;font-weight:600}
-.logit{flex:none;font-size:12px;font-weight:700;padding:7px 10px;border-radius:6px;border:1px solid var(--accent);color:var(--accent)}
 
-nav{
-  position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(19,22,13,.96);backdrop-filter:blur(12px);
-  border-top:1px solid var(--line);
-  padding:8px 6px calc(8px + var(--safe-b));
-  display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
-}
-nav button{
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-  padding:7px 2px;color:var(--dim);font-size:10px;font-weight:600;
-  letter-spacing:.7px;text-transform:uppercase;position:relative;
-}
-nav button.sel::before{content:'';position:absolute;top:-8px;width:20px;height:2px;
-  background:var(--accent)}
-nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.5;
-  stroke-linecap:round;stroke-linejoin:round}
-nav button.sel{color:var(--accent)}
+/* ---------- bottom nav with the + in the middle ---------- */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--card) 94%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:6px 8px calc(6px + var(--safe-b));display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+nav button,nav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;color:var(--dim);
+  font:700 .68rem var(--sans);text-decoration:none}
+nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+nav .sel{color:var(--accent)}
+nav .fab{position:relative;top:-14px}
+nav .fab i{width:58px;height:58px;border-radius:20px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;
+  box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 40%,transparent)}
+nav .fab i svg{width:28px;height:28px;stroke-width:2.4}
+nav .fab span{color:var(--tx)}
+nav .navloop img{width:24px;height:24px;border-radius:7px;display:block}
 
-/* ---------- sections ---------- */
-/* Flat sections divided by hairlines rather than a stack of boxes — closer to a
-   field notebook than a dashboard. */
-.card{padding:0 0 18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
-.card:last-child{border-bottom:none}
-.card h2{margin:0 0 10px;font-size:11.5px;font-weight:700;color:var(--dim);
-  text-transform:uppercase;letter-spacing:1.4px}
+/* ---------- cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 10px;font:700 .74rem/1.2 var(--sans);color:var(--dim);text-transform:uppercase;letter-spacing:1.1px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-
-/* the one framed element on the page: the number that actually matters */
-.hero{
-  background:var(--card) var(--contour) repeat;
-  border:1px solid var(--line);border-radius:4px;
-  padding:18px;margin-bottom:20px;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
-}
-.hero::before{
-  content:'';display:block;width:34px;height:2px;background:var(--accent);
-  margin-bottom:14px;
-}
-
-.big{font-family:var(--serif);font-size:38px;font-weight:600;letter-spacing:-1.2px;line-height:1.05}
-.eur{font-size:12.5px;color:var(--dim);font-weight:500;margin-top:4px}
-.lbl{font-size:11px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:1.4px}
-
-/* Settings splits in two: what both phones share, and what this one keeps. */
-.group{display:flex;align-items:center;gap:10px;margin:0 0 15px;font-size:11px;
-  font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--accent)}
-.group::after{content:'';flex:1;height:1px;background:var(--line)}
-.group.mid{margin-top:8px}
-/* a quiet caption above a choice, so it doesn't shout like a heading */
-.cap{display:block;font-size:12.5px;color:var(--dim);margin:0 0 7px}
-
-.bar{height:5px;border-radius:0;background:var(--card2);overflow:hidden;margin:12px 0 8px;position:relative}
-.bar i{display:block;height:100%;transition:width .35s ease}
-.bar .pace{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--tx);opacity:.55;border-radius:2px}
-.sub{display:flex;justify-content:space-between;font-size:12px;color:var(--dim)}
-
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
-.mini{padding:2px 0}
-.mini+.mini{border-left:1px solid var(--line);padding-left:14px}
-.mini .n{font-family:var(--serif);font-size:25px;font-weight:600;letter-spacing:-.5px;margin-top:4px}
-.mini .e{font-size:11.5px;color:var(--dim);margin-top:2px}
-
-.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .dim{color:var(--dim)}
-
-/* ---------- forms ---------- */
-label.f{display:block;margin-bottom:13px}
-label.f>span{display:block;font-size:12px;font-weight:600;color:var(--dim);margin-bottom:5px}
-input,select,textarea{
-  width:100%;background:var(--card2);border:1px solid var(--line);border-radius:3px;
-  padding:11px 12px;outline:none;
-}
-input:focus,select,textarea:focus{border-color:var(--accent)}
-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2392a793' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 11px center;background-size:14px;padding-right:32px}
-.amt input{font-family:var(--serif);font-size:32px;font-weight:600;padding:12px 12px 12px 42px;letter-spacing:-.6px}
-.amt{position:relative}
-.amt .cur{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:19px;color:var(--dim);font-weight:600;pointer-events:none}
-
-.btn{
-  display:block;width:100%;text-align:center;background:var(--accent);color:#1c1206;
-  font-weight:700;padding:14px;border-radius:3px;font-size:15px;
-  letter-spacing:.4px;
-}
-.btn:active{opacity:.75}
-.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--line);font-size:14px;padding:12px}
-.btn.danger{background:#3a1c18;color:var(--bad);border:1px solid #5a2c25}
-
-.pills{display:flex;flex-wrap:wrap;gap:7px}
-.pill{
-  padding:9px 13px;border-radius:3px;background:var(--card2);border:1px solid var(--line);
-  font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:6px;
-}
-.pill.sel{background:#4a3016;border-color:var(--accent);color:#f6cfa8}
-.pill.pa.sel{background:#123a36;border-color:var(--pa);color:#b5e6df}
-.pill.pb.sel{background:#452019;border-color:var(--pb);color:#f2c4ba}
-
-/* ---------- list ---------- */
-.item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}
-.item:last-child{border-bottom:none}
-.ic{width:34px;height:34px;border-radius:3px;display:grid;place-items:center;font-size:17px;flex:none}
-.item .m{flex:1;min-width:0}
-.item .t{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item .s{font-size:11.5px;color:var(--dim);margin-top:2px}
-.item .v{text-align:right;flex:none}
-.item .v b{font-family:var(--serif);font-size:16px;font-weight:600}
-.item .v small{display:block;color:var(--dim);font-size:11px}
-.day{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1.2px;
-  margin:16px 0 2px;display:flex;justify-content:space-between}
-
-/* category pie, with the figure it's showing beside it */
-.donut{display:flex;align-items:center;gap:18px;margin:2px 0 18px}
-.donut svg{width:124px;height:124px;flex:none;display:block}
-.donut svg path{cursor:pointer;transition:opacity .2s}
-.donut .rd{flex:1;min-width:0}
-.donut .rd b{display:block;font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.8px;line-height:1.1}
-.donut .rd span{display:block;font-size:13px;margin-top:3px}
-.donut .rd small{display:block;font-size:12px;color:var(--dim);margin-top:2px}
-
-/* one period (week / month) on Home: title and figure on a line, bar, then detail */
-.per+.per{margin-top:18px}
-.per h2{margin:0}
-.pv{font-size:12.5px;color:var(--dim);white-space:nowrap}
-.pv b{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.4px;margin-right:3px}
-.pv b.ok{color:var(--ok)} .pv b.warn{color:var(--warn)} .pv b.bad{color:var(--bad)}
-.per .bar{margin:9px 0 7px}
-
-/* Add: categories as a compact icon grid rather than fifteen wide pills */
-.catgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:-8px 0 15px}
-.catgrid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  padding:8px 2px 7px;border-radius:3px;background:var(--card2);border:1px solid var(--line);
-  font-size:10.5px;font-weight:600;line-height:1.15;color:var(--dim);min-height:58px}
-.catgrid button span{font-size:19px;line-height:1}
-.catgrid button.sel{background:#4a3016;border-color:var(--accent);color:#f6cfa8}
-
-/* a small name tag on personal expenses */
-.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;padding:1px 5px;
-  border-radius:2px;margin-left:6px;vertical-align:2px}
-.tag.pa{color:#b5e6df;background:#123a36} .tag.pb{color:#f2c4ba;background:#452019}
-
-/* quiet text buttons, e.g. "See all" */
-.lnk{color:var(--accent);font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:none}
 h2.row{display:flex}
 
-/* sections you open when you want them */
+/* the money that matters today */
+.hero{background:var(--card);padding:16px}
+.today{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.ring{width:112px;height:112px;position:relative;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:11;stroke-linecap:round}
+.ring .tr{stroke:var(--card2)}
+.ring .in{display:grid;place-items:center;position:absolute;inset:0;text-align:center;align-content:center}
+.ring .in b{font:800 1.45rem/1 var(--display);letter-spacing:-.5px}
+.ring .in small{font-size:.68rem;color:var(--dim);font-weight:700;margin-top:3px}
+.today .tt{font:800 1.05rem/1.2 var(--display)}
+.today .ts{font-size:.85rem;color:var(--dim);margin-top:2px}
+.today .tv{margin-top:8px;font-size:.84rem;line-height:1.4}
+.today .tv b{font-weight:700}
+.stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.stats3>div{background:var(--card2);border-radius:14px;padding:10px 11px;min-width:0}
+.stats3 .lbl{font-size:.68rem}
+.stats3 .n{font:800 1.2rem/1.15 var(--display);margin-top:3px;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats3 .e{font-size:.72rem;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big{font:800 2rem/1.05 var(--display);letter-spacing:-.8px}
+.eur{font-size:.8rem;color:var(--dim);margin-top:3px}
+.lbl{font-size:.7rem;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.9px}
+.bar{height:8px;border-radius:99px;background:var(--card2);overflow:hidden;margin:12px 0 7px;position:relative}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .35s ease}
+.bar .pace{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--tx);opacity:.45;border-radius:2px}
+.sub{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--dim)}
+.note{font-size:.8rem;color:var(--dim);line-height:1.5;margin-top:8px}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .dim{color:var(--dim)}
+
+/* quick add: one tap on a category you use a lot */
+.quick{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 12px;padding:2px 16px}
+.quick::-webkit-scrollbar{display:none}
+.quick button{flex:none;display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:9px 14px 9px 10px;font-weight:700;font-size:.86rem;box-shadow:var(--shadow)}
+.quick button span{font-size:1.15rem;line-height:1}
+.quick button.more{color:var(--accent);border-color:var(--accent)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+input[type=date]{min-width:0;-webkit-appearance:none;appearance:none}
+.mini{padding:2px 0;min-width:0}
+.mini+.mini{border-left:1px solid var(--line);padding-left:12px}
+.mini .n{font:800 1.3rem var(--display);letter-spacing:-.4px;margin-top:3px}
+.mini .e{font-size:.75rem;color:var(--dim);margin-top:2px}
+
+/* week / month */
+.per+.per{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.per h2{margin:0}
+.pv{font-size:.8rem;color:var(--dim);white-space:nowrap}
+.pv b{font:800 1.2rem var(--display);letter-spacing:-.3px;margin-right:4px}
+.pv b.ok{color:var(--ok)} .pv b.warn{color:var(--warn)} .pv b.bad{color:var(--bad)}
+.per .bar{margin:9px 0 6px}
+
+/* folding cards */
 details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
 details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary h2{margin:0}
-details.fold>summary::after{content:'Show';font-size:11.5px;font-weight:700;color:var(--accent)}
-details.fold[open]>summary::after{content:'Hide'}
+details.fold>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--dim);border-bottom:2px solid var(--dim);transform:rotate(45deg) translateY(-3px);transition:transform .2s}
+details.fold[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
 details.fold[open]>summary{margin-bottom:12px}
 
+/* ---------- list rows ---------- */
+.item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.item:last-child{border-bottom:none}
+.ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:19px;flex:none}
+.item .m{flex:1;min-width:0}
+.item .t{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{font-size:.76rem;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .v{text-align:right;flex:none}
+.item .v b{font:800 1rem var(--display)}
+.item .v small{display:block;color:var(--dim);font-size:.72rem}
+.day{font:700 .74rem var(--sans);color:var(--dim);text-transform:uppercase;letter-spacing:.9px;
+  margin:16px 0 0;padding-bottom:4px;display:flex;justify-content:space-between}
+.day:first-child{margin-top:4px}
+.tag{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.3px;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.tag.pa{color:var(--pa);background:var(--pa-soft)} .tag.pb{color:var(--pb);background:var(--pb-soft)}
+.tag.loop{color:var(--fern);background:var(--fern-soft)}
+.lnk{color:var(--accent);font-size:.78rem;font-weight:700;text-transform:none;letter-spacing:0}
+.empty{text-align:center;color:var(--dim);padding:28px 10px;font-size:.9rem}
+.logit{flex:none;font-size:.78rem;font-weight:700;padding:7px 12px;border-radius:99px;border:1px solid var(--accent);color:var(--accent);background:var(--card)}
+
+/* Loop feed */
+.feed{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:.86rem}
+.feed:first-child{border-top:0}.feed .w{flex:1;min-width:0}.feed .when{flex:none;font-size:.72rem;color:var(--dim)}
+.feed .who{font-weight:700}.feed.new .who::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:5px;vertical-align:middle}
+.feed.del .what{text-decoration:line-through;text-decoration-color:var(--dim)}
+.feedmore summary{list-style:none;cursor:pointer;font-size:.78rem;color:var(--accent);font-weight:700;padding-top:6px}.feedmore summary::-webkit-details-marker{display:none}
+
+/* category breakdown */
+.donut{display:flex;align-items:center;gap:18px;margin:2px 0 16px}
+.donut svg{width:124px;height:124px;flex:none;display:block}
+.donut svg path{cursor:pointer;transition:opacity .2s}
+.donut .rd{flex:1;min-width:0}
+.donut .rd b{display:block;font:800 1.8rem/1.1 var(--display);letter-spacing:-.6px}
+.donut .rd span{display:block;font-size:.85rem;margin-top:3px}
+.donut .rd small{display:block;font-size:.76rem;color:var(--dim);margin-top:2px}
 button.catrow{display:block;width:100%;text-align:left;transition:opacity .2s}
 .catrow.off{opacity:.35}
-.catrow{margin-bottom:13px}
-.catrow .row{margin-bottom:5px;font-size:14px}
-.catbar{height:4px;background:var(--card2);overflow:hidden}
-.catbar i{display:block;height:100%}
+.catrow{margin-bottom:12px}
+.catrow .row{margin-bottom:5px;font-size:.9rem}
+.catbar{height:6px;border-radius:99px;background:var(--card2);overflow:hidden}
+.catbar i{display:block;height:100%;border-radius:99px}
 
-.empty{text-align:center;color:var(--dim);padding:34px 10px;font-size:14px}
-.note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:8px}
-code{background:var(--card2);padding:1px 5px;border-radius:5px;font-size:12px;
-  font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
-pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:12px;overflow-x:auto;
-  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#c2d4bd}
-.toast{
-  position:fixed;left:50%;bottom:calc(88px + var(--safe-b));transform:translateX(-50%) translateY(14px);
-  background:#f2f5ee;color:#0f1511;padding:11px 18px;border-radius:3px;font-weight:650;font-size:14px;
-  opacity:0;pointer-events:none;transition:.22s;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.4);white-space:nowrap
-}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:transparent;
-  border:1px solid var(--line);border-radius:3px;margin-bottom:16px;overflow:hidden}
-.seg button{padding:10px 6px;font-size:12px;font-weight:650;color:var(--dim);
-  letter-spacing:.5px;border-right:1px solid var(--line)}
-.seg button:last-child{border-right:none}
-.seg button.sel{background:var(--card2);color:var(--tx)}
+/* search box on Expenses */
+.search{position:relative;margin-bottom:12px}
+.search input{padding-left:38px;border-radius:14px}
+.search::before{content:"";position:absolute;left:14px;top:50%;width:12px;height:12px;border:2px solid var(--dim);border-radius:50%;transform:translateY(-62%)}
+.search::after{content:"";position:absolute;left:25px;top:57%;width:6px;height:2px;background:var(--dim);transform:rotate(45deg)}
+
+/* ---------- segmented controls & pills ---------- */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:3px;margin-bottom:12px}
+.seg button{padding:9px 6px;font:700 .82rem var(--sans);color:var(--dim);border-radius:10px}
+.seg button.sel{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .seg.two{grid-template-columns:1fr 1fr}
 .seg.four{grid-template-columns:repeat(4,1fr)}
-.sugg{border:1px solid var(--line);border-radius:3px;margin:0 0 14px;overflow:hidden;
-  background:var(--card2)}
-.sugg button{display:block;width:100%;text-align:left;padding:10px 12px;font-size:14px;
-  border-bottom:1px solid var(--line)}
-.sugg button:last-child{border-bottom:none}
-.sugg button:active{background:var(--card)}
-.sugg b{color:var(--accent)}
-.sugg .meta{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;font-weight:500}
+.seg.mini2{display:inline-grid;grid-template-columns:1fr 1fr;margin:0;padding:2px;border-radius:11px}
+.seg.mini2 button{padding:5px 10px;font-size:.74rem;border-radius:9px}
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{padding:9px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:.86rem;font-weight:700;display:flex;align-items:center;gap:6px}
+.pill.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.pill.pa.sel{background:var(--pa-soft);border-color:var(--pa);color:var(--pa)}
+.pill.pb.sel{background:var(--pb-soft);border-color:var(--pb);color:var(--pb)}
 
+/* ---------- forms ---------- */
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:.76rem;font-weight:700;color:var(--dim);margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;outline:none;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2364706a' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center;background-size:14px;padding-right:32px}
+.btn{display:block;width:100%;text-align:center;background:var(--accent);color:var(--on-accent);font-weight:700;padding:14px;border-radius:14px;font-size:1rem}
+.btn:active{opacity:.8}
+.btn.ghost{background:var(--card);color:var(--tx);border:1px solid var(--line);font-size:.92rem;padding:12px}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid color-mix(in srgb,var(--bad) 45%,transparent)}
+.cap{display:block;font-size:.78rem;color:var(--dim);margin:0 0 7px}
+.group{display:flex;align-items:center;gap:10px;margin:14px 2px 10px;font:700 .72rem var(--sans);text-transform:uppercase;letter-spacing:1.1px;color:var(--accent)}
+.group::after{content:"";flex:1;height:1px;background:var(--line)}
+.group.mid{margin-top:22px}
+code{background:var(--card2);padding:1px 5px;border-radius:6px;font-size:.78rem;font-family:ui-monospace,Menlo,monospace;word-break:break-all}
+pre{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;font:11px/1.5 ui-monospace,Menlo,monospace}
 .calc{display:flex;gap:7px;margin:-4px 0 14px}
-.calc button{flex:1;padding:9px;border-radius:3px;background:var(--card2);
-  border:1px solid var(--line);font-size:13px;font-weight:650;color:var(--dim)}
-.calc button:active{border-color:var(--accent);color:var(--tx)}
+.calc button{flex:1;padding:9px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:.82rem;font-weight:700;color:var(--dim)}
+.sugg{border:1px solid var(--line);border-radius:14px;margin:0 0 14px;overflow:hidden;background:var(--card)}
+.sugg button{display:block;width:100%;text-align:left;padding:10px 12px;font-size:.9rem;border-bottom:1px solid var(--line)}
+.sugg button:last-child{border-bottom:none}
+.sugg b{color:var(--accent)}
+.sugg .meta{display:block;font-size:.74rem;color:var(--dim);margin-top:2px;font-weight:500}
+
+/* ---------- add / edit as a sheet ---------- */
+#scrim{position:fixed;inset:0;z-index:50;background:rgba(10,14,12,.42);opacity:0;pointer-events:none;transition:opacity .2s}
+body.adding #scrim{opacity:1;pointer-events:auto}
+body.adding{overflow:hidden}
+#v-add{position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:94vh;overflow-y:auto;background:var(--bg);
+  border-radius:24px 24px 0 0;padding:8px 16px calc(16px + var(--safe-b));box-shadow:0 -10px 30px rgba(0,0,0,.18);
+  transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);max-width:620px;margin:0 auto}
+body.adding #v-add{transform:none}
+#v-add.hide{display:block!important;visibility:hidden}
+body.adding #v-add.hide{visibility:visible}
+.grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:2px auto 8px}
+.sheethead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sheethead h2{flex:1;margin:0;font:800 1.2rem var(--display)}
+.sheethead .x{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:1.1rem;color:var(--dim)}
+#v-add .card{box-shadow:none}
+.amt{position:relative;margin-bottom:6px}
+.amt input{font:800 2.3rem/1 var(--display);padding:14px 14px 14px 46px;letter-spacing:-.6px;border-radius:16px;background:var(--card)}
+.amt .cur{position:absolute;left:16px;top:50%;transform:translateY(-50%);font:700 1.4rem var(--display);color:var(--dim);pointer-events:none}
+.catgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 14px}
+.catgrid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:9px 2px 8px;border-radius:14px;
+  background:var(--card);border:1px solid var(--line);font-size:.66rem;font-weight:700;line-height:1.15;color:var(--dim);min-height:62px}
+.catgrid button span{font-size:1.35rem;line-height:1}
+.catgrid button.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.frow{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:center;margin-bottom:10px}
+.frow>.lab{font-size:.76rem;font-weight:700;color:var(--dim)}
+.frow .pills{flex-wrap:wrap}
+.frow .pills::-webkit-scrollbar{display:none}
+.frow .pill{flex:none;padding:8px 12px}
+.datechips{display:flex;gap:6px;align-items:center}
+.datechips input{flex:1;min-width:0;padding:8px 10px;border-radius:999px;font-size:.86rem}
+.savebar{position:sticky;bottom:calc(-16px - var(--safe-b));background:linear-gradient(transparent,var(--bg) 30%);padding:14px 0 calc(4px + var(--safe-b));margin-top:4px}
+
+.toast{position:fixed;left:50%;bottom:calc(100px + var(--safe-b));transform:translateX(-50%) translateY(14px);
+  background:#1d2621;color:#fff;padding:11px 18px;border-radius:999px;font-weight:700;font-size:.9rem;
+  opacity:0;pointer-events:none;transition:.22s;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toast{background:#e7ece6;color:#121815}}
 </style>
 </head>
 <body>
@@ -281,67 +295,42 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
   <g class="kb-wing"><path d="M40 42 C34 22 46 6 70 0 C62 16 60 30 58 42 Z" fill="#5f7a31"/><path d="M44 42 C42 28 50 16 62 9 C58 22 57 32 55 42 Z" fill="#f0632a"/><path d="M52 6 C62 2 68 1 70 0 C66 6 62 10 58 13 Z" fill="#4a8fc4"/></g>
 </svg></div><div class="ks-title">Kea</div></div>
 
-<header>
-  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
-    <!-- kea in profile — the hooked beak is the whole point -->
-    <g fill="var(--accent)">
-      <circle cx="42" cy="52" r="26"/>
-      <path d="M56 32 C79 34, 94 44, 98 56 C100 64, 95 71, 89 69
-               C86 65, 86 60, 85 56 C79 49, 69 47, 57 51 Z"/>
-    </g>
-    <circle cx="52" cy="43" r="4" fill="var(--bg)"/>
-  </svg>
-  <h1 id="ttl">Kea</h1>
-  <a class="loop" href="trip/" aria-label="Open the trip planner"><img src="trip/icon-192.png" alt="" width="28" height="28"></a>
+<header id="hdr">
+  <div class="mark" aria-hidden="true"><svg viewBox="0 0 100 100"><g fill="#f0793a"><circle cx="42" cy="52" r="26"/><path d="M56 32 C79 34, 94 44, 98 56 C100 64, 95 71, 89 69 C86 65, 86 60, 85 56 C79 49, 69 47, 57 51 Z"/></g><circle cx="52" cy="43" r="4" fill="#1d2621"/></svg></div>
+  <div class="ttlwrap"><h1 id="ttl">Kea</h1><div class="hsub" id="hsub"></div></div>
   <button class="chip" id="sync">local</button>
 </header>
 
 <main>
   <!-- ============ HOME ============ -->
   <section id="v-home">
-    <div class="seg two" id="pp-toggle">
-      <button data-pp="0" class="sel">Both of us</button>
-      <button data-pp="1" id="pp-me">Just me</button>
-    </div>
     <div class="card hero">
-      <div class="row">
-        <div>
-          <div class="lbl" id="h-left-lbl">Left to spend</div>
-          <div class="big" id="h-left">—</div>
-          <div class="eur" id="h-left-e"></div>
-        </div>
-        <div style="text-align:right">
-          <div class="lbl">Days left</div>
-          <div class="big" id="h-days" style="font-size:28px">—</div>
-          <div class="eur" id="h-end"></div>
-        </div>
+      <div class="row" style="margin-bottom:12px"><h2 style="margin:0" id="today-h">Today</h2>
+        <div class="seg mini2" id="pp-toggle"><button data-pp="0" class="sel">Both of us</button><button data-pp="1" id="pp-me">Just me</button></div></div>
+      <div class="today">
+        <div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="tr" cx="60" cy="60" r="50"/><circle id="t-ring" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16" stroke="var(--ok)"/></svg>
+          <div class="in"><b id="t-left">—</b><small id="t-left-l">left today</small></div></div>
+        <div><div class="tt" id="t-title"></div><div class="ts" id="t-sub"></div><div class="tv" id="h-verdict"></div></div>
+      </div>
+      <div class="stats3">
+        <div><div class="lbl" id="h-left-lbl">Left</div><div class="n" id="h-left">—</div><div class="e" id="h-left-e"></div></div>
+        <div><div class="lbl">Days left</div><div class="n" id="h-days">—</div><div class="e" id="h-end"></div></div>
+        <div><div class="lbl">Avg / day</div><div class="n" id="h-avg">—</div><div class="e" id="h-avg-e"></div></div>
       </div>
       <div class="bar"><i id="h-bar"></i><span class="pace" id="h-pace"></span></div>
       <div class="sub"><span id="h-spent"></span><span id="h-total"></span></div>
-      <div class="note" id="h-verdict" style="margin-top:11px"></div>
       <div class="note hide" id="h-planned"></div>
+      <div class="hide"><span id="h-daily"></span><span id="h-daily-e"></span></div>
     </div>
-
-    <div class="grid2">
-      <div class="mini">
-        <div class="lbl">Daily allowance</div>
-        <div class="n" id="h-daily">—</div>
-        <div class="e" id="h-daily-e"></div>
-      </div>
-      <div class="mini">
-        <div class="lbl">Avg/day so far</div>
-        <div class="n" id="h-avg">—</div>
-        <div class="e" id="h-avg-e"></div>
-      </div>
-    </div>
+    <div class="quick" id="quick" aria-label="Quick add"></div>
 
     <div class="card hide" id="loop-card">
-      <div class="row" style="display:flex;justify-content:space-between;align-items:baseline"><h2>Planned activities</h2><a href="trip/" style="font-size:12px;color:var(--dim)">in the trip planner ›</a></div>
+      <h2 class="row">Planned in Loop <a class="lnk" href="trip/">Open Loop ›</a></h2>
       <div id="loop-list"></div>
     </div>
 
     <div class="card hide" id="feed-card">
-      <div class="row" style="display:flex;justify-content:space-between;align-items:baseline"><h2>Lately in Loop</h2><a href="trip/" style="font-size:12px;color:var(--dim)">open ›</a></div>
+      <h2>Lately in Loop</h2>
       <div id="feed-list"></div>
     </div>
 
@@ -363,10 +352,10 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       </div>
     </div>
 
-    <div class="card hide" id="trend-card">
-      <h2>Last 8 weeks</h2>
+    <details class="card fold hide" id="trend-card">
+      <summary><h2>Last 8 weeks</h2></summary>
       <div id="trend"></div>
-    </div>
+    </details>
 
     <div class="card" id="split-card">
       <h2>Who paid</h2>
@@ -380,54 +369,29 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
   </section>
 
   <!-- ============ ADD ============ -->
-  <section id="v-add" class="hide">
-    <div class="card">
-      <label class="f amt">
-        <span>Amount (NZD)</span>
-        <em class="cur" style="font-style:normal">$</em>
-        <input id="a-amt" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
-      </label>
-      <div class="eur" id="a-eur" style="margin:-6px 0 10px"></div>
-      <div id="a-recent-wrap" class="hide">
-        <label class="f"><span>Repeat a recent one</span></label>
-        <div class="pills" id="a-recent" style="margin:-8px 0 15px"></div>
-      </div>
-
-      <label class="f">
-        <span>Category</span>
-      </label>
-      <div class="catgrid" id="a-cats"></div>
-
-      <label class="f">
-        <span>Paid from</span>
-      </label>
-      <div class="pills" id="a-accounts" style="margin:-8px 0 8px"></div>
-      <div class="calc hide" id="a-acct-new" style="margin:0 0 15px">
-        <input id="a-acct-input" type="text" placeholder="e.g. ASB, Wise, Emma's card" autocomplete="off">
-        <button class="btn ghost" id="a-acct-save" style="width:auto;padding:9px 15px">Save</button>
-      </div>
-
-      <label class="f">
-        <span>Paid by</span>
-      </label>
-      <div class="pills" id="a-payers" style="margin:-8px 0 15px"></div>
-
-      <label class="f">
-        <span>Whose spending</span>
-      </label>
-      <div class="pills" id="a-pers" style="margin:-8px 0 8px"></div>
-      <div class="note" id="a-pers-note" style="margin:0 0 15px"></div>
-
-      <label class="f"><span>Date</span><input id="a-date" type="date"></label>
-      <label class="f" style="margin-bottom:6px"><span>Note (optional)</span>
-        <input id="a-note" type="text" placeholder="e.g. Z Station Taupo"
-               autocomplete="off" autocorrect="off" spellcheck="false"></label>
-      <div id="a-sugg" class="sugg hide"></div>
-
-      <button class="btn" id="a-save">Add expense</button>
-      <button class="btn ghost hide" id="a-del" style="margin-top:9px">Delete this expense</button>
-      <div class="note hide" id="a-meta" style="text-align:center;margin-top:12px"></div>
+  <section id="v-add" class="hide" aria-label="Add expense">
+    <div class="grab"></div>
+    <div class="sheethead"><h2 id="a-title">New expense</h2><button class="x" id="a-close" aria-label="Close">✕</button></div>
+    <label class="amt"><em class="cur" style="font-style:normal">$</em>
+      <input id="a-amt" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-label="Amount in NZD"></label>
+    <div class="eur" id="a-eur" style="margin:0 2px 10px"></div>
+    <div id="a-recent-wrap" class="hide"><div class="pills" id="a-recent" style="margin:0 0 12px"></div></div>
+    <div class="catgrid" id="a-cats"></div>
+    <label class="f" style="margin-bottom:8px"><span>Note</span>
+      <input id="a-note" type="text" placeholder="e.g. Z Station Taupō" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+    <div id="a-sugg" class="sugg hide"></div>
+    <div class="frow"><span class="lab">When</span><div class="datechips" id="a-when"><button class="pill" data-dd="0">Today</button><button class="pill" data-dd="-1">Yesterday</button><input id="a-date" type="date" aria-label="Date"></div></div>
+    <div class="frow"><span class="lab">Paid by</span><div class="pills" id="a-payers"></div></div>
+    <div class="frow"><span class="lab">From</span><div class="pills" id="a-accounts"></div></div>
+    <div class="calc hide" id="a-acct-new" style="margin:0 0 12px">
+      <input id="a-acct-input" type="text" placeholder="e.g. ASB, Wise, Emma's card" autocomplete="off">
+      <button class="btn ghost" id="a-acct-save" style="width:auto;padding:9px 15px">Save</button>
     </div>
+    <div class="frow"><span class="lab">For</span><div class="pills" id="a-pers"></div></div>
+    <div class="note" id="a-pers-note" style="margin:-4px 0 8px 82px"></div>
+    <div class="savebar"><button class="btn" id="a-save">Add expense</button></div>
+    <button class="btn ghost hide" id="a-del" style="margin-top:4px">Delete this expense</button>
+    <div class="note hide" id="a-meta" style="text-align:center;margin-top:10px"></div>
   </section>
 
   <!-- ============ LIST ============ -->
@@ -445,6 +409,7 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
       <summary><h2>By account</h2></summary>
       <div id="l-accts"></div>
     </details>
+    <div class="search"><input id="l-q" type="search" placeholder="Search notes, categories, accounts…" autocomplete="off"></div>
     <div class="card">
       <h2 class="row"><span id="l-items-h">Expenses</span>
         <button class="lnk hide" id="l-clear">Show all</button></h2>
@@ -547,10 +512,12 @@ pre{background:#0a0f0b;border:1px solid var(--line);border-radius:11px;padding:1
 
 <nav>
   <button data-v="home" class="sel"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-  <button data-v="add"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
   <button data-v="list"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Expenses</button>
+  <button data-v="add" class="fab" aria-label="Add expense"><i><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i><span>Add</span></button>
+  <a class="navloop" href="trip/"><img src="trip/icon-192.png" alt="" width="24" height="24">Loop</a>
   <button data-v="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.89 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.95-1.14l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3.1 14.5H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.24 7.5l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9.9 3.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.95 1.14l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0 1.2 2.89H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.04z"/></svg>Settings</button>
 </nav>
+<div id="scrim"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -1000,12 +967,24 @@ function renderHome(){
   document.querySelectorAll('#pp-toggle button').forEach(x =>
     x.classList.toggle('sel', (x.dataset.pp === '1') === !!st.perPerson));
   $('pp-me').textContent = 'Just ' + who(viewer());
-  $('h-left-lbl').textContent = 'Left to spend' + each();
+  $('h-left-lbl').textContent = 'Left';
   $('h-left').textContent = nz((s.left));
-  $('h-left').className = 'big ' + (s.left < 0 ? 'bad' : '');
-  $('h-left-e').textContent = eur((s.left)) + ' left';
+  $('h-left').className = 'n ' + (s.left < 0 ? 'bad' : '');
+  $('h-left-e').textContent = 'of ' + nz(s.budget) + each();
   $('h-days').textContent = s.daysLeft;
   $('h-end').textContent = 'until ' + fmtShort(st.end);
+  // today: what today's share of the pot was, what's gone, what's left
+  const tSpent = vsum(between(t, t)), tBudget = s.daysLeft > 0 ? (s.avail + tSpent) / s.daysLeft : 0, tLeft = tBudget - tSpent;
+  const tr = tBudget > 0 ? Math.min(1, tSpent / tBudget) : (tSpent > 0 ? 1 : 0), ring = $('t-ring');
+  ring.setAttribute('stroke-dashoffset', (314.16 * (1 - tr)).toFixed(1));
+  ring.setAttribute('stroke', tLeft < 0 ? 'var(--bad)' : tr > .8 ? 'var(--warn)' : 'var(--ok)');
+  $('t-left').textContent = nz(Math.abs(tLeft)); $('t-left').className = tLeft < 0 ? 'bad' : '';
+  $('t-left-l').textContent = tLeft < 0 ? 'over today' : 'left today';
+  $('t-title').textContent = tSpent ? 'Spent ' + nz2(tSpent) + ' today' : 'Nothing spent yet today';
+  $('t-sub').textContent = 'Today’s share ' + nz(tBudget) + each() + ' · ' + eur(Math.max(0, tLeft)) + ' left';
+  $('today-h').textContent = dparse(t).toLocaleDateString('en-NZ', {weekday:'long', day:'numeric', month:'short'});
+  document.getElementById('hsub').textContent = (s.daysLeft ? 'Day ' + s.elapsed + '/' + s.totalDays + ' · ' : '') + nz(s.daily) + '/day from here';
+  renderQuick();
 
   const pct = Math.min(1, Math.max(0, s.pct));
   $('h-bar').style.width = (pct*100) + '%';
@@ -1021,7 +1000,7 @@ function renderHome(){
     (s.planned > 0 ? ' · after set-aside' : '');
   $('h-avg').textContent = nz((s.avg));
   $('h-avg').className = 'n ' + tone(s.avg / Math.max(0.01, s.perDay));
-  $('h-avg-e').textContent = 'budget is ' + nz((s.perDay)) + '/day' + each();
+  $('h-avg-e').textContent = 'plan ' + nz((s.perDay)) + each();
 
   const diff = s.onPace - s.spent;
   const v = $('h-verdict');
@@ -1083,7 +1062,17 @@ function renderHome(){
   renderTrend();
   document.getElementById('h-recent').innerHTML =
     live().sort((a,b) => b.spent_on.localeCompare(a.spent_on) || b.updated_at.localeCompare(a.updated_at))
-          .slice(0,4).map(e => itemHTML(e)).join('') || '<div class="empty">No expenses yet.<br>Tap <b>Add</b> to log your first one.</div>';
+          .slice(0,5).map(e => itemHTML(e)).join('') || '<div class="empty">No expenses yet.<br>Tap <b>+</b> to log your first one.</div>';
+}
+/* the categories you use most, one tap away */
+function renderQuick(){
+  const n = {}; live().filter(e => e.category !== SETTLE).sort((a,b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 60)
+    .forEach(e => n[e.category] = (n[e.category] || 0) + 1);
+  const top = Object.entries(n).sort((a,b) => b[1]-a[1]).map(x => x[0]);
+  ['fuel','grocery','camp','eatout','utility'].forEach(c => { if (!top.includes(c)) top.push(c); });
+  document.getElementById('quick').innerHTML = top.slice(0, 5).map(id => { const c = catOf(id);
+    return '<button data-qcat="' + id + '"><span>' + c.icon + '</span>' + esc(c.s || c.name) + '</button>'; }).join('') +
+    '<button class="more" data-qcat="">+ Other</button>';
 }
 
 /* Only worth showing once personal spending has pulled your two halves apart. */
@@ -1267,7 +1256,9 @@ function renderList(){
   }).join('');
 
   // grouped list
-  const shown = selCat ? rows.filter(e => isSel(e.category)) : rows;
+  const q = (document.getElementById('l-q')?.value || '').trim().toLowerCase();
+  const shown = (selCat ? rows.filter(e => isSel(e.category)) : rows).filter(e => !q ||
+    ((e.note || '') + ' ' + catOf(e.category).name + ' ' + (e.account || '') + ' ' + who(e.payer)).toLowerCase().includes(q));
   const sc = selCat && selCat !== DONUT_REST ? catOf(selCat) : null;
   document.getElementById('l-items-h').textContent =
     sc ? sc.icon + ' ' + sc.name : selCat ? 'Everything else' : 'Expenses';
@@ -1408,10 +1399,11 @@ function buildRecent(){
   window._recent = out;
 }
 
-function openAdd(id){
+function openAdd(id, cat){
   editing = id || null;
   const e = id ? S.expenses[id] : null;
-  aCat = e ? e.category : aCat;
+  aCat = e ? e.category : (cat || aCat);
+  document.getElementById('a-title').textContent = e ? 'Edit expense' : 'New expense';
   aPayer = e ? e.payer : aPayer;
   aPers = e ? (e.personal || '') : '';        // personal buys are the exception, so never carry one over
   aAccount = e ? (e.account || '') : (S.settings.lastAccount || S.settings.accounts[0] || '');
@@ -1430,8 +1422,9 @@ function openAdd(id){
   document.getElementById('a-sugg').classList.add('hide');
   buildAddPills();
   buildRecent();
+  markWhen();
   show('add');
-  if (!e) setTimeout(() => document.getElementById('a-amt').focus(), 120);
+  if (!e) setTimeout(() => document.getElementById('a-amt').focus(), 260);
 }
 
 function saveExpense(){
@@ -1456,8 +1449,7 @@ function saveExpense(){
   if (aAccount) S.settings.lastAccount = aAccount;   // preselect it next time
   save();
   toast(editing ? 'Saved' : 'Added ' + nz2(rec.amount));
-  editing = null;
-  show('home');
+  closeAdd(); rerender();
   push();
 }
 
@@ -1466,7 +1458,7 @@ function deleteExpense(){
   const e = S.expenses[editing];
   if (!e) return;
   e.deleted = true; e.updated_at = new Date().toISOString(); e.dirty = true;
-  save(); toast('Deleted'); editing = null; show('home'); push();
+  save(); toast('Deleted'); closeAdd(); rerender(); push();
 }
 
 /* ============================================================
@@ -1767,11 +1759,24 @@ function importData(file){
    NAV / GLUE
    ============================================================ */
 let view = 'home';
-const TITLES = {home:'Kea', add:'Add expense', list:'Expenses', set:'Settings'};
+const TITLES = {home:'Kea', add:'Kea', list:'Expenses', set:'Settings'};
 
+function closeAdd(){
+  editing = null;
+  document.body.classList.remove('adding');
+  document.activeElement?.blur?.();
+  setTimeout(() => { if (!document.body.classList.contains('adding')) document.getElementById('v-add').classList.add('hide'); }, 260);
+}
+/* Today / Yesterday chips above the date picker */
+function markWhen(){
+  const v = document.getElementById('a-date').value, t = todayISO(), y = dISO(new Date(dparse(t).getTime() - 864e5));
+  document.querySelectorAll('#a-when [data-dd]').forEach(b => b.classList.toggle('sel', (b.dataset.dd === '0' ? t : y) === v));
+}
 function show(v){
+  if (v === 'add'){ document.getElementById('v-add').classList.remove('hide'); requestAnimationFrame(() => document.body.classList.add('adding')); return; }
+  if (document.body.classList.contains('adding')) closeAdd();
   view = v;
-  ['home','add','list','set'].forEach(k =>
+  ['home','list','set'].forEach(k =>
     document.getElementById('v-' + k).classList.toggle('hide', k !== v));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
   document.getElementById('ttl').textContent = TITLES[v];
@@ -1797,6 +1802,19 @@ function toast(m){
 document.querySelectorAll('nav button').forEach(b =>
   b.addEventListener('click', () => b.dataset.v === 'add' ? openAdd(null) : show(b.dataset.v)));
 
+document.getElementById('scrim').addEventListener('click', closeAdd);
+document.getElementById('a-close').addEventListener('click', closeAdd);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('adding')) closeAdd(); });
+document.getElementById('a-when').addEventListener('click', e => {
+  const b = e.target.closest('[data-dd]'); if (!b) return;
+  document.getElementById('a-date').value = dISO(new Date(dparse(todayISO()).getTime() + (+b.dataset.dd) * 864e5)); markWhen();
+});
+document.getElementById('a-date').addEventListener('change', markWhen);
+document.getElementById('quick').addEventListener('click', e => {
+  const b = e.target.closest('[data-qcat]'); if (!b) return; openAdd(null, b.dataset.qcat || null);
+});
+document.getElementById('l-q').addEventListener('input', () => renderList());
+addEventListener('scroll', () => document.getElementById('hdr').classList.toggle('scrolled', scrollY > 4), {passive:true});
 document.getElementById('a-cats').addEventListener('click', e => {
   const b = e.target.closest('[data-cat]'); if (!b) return;
   aCat = b.dataset.cat; buildAddPills();

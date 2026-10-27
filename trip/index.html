@@ -403,6 +403,10 @@ textarea{min-height:72px;resize:vertical}
 .item.stayedi{box-shadow:inset 3px 0 0 #3f9a5c}
 .mk.stayed .ic{border-color:#3f9a5c}
 .sleep .nm{flex:1;min-width:0;font:700 1.05rem/1.25 var(--display)}
+.actlist .act:has(.drag){grid-template-columns:auto auto minmax(0,1fr) auto}
+.act .drag{touch-action:none;cursor:grab;color:var(--muted);font-size:1.15rem;padding:8px 2px;margin-left:-4px;user-select:none;-webkit-user-select:none}
+.act.dragging{position:relative;z-index:5;background:var(--card);box-shadow:0 6px 18px rgba(0,0,0,.18);border-radius:12px;transition:none}
+.act.shift{transition:transform .15s}
 .act{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .act:first-child{border-top:0}
 .chk{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:none;cursor:pointer;color:transparent;font-weight:800}
@@ -1100,13 +1104,25 @@ function openPaid(id){const x=S.docs.spots[id];if(!x)return;const me=keaMe(),acc
   if(x.pp)$("#form").querySelectorAll("[name=personal]").forEach(r=>r.onchange=()=>{$("#form [name=amount]").value=r.value?Math.round(x.price/2*100)/100:x.price})}
 /* ticking a plan off moves it up: done things first, in the order you did them, then what's still to do.
    That order is what the day recap and its route use. */
-function orderDay(d){if(!d)return;const items=Object.entries(S.docs.spots).filter(([,x])=>x.day===d).map(([id,x])=>({id,x}))
+function orderDay(d,last){if(!d)return;const items=Object.entries(S.docs.spots).filter(([,x])=>x.day===d).map(([id,x])=>({id,x}))
     .sort((a,b)=>(a.x.order??0)-(b.x.order??0)||(a.x.name||"").localeCompare(b.x.name||""));
-  const done=items.filter(o=>o.x.done).sort((a,b)=>(a.x.doneAt||"").localeCompare(b.x.doneAt||"")),todo=items.filter(o=>!o.x.done);
+  const done=items.filter(o=>o.x.done&&o.id!==last),todo=items.filter(o=>!o.x.done);const l=items.find(o=>o.id===last&&o.x.done);if(l)done.push(l);
   [...done,...todo].forEach((o,i)=>{if(o.x.order!==i){S.docs.spots[o.id]={...o.x,order:i};S.pending["spots/"+o.id]=1}})}
 function markDone(id,on,extra={}){const x=S.docs.spots[id];if(!x)return;
   S.docs.spots[id]={...x,...extra,done:on,doneAt:on?(x.done&&x.doneAt?x.doneAt:new Date().toISOString()):null,by:keaMe()};S.pending["spots/"+id]=1;
-  orderDay(x.day);persist();refresh();scheduleSync()}
+  orderDay(x.day,id);persist();refresh();scheduleSync()}
+/* drag the ⠿ handle to put a day's plans in your own order */
+(()=>{let dr=null;
+  document.addEventListener("pointerdown",e=>{const h=e.target.closest?.(".act .drag");if(!h)return;const row=h.closest(".act"),list=row.parentElement,rows=[...list.querySelectorAll(":scope>.act")];
+    e.preventDefault();h.setPointerCapture?.(e.pointerId);
+    dr={row,list,rows,i:rows.indexOf(row),y0:e.clientY,hs:rows.map(r=>r.getBoundingClientRect()),to:rows.indexOf(row),id:e.pointerId};row.classList.add("dragging");rows.forEach(r=>r!==row&&r.classList.add("shift"))});
+  document.addEventListener("pointermove",e=>{if(!dr||e.pointerId!==dr.id)return;e.preventDefault();const dy=e.clientY-dr.y0,H=dr.hs[dr.i].height;dr.row.style.transform=`translateY(${dy}px)`;
+    const mid=dr.hs[dr.i].top+H/2+dy;let to=dr.i;dr.hs.forEach((b,k)=>{if(k<dr.i&&mid<b.top+b.height/2)to=Math.min(to,k);if(k>dr.i&&mid>b.top+b.height/2)to=Math.max(to,k)});dr.to=to;
+    dr.rows.forEach((r,k)=>{if(r===dr.row)return;r.style.transform=k>dr.i&&k<=to?`translateY(${-H}px)`:k<dr.i&&k>=to?`translateY(${H}px)`:""})},{passive:false});
+  const end=e=>{if(!dr||e.pointerId!==dr.id)return;const {rows,i,to}=dr;rows.forEach(r=>{r.style.transform="";r.classList.remove("dragging","shift")});dr=null;
+    if(to===i)return;const ids=rows.map(r=>r.dataset.aid);const [m]=ids.splice(i,1);ids.splice(to,0,m);
+    ids.forEach((id,k)=>{const x=S.docs.spots[id];if(x&&x.order!==k){S.docs.spots[id]={...x,order:k,by:keaMe()};S.pending["spots/"+id]=1}});persist();refresh();scheduleSync()};
+  document.addEventListener("pointerup",end);document.addEventListener("pointercancel",end)})();
 function setDone(id,on){const x=S.docs.spots[id];if(!x)return;
   if(on&&+x.price>0&&!x.keaId)return openPaid(id);
   if(!on&&x.keaId){keaUnpay(id,true);markDone(id,false);return toast("Not done · removed from Kea")}
@@ -1477,8 +1493,8 @@ function renderDay(){
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
       <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
     <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></div>
-      <div>${plan.map((x,i)=>`<div class="act ${x.done?"done":""}">
-        <button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
+      <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
+        ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div></div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
@@ -1767,7 +1783,7 @@ $("#form").addEventListener("submit",e=>{
     const amt=parseFloat(String(v.amount||"").replace(",","."));if(!(amt>0)){toast("Enter an amount");return}
     const keaId=x.keaId||newId(),meta={payer:v.payer||keaMe(),account:v.account||"",personal:v.personal||""};
     const nx={...x,price:Math.round(amt*100)/100,cat:v.cat||"activity",done:true,doneAt:x.doneAt||new Date().toISOString(),paid:true,keaId,keaMeta:meta};
-    S.docs.spots[id]=nx;S.pending["spots/"+id]=1;orderDay(x.day);persist();refresh();scheduleSync();
+    S.docs.spots[id]=nx;S.pending["spots/"+id]=1;orderDay(x.day,id);persist();refresh();scheduleSync();
     keaWrite(keaRec(nx,meta));
     try{const k=keaLocal();if(k&&k.settings&&meta.account){k.settings.lastAccount=meta.account;localStorage.setItem(KEA_LS,JSON.stringify(k))}}catch{}
     closeSheet();toast(`Logged ${nzd(amt)} in Kea`);return}

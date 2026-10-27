@@ -243,7 +243,7 @@ Works offline and syncs between both phones. Served at **https://draumbear.githu
 |---|---|
 | `trip/index.html` | The whole app. Works offline; syncs through the same Supabase project as Kea. |
 | `trip/plan.json` | Starting plan, used the first time a phone opens the app with nothing shared yet. |
-| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v84`…) when you change `index.html`. |
+| `trip/sw.js` | Service worker so it opens with no signal. Bump `CACHE` (`loop-v85`…) when you change `index.html`. |
 | `trip/manifest.json`, `trip/icon-*.png` | Home-screen install. |
 
 **Install:** open the URL in Chrome → ⋮ → **Add to Home screen / Install app**.

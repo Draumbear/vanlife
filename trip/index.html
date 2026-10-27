@@ -487,6 +487,12 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+.gopop{position:fixed;z-index:60;display:flex;flex-direction:column;min-width:170px;padding:6px;border-radius:16px;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.22);animation:gpIn .14s ease-out}
+.gopop a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:11px;color:inherit;text-decoration:none;font-weight:700}
+.gopop a:active{background:var(--line)}
+.gopop i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-style:normal;font-size:15px}
+@keyframes gpIn{from{opacity:0;transform:scale(.94)}}
+
 .addplus{width:34px;height:34px;border-radius:50%;border:0;background:var(--fern);color:var(--on-fern);display:grid;place-items:center;cursor:pointer;padding:0}
 .addplus .svg{width:18px;height:18px}
 .go{display:flex;gap:4px}
@@ -680,8 +686,23 @@ function navUrl(x,kind){const ctx=kind==="camp"?(x.region||""):ctxName(x),nm=(x.
   if(nm&&!x.loc){const q=`${nm}${kind==="camp"&&!/camp|domain|reserve|holiday park/i.test(nm)?" campsite":""}${ctx&&!nm.toLowerCase().includes(ctx.toLowerCase())?", "+ctx:""}, New Zealand`;
     return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q)}
   const t=dest(x,kind);return "https://www.google.com/maps/search/?api=1&query="+(t.ll||encodeURIComponent(t.q))}
-const navLinks=(x,kind)=>`<div class="links">${x.id&&ptOf(x)?`<button type="button" class="linkbtn" data-mapfocus="${kind==="camp"?"camp":"spot"}:${esc(x.id)}">View on map</button>`:""}<a href="${esc(navUrl(x,kind))}" target="_blank" rel="noopener">Google Maps</a>${A(infoUrl(x,kind),"Info")}</div>`;
-const goBtns=(x,kind)=>`<a class="gobtn" href="${esc(navUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name||"")}">${icon("nav")}</a>`;
+const navLinks=(x,kind)=>`<div class="links">${x.id&&ptOf(x)?`<button type="button" class="linkbtn" data-mapfocus="${kind==="camp"?"camp":"spot"}:${esc(x.id)}">View on map</button>`:""}<a href="${esc(navUrl(x,kind))}" target="_blank" rel="noopener">Google Maps</a>${A(wazeUrl(x,kind),"Waze")}${A(infoUrl(x,kind),"Info")}</div>`;
+const goBtns=(x,kind)=>`<a class="gobtn" href="${esc(navUrl(x,kind))}" data-waze="${esc(wazeUrl(x,kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name||"")}">${icon("nav")}</a>`;
+
+
+/* directions: pick Google Maps or Waze */
+function closeGo(){document.querySelector(".gopop")?.remove()}
+document.addEventListener("click",e=>{
+  const pop=e.target.closest(".gopop");if(pop){if(e.target.closest("a"))setTimeout(closeGo,50);return}
+  const b=e.target.closest("a[data-waze]");closeGo();if(!b)return;
+  e.preventDefault();e.stopPropagation();
+  const m=document.createElement("div");m.className="gopop";m.setAttribute("role","menu");
+  m.innerHTML=`<a href="${esc(b.getAttribute("href"))}" target="_blank" rel="noopener" role="menuitem"><i style="background:#e8f0fe">🗺️</i>Google Maps</a><a href="${esc(b.dataset.waze)}" target="_blank" rel="noopener" role="menuitem"><i style="background:#33ccff">🚐</i>Waze</a>`;
+  document.body.appendChild(m);const r=b.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+  m.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+"px";
+  m.style.top=(r.bottom+6+h>innerHeight-8?r.top-h-6:r.bottom+6)+"px";
+},true);
+addEventListener("scroll",closeGo,{passive:true,capture:true});
 
 /* ================= local store + sync ================= */
 const LS="sil-v2",OLD="sil-plan-v1",PREV="sil-plan-prev",LS_CRED="sil-sync-v1",KEA_CRED="vanbudget.sync.v1";
@@ -895,7 +916,7 @@ function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();
     const kind=camp?(CAMPTYPES[x.type]||"Campsite"):kindLabel(x);
     m.bindPopup(()=>`<div class="mpop"><b>${x.suggested?"✦ ":""}${esc(x.name)}</b><span class="muted">${esc(kind)}${x.day?` · planned ${wd(x.day)} ${fmt(x.day)}`:""}${st?" · "+esc(stayLabel(x))+(x.rate?" "+rateTag(x):""):x.done?" · done":""}</span>${camp&&x.review?`<span class="clamp2">“${esc(x.review)}”</span>`:""}
       ${x.notes?`<span class="clamp2">${esc(x.notes)}</span>`:""}
-      <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}" target="_blank" rel="noopener">Google Maps</a></div>
+      <div class="row2"><button type="button" class="pill" data-open="${camp?"camp":"spot"}:${esc(x.id)}">${camp?"Details":"Details & plan"}</button><a class="pill" href="${esc(navUrl(x,camp?"camp":x.kind))}" data-waze="${esc(wazeUrl(x,camp?"camp":x.kind))}" target="_blank" rel="noopener">Directions</a></div>
       <div class="row2">${camp?`<button type="button" class="pill ${st?"":"go"}" data-tog="camps:done:${esc(x.id)}">${st?"Undo stayed":"✓ Stayed here"}</button>`:`<button type="button" class="pill ${x.done?"":"go"}" data-mdone="${esc(x.id)}">${x.done?"Undo done":"✓ Done"}</button>`}<button type="button" class="pill warn" data-mdel="${camp?"camp":"spot"}:${esc(x.id)}">Remove</button></div></div>`,{maxWidth:260});
     m.addTo(lyr);mks.push({m,id:x.id,ll:[p.lat,p.lng],len:(x.name||"").length,pri:(x.day&&x.day>=t?0:x.fav?1:camp&&st?2:x.suggested?4:x.done?5:3)+(state.mapDay?0:0)})});
   if(state.mapDay){const pts=mks.map(o=>o.ll);if(pts.length>1)lmap.fitBounds(pts,{padding:[50,50],maxZoom:14});else if(pts.length)lmap.setView(pts[0],13)}
@@ -1405,11 +1426,11 @@ function renderToday(){
     <div class="tplan">${shown.map(x=>`<div class="trow ${x.done?"done":""}">
         <button class="chk tw ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}${x.tide?`<small class="tsub">${tideNote(x).replace(/<[^>]+>/g,"")}</small>`:""}</button>
-        <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
+        <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" data-waze="${esc(wazeUrl(x,x.kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
       ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
       <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button><span class="tfr">${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}${dayRouteUrl(d)?`<a class="tshare" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener" aria-label="Today's route in Google Maps"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg></a>`:""}${here?`<button type="button" class="tshare" data-todayrecap="${d}" aria-label="Share today's recap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>`:""}</span></div></div>
     <div class="tnight"><span>${here?`<button class="chk tw ${n.stayed?"on":""}" type="button" data-stay="${d}" aria-pressed="${n.stayed}" aria-label="We're sleeping here">✓</button>`:""}⛺ <span class="s">Tonight</span> <b>${n.camp?esc(n.camp):"no campsite yet"}</b></span>
-      <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" target="_blank" rel="noopener" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
+      <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" data-waze="${esc(wazeUrl(camp,"camp"))}" target="_blank" rel="noopener" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
     ${shownAlerts(d).length?`<button type="button" class="talert" data-day="${d}">⚠️ ${shownAlerts(d).length} road alert${shownAlerts(d).length>1?"s":""} near you</button>`:""}
     ${here&&(tot||pd)?`<div class="s">Spent today ${nzd(tot)}${pd?` of ${nzd(pd)}`:""}</div>`:""}
   </div>`}

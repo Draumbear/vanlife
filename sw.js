@@ -1,6 +1,6 @@
 /* Van Budget NZ — offline shell.
    Bump CACHE when you change index.html so phones pick up the new version. */
-const CACHE = 'kea-v32';
+const CACHE = 'kea-v33';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './trip/icon-192.png', './kea-icon.svg'];
 
 self.addEventListener('install', e => {
@@ -31,4 +31,19 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
   );
+});
+
+// Evening reminder (pushed by Supabase's evening-nudge at 8 pm)
+self.addEventListener('push', e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (err) {}
+  e.waitUntil(self.registration.showNotification(d.title || 'Spent anything today?', {
+    body: d.body || 'Log it in Kea before you forget.', tag: d.tag || 'evening', icon: 'icon-192.png', badge: 'icon-192.png', data: { url: d.url || './?add=1' } }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    const w = ws.find(c => c.url.startsWith(self.registration.scope) && !c.url.includes('/trip/'));
+    return w ? w.navigate(url).then(c => c && c.focus()) : self.clients.openWindow(url);
+  }));
 });

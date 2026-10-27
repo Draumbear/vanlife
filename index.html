@@ -337,6 +337,8 @@ body.adding #v-add.hide{visibility:visible}
       <div class="hide"><span id="h-daily"></span><span id="h-daily-e"></span></div>
     </div>
     <div class="quick" id="quick" aria-label="Quick add"></div>
+    <div class="card hide" id="nudge-card"><div class="row"><div style="font-size:.9rem"><b>🔔 Evening reminder?</b><div class="note" style="margin:2px 0 0">A nudge at 8 pm to log what you spent.</div></div>
+      <div style="display:flex;gap:6px"><button class="btn ghost" id="nudge-no" style="width:auto;padding:8px 12px">No</button><button class="btn" id="nudge-yes" style="width:auto;padding:8px 14px">Yes</button></div></div></div>
 
     <div class="card hide" id="loop-card">
       <h2 class="row">Planned in Loop <a class="lnk" href="trip/">Open Loop ›</a></h2>
@@ -486,6 +488,11 @@ body.adding #v-add.hide{visibility:visible}
     </div>
 
     <div class="group mid">This phone only</div>
+    <div class="card">
+      <h2>Evening reminder</h2>
+      <div class="row"><div class="note" style="margin:0">A notification at 8 pm: “Spent anything today?”, with what’s logged so far.</div>
+        <button class="btn ghost" id="nudge-btn" style="width:auto;padding:9px 14px;white-space:nowrap">Turn on</button></div>
+    </div>
     <div class="card">
       <h2>Whose phone is this?</h2>
       <div class="seg two" id="s-me">
@@ -2055,6 +2062,43 @@ chipIdle();
 sync(true);
 fetchRate(false);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---- evening reminder: a real push notification at 8 pm, sent from Supabase (evening-nudge) ---- */
+const VAPID_PUB = 'BO5DMoGlFQFQfqsBbf9OPiav6DKux2gKERWQJcvlTZKtpjLTUdXvVou3SiooIj_feAYbcqF79eCdMstztcUnWFo';
+const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...b].map(c => c.charCodeAt(0))); };
+const pushOK = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+async function nudgeSub(){ if (!pushOK()) return null; const reg = await navigator.serviceWorker.ready; return reg.pushManager.getSubscription(); }
+async function nudgeOn(){
+  if (!pushOK()) return toast('This phone can’t do notifications here');
+  if (!syncOn()) return toast('Set up sync first (Settings)');
+  const perm = await Notification.requestPermission(); if (perm !== 'granted') return toast('Notifications are blocked for Kea');
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUB) });
+    const r = await fetch(sbURL('push_subs?on_conflict=endpoint'), { method: 'POST', headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ endpoint: sub.endpoint, sub: sub.toJSON(), who: S.settings.me || 'p1', updated_at: new Date().toISOString() }]) });
+    if (!r.ok) throw new Error(await r.text());
+    toast('🔔 Reminder on — every evening at 8'); try { localStorage.setItem('kea.nudge', 'on'); } catch(e){}
+  } catch(e){ console.warn(e); toast('Couldn’t turn it on — try again with signal'); }
+  renderNudge();
+}
+async function nudgeOff(){
+  try { const sub = await nudgeSub(); if (sub){ await fetch(sbURL('push_subs?endpoint=eq.' + encodeURIComponent(sub.endpoint)), { method: 'DELETE', headers: sbHeaders() }).catch(()=>{}); await sub.unsubscribe(); } } catch(e){}
+  try { localStorage.setItem('kea.nudge', 'off'); } catch(e){} toast('Reminder off'); renderNudge();
+}
+async function renderNudge(){
+  const sub = await nudgeSub().catch(() => null), on = !!sub && Notification.permission === 'granted';
+  const btn = document.getElementById('nudge-btn'); if (btn) btn.textContent = on ? 'On ✓ · Turn off' : 'Turn on';
+  let pref = null; try { pref = localStorage.getItem('kea.nudge'); } catch(e){}
+  document.getElementById('nudge-card').classList.toggle('hide', on || pref === 'off' || pref === 'on' || !pushOK() || !syncOn());
+}
+document.getElementById('nudge-btn').addEventListener('click', async () => (await nudgeSub()) ? nudgeOff() : nudgeOn());
+document.getElementById('nudge-yes').addEventListener('click', nudgeOn);
+document.getElementById('nudge-no').addEventListener('click', () => { try { localStorage.setItem('kea.nudge', 'off'); } catch(e){} renderNudge(); });
+setTimeout(renderNudge, 1500);
+// tapping the notification opens Kea with a new expense ready
+if (/[?&]add=1/.test(location.search)){ history.replaceState(null, '', location.pathname); setTimeout(() => openAdd(null), 2300); }
+
 </script>
 </body>
 </html>

@@ -106,6 +106,7 @@ textarea{min-height:72px;resize:vertical}
 .today .chk.tw.on{background:var(--on-fern);color:var(--fern)}
 .tfoot{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
 .tfr{display:inline-flex;align-items:center;gap:10px}
+.routepill{color:var(--fern);border-color:var(--fern);text-decoration:none}
 .tshare{width:36px;height:36px;border-radius:50%;border:0;background:var(--on-fern);color:var(--fern);display:grid;place-items:center;cursor:pointer}
 .tshare svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .tadd{display:inline-flex;align-items:center;gap:4px;background:var(--on-fern);color:var(--fern);border:0;border-radius:999px;padding:6px 12px 6px 8px;font:800 .85rem var(--body);cursor:pointer}
@@ -1320,6 +1321,16 @@ const wet=w=>w&&(w.p>=12||(w.c>=63&&w.c<=67&&w.p>=6)||w.c>=95);
 function rainAlt(d){const s=stopFor(d),w=wxFor(d);if(!s||!w)return null;return stopDays(s).filter(x=>x>=today()&&x!==d).map(x=>[x,wxFor(x)]).filter(([,v])=>v&&v.p<Math.max(3,w.p*.35)).sort((a,b)=>a[1].p-b[1].p||a[0].localeCompare(b[0]))[0]?.[0]||null}
 function rainRow(x,d){if(!d||d<today()||x.done||!OUTDOOR.has(x.kind||"place"))return "";const w=wxFor(d);if(!wet(w))return "";const alt=rainAlt(d),aw=alt&&wxFor(alt);
   return `<div class="rainrow">🌧️ ${Math.round(w.p)} mm forecast${alt?` · <button type="button" class="pill go" data-mvplan="${esc(x.id)}:${alt}">Move to ${wd(alt)} ${fmt(alt)} ${WMO(aw.c)} ${Math.round(aw.p)} mm</button>`:" · no drier day at this stop"}</div>`}
+/* the day as one Google Maps route: from last night's campsite, past every plan (in your order), to tonight's campsite if you have one */
+function dayRouteUrl(d){const t=today(),from=nightLoc(addDays(d,-1)),n=nightInfo(d),to=n.camp?nightLoc(d):null;
+  const stops=planFor(d).filter(x=>x.kind!=="task"&&!(d===t&&x.done)).map(x=>ptOf(x)).filter(Boolean);
+  const ll=p=>`${(+p.lat).toFixed(5)},${(+p.lng).toFixed(5)}`;
+  const pts=[...stops];let dest=to;if(!dest){if(!pts.length)return null;dest=pts.pop()}
+  if(!pts.length&&!from)return null;
+  const q=new URLSearchParams({api:"1",travelmode:"driving",destination:ll(dest)});
+  if(from&&!(d===t&&planFor(d).some(x=>x.done)))q.set("origin",ll(from));
+  if(pts.length)q.set("waypoints",pts.slice(0,9).map(ll).join("|"));
+  return "https://www.google.com/maps/dir/?"+q.toString()}
 /* drag the ⠿ handle to put a day's plans in your own order */
 (()=>{let dr=null;
   document.addEventListener("pointerdown",e=>{const h=e.target.closest?.(".act .drag");if(!h)return;const row=h.closest(".act"),list=row.parentElement,rows=[...list.querySelectorAll(":scope>.act")];
@@ -1352,7 +1363,7 @@ function renderToday(){
         <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}${x.tide?`<small class="tsub">${tideNote(x).replace(/<[^>]+>/g,"")}</small>`:""}</button>
         <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
       ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
-      <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button><span class="tfr">${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}${here?`<button type="button" class="tshare" data-todayrecap="${d}" aria-label="Share today's recap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>`:""}</span></div></div>
+      <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button><span class="tfr">${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}${dayRouteUrl(d)?`<a class="tshare" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener" aria-label="Today's route in Google Maps"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg></a>`:""}${here?`<button type="button" class="tshare" data-todayrecap="${d}" aria-label="Share today's recap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>`:""}</span></div></div>
     <div class="tnight"><span>${here?`<button class="chk tw ${n.stayed?"on":""}" type="button" data-stay="${d}" aria-pressed="${n.stayed}" aria-label="We're sleeping here">✓</button>`:""}⛺ <span class="s">Tonight</span> <b>${n.camp?esc(n.camp):"no campsite yet"}</b></span>
       <span class="tbtns">${n.camp?`<a class="gobtn tw" href="${esc(navUrl(camp,"camp"))}" target="_blank" rel="noopener" aria-label="Directions to campsite">${icon("nav")}</a>`:""}<button class="gobtn tw" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></span></div>
     ${shownAlerts(d).length?`<button type="button" class="talert" data-day="${d}">⚠️ ${shownAlerts(d).length} road alert${shownAlerts(d).length>1?"s":""} near you</button>`:""}
@@ -1719,7 +1730,7 @@ function renderDay(){
     ${d<=t?spendCard(d):""}
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
       <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
-    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></div>
+    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><span style="display:flex;gap:8px;align-items:center">${dayRouteUrl(d)?`<a class="pill routepill" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener">🗺️ Route in Google Maps</a>`:""}<button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></span></div>
       <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
         ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>

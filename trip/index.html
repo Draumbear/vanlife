@@ -1762,7 +1762,7 @@ function openSpot(it,fresh,ll){
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
     <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${townOf(it)?" · 📍 "+esc(townOf(it)):ctxName(it)?" · "+esc(ctxName(it)):""}${it.region?" · "+esc(it.region):""}</div>
-    ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="${spots}:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
+    ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="spots:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,it.kind)}
     ${it.kind==="task"?`<label>Do by<input type="date" id="q-by" value="${esc(it.by||"")}"></label>`:""}
@@ -1800,7 +1800,7 @@ function openCamp(it,ll){
     ${sgBox(it)}
     <div><span class="chip c-${esc(it.type||"unknown")}">${esc(CAMPTYPES[it.type]||"To sort")}</span> <span class="muted" style="font-size:.85rem">${townOf(it)?"📍 "+esc(townOf(it))+" · ":""}${esc(it.region||"")}</span></div>
     ${isStayed(it)||it.rate?`<div class="ratebox">${it.rate?`<b>${rateTag(it)}</b> `:""}${it.review?`“${esc(it.review)}” `:""}<button type="button" class="linkx" data-rate="${esc(it.id)}">${it.rate?"change":"How was it?"}</button></div>`:""}
-    ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="${camps}:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
+    ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="camps:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
     ${navLinks(it,"camp")}
     <label>Sleep here<select id="q-sleep">${dayOpts("","Pick a night…")}</select></label>

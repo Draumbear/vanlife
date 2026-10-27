@@ -980,8 +980,15 @@ async function buildRecap(d){
   const BH=400,by=H-150-BH-10,bh=BH,lx=60,lw=470,rx=lx+lw+40,rw=W-rx-60;
   g.font=`italic 400 36px ${BF}`;let L=j.note?wrapLines(g,j.note,W-180,photo?3:7):[];
   const noteH=L.length?L.length*46+40:0;let y=230;
-  if(photo){try{const im=await loadImg(photo),bw=W-120,bh2=Math.max(260,by-30-noteH-y),sc=Math.max(bw/im.width,bh2/im.height),sw=bw/sc,sh=bh2/sc;
-    g.save();g.beginPath();g.roundRect(60,y,bw,bh2,28);g.clip();g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,60,y,bw,bh2);g.restore();y+=bh2+34}catch{}}
+  // the photo keeps its shape: a wide one gets a shorter frame, a tall one sits on a blurred copy of itself
+  if(photo){try{const im=await loadImg(photo),bw=W-120,avail=Math.max(260,by-30-noteH-y),ar=im.width/im.height;
+    let bh2=Math.min(avail,bw/ar);y+=Math.round((avail-bh2)/2);
+    g.save();g.beginPath();g.roundRect(60,y,bw,bh2,28);g.clip();
+    const fitW=bh2*ar;
+    if(fitW>=bw*.88){const sc=Math.max(bw/im.width,bh2/im.height),sw=bw/sc,sh=bh2/sc;g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,60,y,bw,bh2)}
+    else{const sc=Math.max(bw/im.width,bh2/im.height),sw=bw/sc,sh=bh2/sc;g.filter="blur(28px) brightness(.8)";g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,40,y-20,bw+40,bh2+40);g.filter="none";
+      g.drawImage(im,60+(bw-fitW)/2,y,fitW,bh2)}
+    g.restore();y+=bh2+34}catch{}}
   if(L.length){g.fillStyle="#2f6b4f";g.font=`800 64px ${DF}`;g.fillText("“",54,y+40);g.fillStyle="#1d2621";g.font=`italic 400 36px ${BF}`;
     L.forEach((l,i)=>g.fillText(l,110,y+30+i*46))}
   // the route on a real map: OpenStreetMap tiles under the day's path, numbered like the list beside it
@@ -1019,13 +1026,14 @@ async function buildRecap(d){
   if(!moved&&!tilesOk){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
   if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
   // where in Aotearoa: a small South Island in the corner of the map
-  {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,ix=lx+lw-iw-14,iy=by+bh-56-ih-26,LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
+  {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,ix=lx+lw-iw-14,iy=by+bh-ih-112,LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
     g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
     g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
     g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
   g.restore();
-  g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-56,lw-28,44,14);g.fill();
-  g.fillStyle="#1d2621";g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd";g.fillText(wrapLines(g,tn,lw-56,1)[0]||"",lx+28,by+bh-26);
+  g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd",CL=wrapLines(g,tn,lw-56,2),cbh=CL.length>1?74:44;
+  g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-12-cbh,lw-28,cbh,14);g.fill();
+  g.fillStyle="#1d2621";CL.forEach((l,i)=>g.fillText(l,lx+28,by+bh-12-cbh+30+i*30));
   // what we did, numbered like the map; long names wrap onto a second line
   g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE DID",rx,by+30);
   let ly=by+76;const acts=R.acts,fs=acts.length>5?26:29,lh=fs+8;

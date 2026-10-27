@@ -341,9 +341,17 @@ textarea{min-height:72px;resize:vertical}
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .reg{font:800 .95rem var(--display);margin:18px 0 0}
 .itemr{display:flex;align-items:center;gap:2px}
+.locpick{display:grid;gap:8px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--fern-soft)}
+.locpick .locstat{font-size:.88rem}.locpick .locbtns{display:flex;flex-wrap:wrap;gap:6px}
+.linkx{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:.82rem;cursor:pointer;padding:0 4px}
+.lochit{display:grid;text-align:left;width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;margin-bottom:6px;font:inherit;color:inherit;cursor:pointer}
+.lochit span{font-size:.8rem;color:var(--muted)}
+.locmap{height:240px;border-radius:12px;overflow:hidden}
+.maphint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:500;background:rgba(29,38,33,.82);color:#fff;font-size:.78rem;padding:5px 12px;border-radius:999px;pointer-events:none;animation:hintOut .6s ease 4s forwards;white-space:nowrap}
+@keyframes hintOut{to{opacity:0}}
 .itemr .mapgo{width:36px;height:36px;border:0;background:none;color:var(--muted);display:grid;place-items:center}
 .itemr .mapgo .svg{width:19px;height:19px}
-.meta .tw{white-space:nowrap}
+.meta .tw{white-space:nowrap}.meta .away{color:var(--fern);white-space:nowrap}
 .linkbtn{display:inline-flex;align-items:center;font:700 .82rem var(--body);color:var(--fern);border:1px solid var(--fern);border-radius:999px;padding:5px 11px;background:var(--card);cursor:pointer}
 .item.done .nm{text-decoration:line-through;color:var(--muted)}
 .item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
@@ -750,7 +758,7 @@ function loadLeaflet(){if(window.L)return Promise.resolve(window.L);if(LF)return
 function openMap(){const t=today(),st=sortStops(),L=legs();let left=0;st.forEach((s,i)=>{if((s.start||"")>t)left+=L[i]});
   const v=$("#mapview");v.hidden=false;document.body.style.overflow="hidden";state.mapKind??="all";
   v.innerHTML=`<div class="vhead"><div class="wrap"><button class="ib" type="button" data-close="map" aria-label="Close">${icon("back")}</button><h2>Map<small>~${left.toLocaleString("en-NZ")} km to go · ~$${Math.round(left*KM_COST).toLocaleString("en-NZ")} fuel + RUC</small></h2><button class="ib" type="button" id="locme" aria-label="Show where we are">📍</button></div></div>
-    <div class="mapbar"><div class="srcseg" id="msrc"></div><div class="chips" id="mkinds"></div></div><div id="lmap"><p class="empty">Loading map…</p></div>`;
+    <div class="mapbar"><div class="srcseg" id="msrc"></div><div class="chips" id="mkinds"></div></div><div id="lmap"><p class="empty">Loading map…</p></div><div class="maphint">Long-press the map to add a place or campsite there</div>`;
   renderMapBar();
   loadLeaflet().then(L=>{buildMap(L)}).catch(()=>{$("#lmap").innerHTML=`<div class="wrap vbody"><p class="muted">The full map needs a connection the first time. Here's the route for now.</p><div class="mapwrap">${mapSvg()}</div></div>`})}
 function renderMapBar(){$("#msrc").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-msrc="${k}">${l}</button>`).join("");
@@ -763,6 +771,7 @@ function buildMap(L){const el=$("#lmap");el.innerHTML="";
   L.control.zoom({position:"bottomright"}).addTo(lmap);
   const zc=()=>el.classList.toggle("named",lmap.getZoom()>=11);lmap.on("zoomend",zc);zc();
   lmap.on("zoomend moveend",()=>declutter());
+  lmap.on("contextmenu",e=>addHere(e.latlng));
   // the route between stops, and the stops themselves
   const st=sortStops().filter(hasLL),t=today(),cur=currentStop();
   {const pts=nightPts(),pa=pts.filter(q=>q.d<t),fu=pts.filter(q=>q.d>=t);if(pa.length&&fu.length)fu.unshift(pa[pa.length-1]);
@@ -1406,7 +1415,11 @@ function renderDays(){
 
 /* ================= places ================= */
 function allPlaces(){return [...state.spots.filter(x=>x.kind!=="chore"&&x.kind!=="task").map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
-function renderPlaces(){
+/* where we are right now, for "nearest first" in Places (refreshed at most every 5 minutes) */
+function wantHere(){if(!navigator.geolocation||state.hereBusy)return;if(state.here&&Date.now()-state.here.at<300000)return;state.hereBusy=true;
+  navigator.geolocation.getCurrentPosition(p=>{state.hereBusy=false;state.here={lat:p.coords.latitude,lng:p.coords.longitude,at:Date.now()};if(state.tab==="places")renderPlaces()},
+    ()=>{state.hereBusy=false;state.here=state.here||null},{maximumAge:300000,timeout:20000})}
+function renderPlaces(){if(state.tab==="places")wantHere();const me=state.here,away=x=>{const p=me&&ptOf(x);return p?hav(me,p):1e9};
   if(state.region===null&&state.stops.length)state.region=currentStop()?.region||"all";
   const reg=state.region||"all";
   const sel=$("#region");sel.innerHTML=`<option value="all">All regions</option>`+REGIONS.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join("");sel.value=reg;
@@ -1417,12 +1430,12 @@ function renderPlaces(){
   $("#src").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-src="${k}">${l}</button>`).join("");
   $("#kinds").innerHTML=labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
   const items=base.filter(x=>visSug(x)&&(f[state.kind]||f.all)(x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
-    .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
-  const by={};items.forEach(x=>(by[x.region||"Other"]??=[]).push(x));
-  const order=[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
-  $("#plist").innerHTML=items.length?order.map(r=>(order.length>1?`<div class="reg">${esc(r)}</div>`:"")+by[r].map(x=>{
-    const st=x._c==="camp"&&isStayed(x),tw=townOf(x);
-    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}</span>`:""}`:`${esc(kindLabel(x))}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
+    .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(me?away(a)-away(b):(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||"")));
+  const by={};items.forEach(x=>(by[me?"Nearest first":x.region||"Other"]??=[]).push(x));
+  const order=me?["Nearest first"].filter(r=>by[r]):[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
+  $("#plist").innerHTML=items.length?order.map(r=>(order.length>1||me?`<div class="reg">${me?"📍 Nearest to you first":esc(r)}</div>`:"")+by[r].map(x=>{
+    const st=x._c==="camp"&&isStayed(x),tw=townOf(x),ka=me&&ptOf(x)?Math.round(away(x)*1.25):null;
+    const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${ka!=null?` · <b class="away">${ka<1?"here":ka+" km"}</b>`:""}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}</span>`:""}`:`${ka!=null?`<b class="away">${ka<1?"here":ka+" km"}</b> · `:""}${esc(kindLabel(x))}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
     return `<div class="item ${x.done&&x._c==="spot"?"done":""} ${st?"stayedi":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}</div><div class="meta">${meta}</div></button>
       <span class="itemr">${ptOf(x)?`<button class="ib sm mapgo" type="button" data-mapfocus="${x._c}:${esc(x.id)}" aria-label="View ${esc(x.name)} on the map">${icon("map")}</button>`:""}${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:`<button class="chk sm ${st?"on":""}" type="button" data-tog="camps:done:${esc(x.id)}" aria-pressed="${st}" aria-label="${st?"Not stayed":"We stayed here"}">✓</button>`}<button class="fav ${x.fav?"on":""}" type="button" data-tog="${COLL[x._c]}:fav:${esc(x.id)}" aria-pressed="${!!x.fav}" aria-label="Favourite">♥</button></span></div>`}).join("")).join("")
     :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
@@ -1488,7 +1501,7 @@ function renderIdeas(){
 function render(){if(lmap)drawMarkers();renderHeader();renderToday();renderExtras();renderDays();renderPlaces();renderDay()}
 
 /* ================= sheets ================= */
-function sheet(html,type,id){const f=$("#form");f.innerHTML=html;f.dataset.type=type;f.dataset.id=id||"";$("#scrim").hidden=false;$("#sheet").hidden=false;$("#sheet").scrollTop=0;f.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",closeSheet))}
+function sheet(html,type,id){const f=$("#form");f.innerHTML=html;setTimeout(()=>wireLoc(f),0);f.dataset.type=type;f.dataset.id=id||"";$("#scrim").hidden=false;$("#sheet").hidden=false;$("#sheet").scrollTop=0;f.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",closeSheet))}
 function closeSheet(){$("#scrim").hidden=true;$("#sheet").hidden=true}
 function armed(btn,label,fn){if(!btn)return;btn.onclick=()=>{if(btn.dataset.armed)fn();else{btn.dataset.armed=1;btn.textContent=label}}}
 const regionOpts=v=>`<option value="">—</option>`+REGIONS.map(r=>`<option ${r===v?"selected":""}>${esc(r)}</option>`).join("");
@@ -1497,15 +1510,55 @@ const dayOpts=(v,label)=>`<option value="">${label}</option>`+[...new Set([...(v
 const head=(title,close=true)=>`<div style="display:flex;align-items:flex-start;gap:8px"><h2 id="sheet-title" style="flex:1">${title}</h2>${close?`<button class="ib" type="button" data-cancel aria-label="Close">${icon("close")}</button>`:""}</div>`;
 const saveRow=(isNew)=>`<div class="end"><div>${isNew?"":`<button type="button" class="btn danger" id="del">Delete</button>`}</div><div><button class="btn primary" type="submit">${isNew?"Add":"Save"}</button></div></div>`;
 
+/* ---- location picker for places & campsites: search by name, use where we are, tap the map, or paste a link ---- */
+const regionNear=ll=>{if(!ll)return "";let b=null,bd=1e9;sortStops().forEach(s=>{if(hasLL(s)&&s.region){const d=hav(s,ll);if(d<bd){bd=d;b=s}}});return b&&bd<120?b.region:""};
+function locField(it){const has=hasLL(it);
+  return `<div class="locpick"><span class="label">Location on the map</span>
+    <input type="hidden" name="lat" value="${has?it.lat:""}"><input type="hidden" name="lng" value="${has?it.lng:""}">
+    <div class="locstat"></div>
+    <div class="locbtns"><button type="button" class="pill" data-lf="find">🔎 Find by name</button><button type="button" class="pill" data-lf="here">📍 We're here</button><button type="button" class="pill" data-lf="map">🗺️ Pick on map</button></div>
+    <div class="locres"></div><div class="locmap" hidden></div>
+    <input name="loc" value="${esc(has?"":(it.loc||""))}" placeholder="…or paste coordinates or a Google Maps link" autocomplete="off"></div>`}
+function parseLL(t){t=String(t||"");let m=/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/.exec(t)||/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(t)||/[?&](?:q|ll|query|destination)=(-?\d+\.\d+)(?:,|%2C)\s*(-?\d+\.\d+)/i.exec(t)||/^\s*(-?\d{1,2}\.\d+)\s*[, ]\s*(-?\d{2,3}\.\d+)\s*$/.exec(t);
+  if(!m)return null;let a=+m[1],b=+m[2];if(Math.abs(a)>90){[a,b]=[b,a]}if(a>0&&b>160)a=-a;return a<-30&&a>-48&&b>165&&b<179?{lat:a,lng:b}:null}
+function wireLoc(f){const box=f.querySelector(".locpick");if(!box)return;const la=box.querySelector("[name=lat]"),ln=box.querySelector("[name=lng]"),st=box.querySelector(".locstat"),res=box.querySelector(".locres"),mp=box.querySelector(".locmap"),paste=box.querySelector("[name=loc]");
+  let mini=null,pin=null;
+  const show=()=>{const p=la.value&&ln.value?{lat:+la.value,lng:+ln.value}:null;
+    st.innerHTML=p?`<b>📍 ${esc(townOf(p)||"Set")}</b> <span class="muted">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</span> <button type="button" class="linkx" data-lf="clear">clear</button>`:`<span class="muted">Not on the map yet — pick one below.</span>`;
+    st.querySelector("[data-lf=clear]")?.addEventListener("click",()=>{la.value=ln.value="";if(pin){pin.remove();pin=null}show()});
+    if(mini&&p){if(pin)pin.setLatLng([p.lat,p.lng]);else pin=window.L.marker([p.lat,p.lng]).addTo(mini)}};
+  const set=(lat,lng)=>{la.value=(+lat).toFixed(5);ln.value=(+lng).toFixed(5);show();if(mini)mini.setView([+lat,+lng],Math.max(mini.getZoom(),13))};
+  const near=()=>{const s=stopFor(state.day||today())||currentStop();return la.value?{lat:+la.value,lng:+ln.value}:s&&hasLL(s)?s:{lat:-44,lng:170}};
+  box.querySelector("[data-lf=find]").onclick=async()=>{const nm=f.querySelector("[name=name]")?.value.trim();if(!nm)return toast("Type a name first");
+    res.innerHTML=`<p class="muted">Searching…</p>`;const c=near();let hits=[];
+    try{const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(nm)}&limit=8&lat=${c.lat}&lon=${c.lng}&lang=en`);if(r.ok){const j=await r.json();
+      hits=(j.features||[]).filter(x=>x.properties?.countrycode==="NZ"||x.properties?.country==="New Zealand").map(x=>({lat:x.geometry.coordinates[1],lng:x.geometry.coordinates[0],t:x.properties.name,s:[x.properties.city||x.properties.county,x.properties.state].filter(Boolean).join(", ")}))}}catch{}
+    if(!hits.length)try{const r=await fetch("https://nominatim.openstreetmap.org/search?"+new URLSearchParams({q:nm,countrycodes:"nz",format:"jsonv2",limit:"6"}),{headers:{"Accept-Language":"en"}});if(r.ok)hits=(await r.json()).map(x=>({lat:+x.lat,lng:+x.lon,t:x.name||x.display_name.split(",")[0],s:x.display_name.split(",").slice(1,3).join(",")}))}catch{}
+    hits.sort((a,b)=>hav(c,a)-hav(c,b));
+    res.innerHTML=hits.length?hits.slice(0,6).map((h,i)=>`<button type="button" class="lochit" data-i="${i}"><b>${esc(h.t||"")}</b><span>${esc(h.s||"")} · ${Math.round(hav(c,h))} km</span></button>`).join(""):`<p class="muted">Nothing found. Try another spelling, or pick it on the map.</p>`;
+    res.querySelectorAll(".lochit").forEach(b=>b.onclick=()=>{const h=hits[+b.dataset.i];set(h.lat,h.lng);res.innerHTML=""})};
+  box.querySelector("[data-lf=here]").onclick=()=>{if(!navigator.geolocation)return toast("No location on this phone");toast("Finding you…");
+    navigator.geolocation.getCurrentPosition(p=>set(p.coords.latitude,p.coords.longitude),()=>toast("Couldn't get your location"),{enableHighAccuracy:true,timeout:15000})};
+  box.querySelector("[data-lf=map]").onclick=async()=>{if(!mp.hidden){mp.hidden=true;return}mp.hidden=false;mp.innerHTML="";
+    try{const L=await loadLeaflet(),c=near();mini=L.map(mp,{zoomControl:true,attributionControl:false}).setView([c.lat,c.lng],la.value?14:11);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(mini);mini.on("click",e=>set(e.latlng.lat,e.latlng.lng));pin=null;show();
+      setTimeout(()=>mini.invalidateSize(),60)}catch{mp.innerHTML=`<p class="muted">The map needs a connection.</p>`}};
+  paste.addEventListener("input",()=>{const p=parseLL(paste.value);if(p){set(p.lat,p.lng);paste.value="";toast("Location set")}
+    else if(/goo\.gl|maps\.app/.test(paste.value))res.innerHTML=`<p class="muted">Short share links can't be read here. In Google Maps, long-press the spot and copy the coordinates instead.</p>`});
+  show()}
+/* long-press on the big map: add a place or campsite right there */
+function addHere(ll){sheet(head("Add here?")+`<p class="muted">${esc(townOf(ll)||"")} · ${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}</p>
+  <div class="row2"><button type="button" class="btn primary" id="ah-spot">📸 A place or activity</button><button type="button" class="btn" id="ah-camp">⛺ A campsite</button></div>`,"addhere");
+  $("#ah-spot").onclick=()=>openSpot(null,false,ll);$("#ah-camp").onclick=()=>openCamp(null,ll)}
 function spotFields(it){return `<label>Name<input name="name" value="${esc(it.name)}"></label>
   <div class="two"><label>Type<select name="kind">${typeOpts({...KINDS,plan:"Other (use Kea category)"},it.kind||"place")}</select></label><label>Region<select name="region">${regionOpts(it.region)}</select></label></div>
   <label>Notes<textarea name="notes" placeholder="Distance, time, tides…">${esc(it.notes)}</textarea></label>
-  <label>Map location <span class="muted" style="font-weight:400">(optional)</span><input name="loc" value="${esc(it.loc)}" placeholder="Car park, or -43.43, 169.97"></label>
+  ${locField(it)}
   <label>Info link <span class="muted" style="font-weight:400">(optional)</span><input name="url" type="url" value="${esc(it.url)}" placeholder="https://…"></label>`}
 function campFields(it){return `<label>Name<input name="name" value="${esc(it.name)}"></label>
   <div class="two"><label>Type<select name="type">${typeOpts(CAMPTYPES,it.type||"unknown")}</select></label><label>Region<select name="region">${regionOpts(it.region)}</select></label></div>
   <label>Notes<textarea name="notes" placeholder="Price, facilities, booking…">${esc(it.notes)}</textarea></label>
-  <label>Map location <span class="muted" style="font-weight:400">(optional)</span><input name="loc" value="${esc(it.loc)}" placeholder="-44.441, 169.262"></label>
+  ${locField(it)}
   <label>Info link <span class="muted" style="font-weight:400">(optional)</span><input name="url" type="url" value="${esc(it.url)}" placeholder="https://…"></label>`}
 
 const sgBox=it=>it.suggested?`<div class="sgbox"><span><b>✦ Claude's suggestion</b></span><div class="row2"><button type="button" class="btn sm" id="sg-keep">Keep it</button><button type="button" class="btn sm" id="sg-drop">Not for us</button></div></div>`:"";
@@ -1516,9 +1569,9 @@ function openNewPlan(d){
   sheet(head(`Add to ${wd(d)} ${fmt(d)}`)+`<div><span class="label">Van chores</span><div class="chorechips">${Object.entries(CHORES).map(([k,[i,l]])=>`<button type="button" class="pill" data-chore="${k}">${i} ${l}</button>`).join("")}</div></div>
     <label>Or something else<input name="name" placeholder="Swimming pool, hike…" autocomplete="off" enterkeyhint="done"></label>
     <div class="end"><div></div><div><button class="btn primary" type="submit">Add</button></div></div>`,"newplan",d);}
-function openSpot(it,fresh){
-  if(!it){const r=stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
-    sheet(head("New place")+spotFields({region:r,kind:"place"})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
+function openSpot(it,fresh,ll){
+  if(!it){const r=regionNear(ll)||stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
+    sheet(head("New place")+spotFields({region:r,kind:"place",...(ll?{lat:ll.lat,lng:ll.lng}:{})})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
     <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${townOf(it)?" · 📍 "+esc(townOf(it)):ctxName(it)?" · "+esc(ctxName(it)):""}${it.region?" · "+esc(it.region):""}</div>
@@ -1553,8 +1606,8 @@ function openSpot(it,fresh){
   $("#q-price").onchange=e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(v>0)return savePrice();const price=null;
     patch("spots",it.id,{price});keaSyncSpot(it.id);const n=S.docs.spots[it.id];$("#q-kea").innerHTML=keaNote({...n,id:it.id});toast(price?`Price ${nzd(price)}`:"Marked free")};
   armed($("#del"),"Tap again",()=>{const had=keaUnpay(it.id,true);del("spots",it.id);closeSheet();toast(had?"Deleted, and removed from Kea":"Deleted")})}
-function openCamp(it){
-  if(!it){sheet(head("New campsite")+campFields({region:state.region!=="all"?state.region:""})+saveRow(true),"camp");return}
+function openCamp(it,ll){
+  if(!it){sheet(head("New campsite")+campFields({region:regionNear(ll)||(state.region!=="all"?state.region:""),type:"unknown",...(ll?{lat:ll.lat,lng:ll.lng}:{})})+saveRow(true),"camp");return}
   sheet(head(esc(it.name))+`
     ${sgBox(it)}
     <div><span class="chip c-${esc(it.type||"unknown")}">${esc(CAMPTYPES[it.type]||"To sort")}</span> <span class="muted" style="font-size:.85rem">${esc(it.region||"")}</span></div>
@@ -1701,6 +1754,9 @@ $("#form").addEventListener("submit",e=>{
   if(type==="stop"){if(!v.start){toast("Pick an arrival date");return}
     v.book=!!v.book;v.booked=!!v.booked;v.lead=+v.lead||14;
     const num=x=>x===""||x==null?null:parseFloat(String(x).replace(",","."));v.lat=num(v.lat);v.lng=num(v.lng);v.imin=num(v.imin);v.imax=num(v.imax);if(v.imin!=null&&v.imax!=null&&v.imax<v.imin)v.imax=v.imin;if(v.end&&v.end<v.start)v.end=v.start}
+  if(type==="spot"||type==="camp"){const la=parseFloat(v.lat),lg=parseFloat(v.lng);delete v.lat;delete v.lng;
+    if(isFinite(la)&&isFinite(lg)){v.lat=la;v.lng=lg;v.llok=true;if(parseLL(v.loc))v.loc="";if(!v.region)v.region=regionNear(v)}
+    else{const p=parseLL(v.loc);if(p){v.lat=p.lat;v.lng=p.lng;v.llok=true;v.loc=""}else if(id){v.lat=null;v.lng=null}}}
   const c=COLL[type],prev=id?S.docs[c][id]:null,doc={...(prev||{}),...v};
   if(!id&&type==="spot"){doc.fav=false;doc.done=false;doc.day=v.day||null;if(doc.day)doc.order=planFor(doc.day).length}
   if(!id&&type==="camp")doc.fav=false;

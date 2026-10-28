@@ -1355,17 +1355,42 @@ function keaUnpay(id,quiet){const x=S.docs.spots[id];if(!x||!x.keaId)return fals
   keaWrite({...keaRec(x),...old,id:x.keaId,deleted:true,updated_at:new Date().toISOString()});
   S.docs.spots[id]={...x,keaId:null,keaMeta:null,paid:false};S.pending["spots/"+id]=1;persist();refresh();scheduleSync();
   if(!quiet)toast("Removed from Kea");return true}
-function openPaid(id){const x=S.docs.spots[id];if(!x)return;const me=keaMe(),acc=keaAccounts();
+function paidFields(amount,cat,meta={}){const me=keaMe(),acc=keaAccounts();
   const radio=(name,opts,val)=>`<div class="pick">${opts.map(([v,l])=>`<label><input type="radio" name="${name}" value="${esc(v)}" ${v===val?"checked":""}><span>${esc(l)}</span></label>`).join("")}</div>`;
-  sheet(head(`Paid for ${esc(x.name)}?`)+`
-    <div class="two"><label>Amount<input name="amount" type="number" inputmode="decimal" min="0" step="0.01" value="${x.price??""}"></label>
-      <label>Category<select name="cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===(x.cat||"activity")?"selected":""}>${i} ${l}</option>`).join("")}</select></label></div>
-    <div><span class="label">Who paid</span>${radio("payer",[["p1",PEOPLE.p1],["p2",PEOPLE.p2]],me)}</div>
-    <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),acc.last||acc.list[0])}</div>
-    <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],"")}</div>
+  return `<div class="two"><label>Amount<input name="amount" type="number" inputmode="decimal" min="0" step="0.01" value="${amount??""}"></label>
+      <label>Category<select name="cat">${Object.entries(KCAT).map(([k,[i,l]])=>`<option value="${k}" ${k===cat?"selected":""}>${i} ${l}</option>`).join("")}</select></label></div>
+    <div><span class="label">Who paid</span>${radio("payer",[["p1",PEOPLE.p1],["p2",PEOPLE.p2]],meta.payer||me)}</div>
+    <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),meta.account||acc.last||acc.list[0])}</div>
+    <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],meta.personal||"")}</div>`}
+function openPaid(id){const x=S.docs.spots[id];if(!x)return;
+  sheet(head(`Paid for ${esc(x.name)}?`)+paidFields(x.price,x.cat||"activity")+`
     <div class="end"><div><button type="button" class="btn" id="pd-skip">We didn't pay</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
   $("#pd-skip").onclick=()=>{markDone(id,true,{nopay:true});closeSheet();toast("Done ✓ · nothing added to Kea")};
   if(x.pp)$("#form").querySelectorAll("[name=personal]").forEach(r=>r.onchange=()=>{$("#form [name=amount]").value=r.value?Math.round(x.price/2*100)/100:x.price})}
+/* ---- paid campsites into Kea ----
+   Ticking a night at a paid (or booked) campsite as slept asks what it cost and logs it in Kea
+   on that date; unticking the night removes it again. */
+const paidNight=n=>n.type==="paid"||n.type==="booked";
+function lastCampPrice(name,d){const o=Object.entries(S.docs.nights).filter(([k,x])=>k!==d&&x.price>0&&sameCamp(x.camp,name)).sort((a,b)=>b[0].localeCompare(a[0]))[0];return o?o[1].price:""}
+function nightKeaRec(d,o,meta){const old=keaLocal()?.expenses?.[o.keaId]||{},me=keaMe();
+  return {id:o.keaId,amount:Math.round(o.price*100)/100,category:o.cat||"camp",spent_on:d,payer:meta.payer||old.payer||me,account:meta.account??old.account??"",personal:meta.personal??old.personal??"",
+    entered_by:old.entered_by||me,note:o.camp||"Campsite",deleted:false,updated_at:new Date().toISOString()}}
+function nightUnpay(d){const o=S.docs.nights[d];if(!o||!o.keaId)return false;const old=keaLocal()?.expenses?.[o.keaId]||{};
+  keaWrite({...nightKeaRec(d,o,o.keaMeta||{}),...old,id:o.keaId,deleted:true,updated_at:new Date().toISOString()});
+  const {keaId,keaMeta,price,cat,...rest}=o;put("nights",d,rest);return true}
+function afterStay(d){const n=nightInfo(d),o=S.docs.nights[d]||{};
+  if(n.stayed&&paidNight(n)&&!o.keaId&&!o.nopay){openCampPaid(d);return true}
+  if(!n.stayed&&o.keaId){nightUnpay(d);toast("Unticked · removed from Kea");return true}
+  if(!n.stayed&&o.nopay){const {nopay,...rest}=o;put("nights",d,rest)}
+  return false}
+function rateLater(name){setTimeout(()=>{const c=state.camps.find(x=>sameCamp(x.name,name));if(c&&!c.rate&&$("#sheet").hidden)openRate(c.id)},450)}
+function openCampPaid(d){const n=nightInfo(d),o=S.docs.nights[d]||{};
+  const inKea=spentOn(d).filter(e=>e.c==="camp"||e.c==="stay");
+  sheet(head(`Paid for ${esc(n.camp)}?`)+`<p class="muted" style="margin:-4px 0 4px">${wd(d)} ${fmt(d)} · goes into Kea as a campsite on that day.</p>`
+    +(inKea.length?`<p style="margin:0 0 4px;color:var(--rust);font-weight:700;font-size:.9rem">Kea already has ${inKea.map(e=>`${esc(e.n||"a campsite")} ${nzd(e.a)}`).join(", ")} that day.</p>`:"")
+    +paidFields(o.price||lastCampPrice(n.camp,d),o.cat||"camp",o.keaMeta||{})+`
+    <div class="end"><div><button type="button" class="btn" id="cp-skip">${inKea.length?"Already in Kea":"We didn't pay"}</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"campPaid",d);
+  $("#cp-skip").onclick=()=>{const cur=S.docs.nights[d];if(cur)put("nights",d,{...cur,nopay:true});closeSheet();toast("Nothing added to Kea");rateLater(n.camp)}}
 /* ticking a plan off moves it up: done things first, in the order you did them, then what's still to do.
    That order is what the day recap and its route use. */
 function orderDay(d,last){if(!d)return;const items=Object.entries(S.docs.spots).filter(([,x])=>x.day===d).map(([id,x])=>({id,x}))
@@ -2071,9 +2096,11 @@ function dragEnd(){if(!drag)return;const {d,target,ghost}=drag;drag=null;ghost.r
   document.addEventListener("touchmove",e=>{if(drag)e.preventDefault()},{passive:false});
   document.addEventListener("contextmenu",e=>{if(drag||e.target.closest?.("[data-flexd]"))e.preventDefault()});
   document.addEventListener("click",e=>{if(eatClick){e.stopPropagation();e.preventDefault();eatClick=false}},true)})();
-function setNight(d,camp,type,notes,flex,stayed){const s=stopFor(d);stayed=stayed??!!S.docs.nights[d]?.stayed;
-  if(s&&s.camp===camp&&(s.campType||"unknown")===type&&!notes&&!flex&&!stayed){if(S.docs.nights[d])del("nights",d)}
-  else put("nights",d,{camp,campType:type,notes:notes||"",...(flex?{flex:true}:{}),...(stayed?{stayed:true}:{})})}
+function setNight(d,camp,type,notes,flex,stayed){const s=stopFor(d),old=S.docs.nights[d]||{};stayed=stayed??!!old.stayed;
+  const keep=sameCamp(old.camp,camp)?Object.fromEntries(["keaId","keaMeta","price","cat","nopay"].filter(k=>old[k]!=null).map(k=>[k,old[k]])):{};
+  if(!sameCamp(old.camp,camp)&&old.keaId)nightUnpay(d);
+  if(s&&s.camp===camp&&(s.campType||"unknown")===type&&!notes&&!flex&&!stayed&&!keep.keaId){if(S.docs.nights[d])del("nights",d)}
+  else put("nights",d,{camp,campType:type,notes:notes||"",...(flex?{flex:true}:{}),...(stayed?{stayed:true}:{}),...keep})}
 /* keep the campsite list in step with ticked nights: a campsite we slept at is ticked
    there too (and added, at the stop's spot, if it wasn't in the list yet) */
 function syncStayCamp(name,d){if(!name)return;const c=state.camps.find(x=>sameCamp(x.name,name)),n=S.docs.nights[d],on=!!n?.stayed&&sameCamp(n.camp,name);
@@ -2083,8 +2110,9 @@ function syncStayCamp(name,d){if(!name)return;const c=state.camps.find(x=>sameCa
 function setStayed(d,on){const n=nightInfo(d);
   if(!n.camp){openNight(d);return toast("Pick where you slept, then tick it")}
   setNight(d,n.camp,n.type,n.notes,n.flex,on);syncStayCamp(n.camp,d);
+  if(afterStay(d))return;
   toast(on?`Slept at ${n.camp} ✓`:"Unticked");
-  if(on)setTimeout(()=>{const c=state.camps.find(x=>sameCamp(x.name,n.camp));if(c&&!c.rate&&$("#sheet").hidden)openRate(c.id)},450)}
+  if(on)rateLater(n.camp)}
 /* how was the campsite? a thumb and a line, shown on the map, in Places and in the recap */
 const rateTag=c=>c.rate==="up"?"👍":c.rate==="down"?"👎":"";
 function openRate(id){const c=S.docs.camps[id];if(!c)return;
@@ -2100,6 +2128,13 @@ $("#form").addEventListener("submit",e=>{
   if(type==="newplan"){const d=id,name=v.name;
     const nid=add("spots",{name,kind:"plan",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
     openSpot({id:nid,...S.docs.spots[nid]},true);return}
+  if(type==="campPaid"){const o=S.docs.nights[id];if(!o)return closeSheet();
+    const amt=parseFloat(String(v.amount||"").replace(",","."));if(!(amt>0)){toast("Enter an amount");return}
+    const meta={payer:v.payer||keaMe(),account:v.account||"",personal:v.personal||""};
+    const no={...o,price:Math.round(amt*100)/100,cat:v.cat||"camp",keaId:o.keaId||newId(),keaMeta:meta};delete no.nopay;
+    put("nights",id,no);keaWrite(nightKeaRec(id,no,meta));
+    try{const k=keaLocal();if(k&&k.settings&&meta.account){k.settings.lastAccount=meta.account;localStorage.setItem(KEA_LS,JSON.stringify(k))}}catch{}
+    closeSheet();toast(`Logged ${nzd(amt)} in Kea`);rateLater(o.camp);return}
   if(type==="paid"){const x=S.docs.spots[id];if(!x)return closeSheet();
     const amt=parseFloat(String(v.amount||"").replace(",","."));if(!(amt>0)){toast("Enter an amount");return}
     const keaId=x.keaId||newId(),meta={payer:v.payer||keaMe(),account:v.account||"",personal:v.personal||""};
@@ -2112,7 +2147,7 @@ $("#form").addEventListener("submit",e=>{
     if(v.all){const s=stopFor(id);patch("stops",s.id,{camp:v.camp,campType:v.campType});stopDays(s).forEach(d=>{const o=S.docs.nights[d];if(!o)return;if(o.flex&&d!==id)put("nights",d,{camp:v.camp,campType:v.campType,notes:"",flex:true,...(o.stayed?{stayed:true}:{})});else setNight(d,v.camp,v.campType,"",false)});setNight(id,v.camp,v.campType,v.notes,!!v.flex,id<=today()?!!v.stayed:undefined)}
     else setNight(id,v.camp,v.campType,v.notes,!!v.flex,id<=today()?!!v.stayed:undefined);
     syncStayCamp(v.camp,id);if(!sameCamp(oldCamp,v.camp))syncStayCamp(oldCamp,id);
-    closeSheet();toast("Saved");return}
+    closeSheet();if(!afterStay(id))toast("Saved");return}
   if(type==="stop"){if(!v.start){toast("Pick an arrival date");return}
     v.book=!!v.book;v.booked=!!v.booked;v.lead=+v.lead||14;
     const num=x=>x===""||x==null?null:parseFloat(String(x).replace(",","."));v.lat=num(v.lat);v.lng=num(v.lng);v.imin=num(v.imin);v.imax=num(v.imax);if(v.imin!=null&&v.imax!=null&&v.imax<v.imin)v.imax=v.imin;if(v.end&&v.end<v.start)v.end=v.start}

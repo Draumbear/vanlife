@@ -502,6 +502,13 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+/* what's on */
+.won .wi{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;padding:9px 0;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer}
+.won .wi:last-child{border-bottom:0}.won .we{font-size:1.25rem;line-height:1.2;width:28px;text-align:center;flex:none}
+.won .wt{flex:1;min-width:0}.won .wt b{display:block;font-size:.95rem;line-height:1.25}.won .wt span{display:block;font-size:.8rem;color:var(--muted);line-height:1.35}
+.won .wd{flex:none;font:600 .72rem var(--mono,monospace);color:var(--fern);background:var(--fern-soft);padding:3px 7px;border-radius:8px;white-space:nowrap;margin-top:2px}
+.won .wd.now{background:var(--fern);color:#fff}
+
 /* aurora card */
 .aur{position:relative;overflow:hidden;border-radius:22px;padding:14px 16px;margin:0 0 12px;color:#e9f6ef;background:radial-gradient(120% 90% at 85% 120%,rgba(64,220,150,.35),transparent 60%),radial-gradient(90% 70% at 20% 130%,rgba(150,90,230,.25),transparent 60%),linear-gradient(180deg,#0b1430,#13244a);border:0;width:100%;text-align:left;font:inherit;display:block;cursor:pointer}
 .aur .k{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.75;font-weight:700}
@@ -1349,6 +1356,30 @@ function openAurora(){const o=aur?.d;if(!o){pullAurora(true);return toast("Check
     <p class="muted" style="font-size:.82rem;margin:8px 0 4px">You'll get a notification in the evening when a good night is forecast, and a "look south now" alert when it's actually happening and the sky is clear enough (on phones that have Kea's evening reminder on).</p>
     <div class="row2" style="display:flex;gap:8px;flex-wrap:wrap"><a class="pill" href="https://www.swpc.noaa.gov/communities/aurora-dashboard-experimental" target="_blank" rel="noopener">NOAA aurora dashboard</a><a class="pill" href="https://www.spaceweatherlive.com/en/auroral-activity/auroral-oval.html" target="_blank" rel="noopener">Southern oval</a><button type="button" class="pill" data-aurorarefresh>Refresh</button></div></div>`,"aurora","")}
 
+
+/* ================= what's on: sky events, holidays, markets, festivals, seasonal nature (trip/happenings.json) ================= */
+let HAP=(()=>{try{return JSON.parse(localStorage.getItem("sil-hap"))||[]}catch{return []}})();
+async function pullHappenings(){try{const r=await fetch("happenings.json",{cache:"no-cache"});if(!r.ok)return;const j=await r.json();HAP=j.items||[];try{localStorage.setItem("sil-hap",JSON.stringify(HAP))}catch{}renderExtras();if(state.day)renderDay()}catch{}}
+const dow=d=>new Date(d+"T12:00:00").getDay();
+function hapOn(h,d){if(d<h.start||d>h.end)return false;if(h.weekly&&!h.weekly.includes(dow(d)))return false;
+  const s=stopFor(d);if(h.minLat!=null&&!(s&&hasLL(s)&&+s.lat>=h.minLat))return false;
+  if(h.near){if(!s||!hasLL(s))return false;return hav(s,{lat:h.near[0],lng:h.near[1]})<=(h.km||70)}return true}
+const hapAway=(h,d)=>{if(!h.near)return "";const s=stopFor(d);if(!s||!hasLL(s))return "";const k=hav(s,{lat:h.near[0],lng:h.near[1]})*1.25;return k<12?"":`~${Math.round(k/5)*5} km from ${shortStop(s.name)}`};
+/* the next few weeks: each happening once, on the first day it applies */
+function hapAhead(days=14){const t=today(),out=[],seen=new Set();
+  for(let i=0;i<days;i++){const d=addDays(t,i);HAP.forEach(h=>{if(!seen.has(h.id)&&hapOn(h,d)){seen.add(h.id);out.push({h,d})}})}return out}
+const hapWhen=(h,d)=>{const t=today(),lbl=d===t?"Today":d===addDays(t,1)?"Tomorrow":`${wd(d)} ${fmt(d)}`;return h.weekly||d===h.end||h.end===h.start?lbl:(d<=t&&h.start<=t?"Now":lbl)+(h.end>d&&!h.weekly?` – ${fmt(h.end)}`:"")};
+function hapRow(h,d,inDay){const w=inDay?(h.weekly||h.end<=d?"":`until ${fmt(h.end)}`):hapWhen(h,d),sub=[h.time,h.where,hapAway(h,d)].filter(Boolean).join(" · ");
+  return `<button type="button" class="wi" data-hap="${esc(h.id)}:${d}"><span class="we">${h.emoji||"✨"}</span><span class="wt"><b>${esc(h.title)}</b>${sub?`<span>${esc(sub)}</span>`:""}</span>${w?`<span class="wd ${/^(Today|Now)/.test(w)?"now":""}">${esc(w)}</span>`:""}</button>`}
+function whatsOnCard(){const a=hapAhead(14);if(!a.length)return "";const MAX=5,open=state.wonOpen;
+  return `<div class="card won"><div class="mini-h"><span class="label">What's on</span><span class="muted" style="font-size:.78rem">next 2 weeks</span></div>
+    ${(open?a:a.slice(0,MAX)).map(o=>hapRow(o.h,o.d)).join("")}${a.length>MAX?`<button type="button" class="tmore" style="color:var(--fern)" data-wonmore>${open?"Show less":`Show ${a.length-MAX} more`}</button>`:""}</div>`}
+function dayHaps(d){const a=HAP.filter(h=>hapOn(h,d));if(!a.length)return "";return `<div class="card won"><span class="label">What's on</span>${a.map(h=>hapRow(h,d,true)).join("")}</div>`}
+function openHap(id,d){const h=HAP.find(x=>x.id===id);if(!h)return;const away=hapAway(h,d);
+  sheet(head(`${h.emoji||"✨"} ${esc(h.title)}`)+`<p class="muted" style="margin:-4px 0 8px">${esc(h.start===h.end?`${wd(h.start)} ${fmt(h.start)}`:h.weekly?`Every ${h.weekly.map(x=>["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][x]).join(" & ")}`:`${fmt(h.start)} – ${fmt(h.end)}`)}${h.time?" · "+esc(h.time):""}${h.where?" · "+esc(h.where):""}${away?" · "+esc(away):""}</p>
+    <p style="line-height:1.5">${esc(h.note||"")}</p>
+    <div class="row2" style="display:flex;gap:8px;flex-wrap:wrap">${h.url?`<a class="pill" href="${esc(safeUrl(h.url)||"#")}" target="_blank" rel="noopener">More info</a>`:""}${h.near?`<a class="pill" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((h.where||h.title)+", New Zealand")}" target="_blank" rel="noopener">Google Maps</a>`:""}${h.kind!=="holiday"&&h.kind!=="nature"?`<button type="button" class="pill go" data-happlan="${esc(h.id)}:${d}">Add to ${wd(d)} ${fmt(d)}</button>`:""}</div>`,"hap","")}
+
 /* ================= Kea (the budget app on this same site) ================= */
 const KEA_LS="vanbudget.v1",KEA_CACHE="sil-kea";
 const KCAT={fuel:["⛽","Fuel"],grocery:["🛒","Groceries"],eatout:["🍔","Eating out"],camp:["🏕️","Campsites"],stay:["🛏️","Stays"],activity:["🪂","Activities"],van:["🔧","Van"],transport:["⛴️","Transport"],utility:["🚿","Showers & laundry"],phone:["📱","Phone"],gear:["🎒","Gear"],health:["💊","Health"],gift:["🎁","Gifts"],drinks:["🍻","Drinks"],other:["✨","Other"]};
@@ -1782,7 +1813,7 @@ function todoCard(){const open=state.todos.filter(x=>!x.done).sort((a,b)=>(a.at|
     <form class="addrow" id="addtodo"><input id="f-todo" placeholder="${open.length?"Add":"Water, dump station, laundry…"}" autocomplete="off" aria-label="Add a to-do"><button class="btn" type="submit">Add</button></form></div>`}
 function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="past"){el.innerHTML="";return}
   const keep=$("#f-todo")?.value||"",focus=document.activeElement?.id==="f-todo";
-  el.innerHTML=auroraCard()+bookCard()+sellCard()}
+  el.innerHTML=auroraCard()+whatsOnCard()+bookCard()+sellCard()}
 /* ---- trip so far, at the top of Past ---- */
 /* past days with plans still unticked: one tap to confirm or drop them */
 function nightsReview(){const t=today(),r=tripRange();if(!r)return "";const open=[];let d=r.first,g=0;
@@ -1890,6 +1921,7 @@ function renderDay(){
         ${n.camp?goBtns(camp,"camp"):""}<button class="ib" type="button" data-night="${d}" aria-label="Change campsite">${icon("edit")}</button></div>
       ${n.notes?`<div class="muted" style="font-size:.85rem">${esc(n.notes)}</div>`:""}</div>
     ${alertCard(d)}
+    ${dayHaps(d)}
     ${d<=t?memoryCard(d):""}
     ${d<=t?spendCard(d):""}
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
@@ -2389,6 +2421,9 @@ document.addEventListener("click",e=>{
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("aurora" in ds)openAurora();
+  else if(ds.hap){const [id,d]=ds.hap.split(":");openHap(id,d)}
+  else if("wonmore" in ds){state.wonOpen=!state.wonOpen;renderExtras()}
+  else if(ds.happlan){const [id,d]=ds.happlan.split(":"),h=HAP.find(x=>x.id===id);if(h){const sp={name:h.title,kind:"place",region:stopFor(d)?.region||"",notes:[h.time,h.where,h.note].filter(Boolean).join(" · "),fav:false,done:false,day:d,order:planFor(d).length,...(h.near?{lat:h.near[0],lng:h.near[1],llok:true}:{}),url:h.url||""};add("spots",sp);closeSheet();toast(`Added to ${wd(d)} ${fmt(d)}`)}}
   else if("aurorarefresh" in ds){pullAurora(true);toast("Refreshing…")}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}
   else if(ds.day)openDay(ds.day);
@@ -2467,7 +2502,7 @@ setTimeout(syncReminders,3000);document.addEventListener("visibilitychange",()=>
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
-  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();syncPhotos();
+  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();pullHappenings();syncPhotos();
   if(/[?&]aurora=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openAurora(),2600)}
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

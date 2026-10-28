@@ -74,7 +74,7 @@ header::after{content:"";display:block;height:10px;border-bottom:1px solid var(-
 .btn.sm{min-height:34px;padding:6px 11px;font-size:.82rem;border-radius:10px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .chip{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--line);color:var(--ink);white-space:nowrap;vertical-align:2px;letter-spacing:.02em}
-.c-doc{background:var(--fern-soft);color:var(--fern)} .c-free{background:var(--sea-soft);color:var(--sea)}
+.c-doc,.c-docpaid{background:var(--fern-soft);color:var(--fern)} .c-free{background:var(--sea-soft);color:var(--sea)}
 .c-paid{background:var(--tussock-soft);color:var(--tussock)} .c-booked{background:var(--rust-soft);color:var(--rust)}
 .links{display:flex;flex-wrap:wrap;gap:6px}
 .links a{display:inline-flex;align-items:center;font-size:.82rem;font-weight:700;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:var(--card)}
@@ -471,6 +471,7 @@ textarea{min-height:72px;resize:vertical}
 .mk.stayed .ic{border-color:#3f9a5c}
 .sleep .nm{flex:1;min-width:0;font:700 1.05rem/1.25 var(--display)}
 .actlist .act:has(.drag){grid-template-columns:auto auto minmax(0,1fr) auto}
+.stnote{display:block;font-size:.8rem;line-height:1.35;margin-top:3px;font-weight:600;opacity:.95}.stnote i{font-weight:400;opacity:.75;font-style:normal}
 .rainrow{grid-column:1/-1;font-size:.8rem;color:#2b6f86;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:-2px}
 .rainrow .pill{font-size:.76rem;padding:4px 10px}.rainrow .pill.go{background:#2b6f86;color:#fff;border-color:#2b6f86}
 .ratebox{font-size:.9rem}.pick.big span{font-size:1rem;padding:12px 16px}
@@ -608,8 +609,8 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 const REGIONS=["Marlborough","Nelson/Tasman","West Coast","Otago","Fiordland","Southland","Canterbury","North Island"];
 const KINDS={place:"Sight",hike:"Hike",multi:"Overnight hike",bike:"MTB & bike",disc:"Disc golf",paid:"Paid activity",quirky:"Quirky",food:"Food & drink"};
 const KINDS_PL={place:"Sights",hike:"Hikes",multi:"Overnight hikes",bike:"MTB & bike",disc:"Disc golf",paid:"Paid ($)",quirky:"Quirky",food:"Food"};
-const CAMPTYPES={doc:"DOC pass",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
-const SHORT={doc:"DOC",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
+const CAMPTYPES={doc:"DOC · pass",docpaid:"DOC · paid",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
+const SHORT={doc:"DOC",docpaid:"DOC $",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
 const COLLS=["stops","spots","camps","nights","todos","journal"];
 const COLL={stop:"stops",spot:"spots",camp:"camps"};
@@ -676,7 +677,7 @@ function dest(x,kind){
   return {q:base+", New Zealand"}}
 function gUrl(x,kind){const t=dest(x,kind);return "https://www.google.com/maps/dir/?api=1&destination="+(t.ll||encodeURIComponent(t.q))}
 function wazeUrl(x,kind){const t=dest(x,kind);return t.ll?`https://waze.com/ul?ll=${t.ll}&navigate=yes`:`https://waze.com/ul?q=${encodeURIComponent(t.q)}&navigate=yes`}
-function infoUrl(x,kind){return safeUrl(x.url)||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(kind==="camp"?(x.region||""):ctxName(x))+" New Zealand"+(kind==="hike"||(kind==="camp"&&x.type==="doc")?" DOC":""))}
+function infoUrl(x,kind){return safeUrl(x.url)||"https://www.google.com/search?q="+encodeURIComponent((x.name||"")+" "+(kind==="camp"?(x.region||""):ctxName(x))+" New Zealand"+(kind==="hike"||(kind==="camp"&&(x.type==="doc"||x.type==="docpaid"))?" DOC":""))}
 const A=(href,label)=>`<a href="${esc(href)}" target="_blank" rel="noopener">${label}</a>`;
 /* one directions link: Android's geo: intent lets the phone ask which app (Maps, Waze…) to use */
 const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -843,7 +844,7 @@ function mapSvg(){
   return s+"</svg>"}
 /* ================= the map: every idea & campsite, our route and where we are ================= */
 const MK={place:"📸",hike:"🥾",multi:"🏔️",bike:"🚵",disc:"🥏",paid:"🎟️",quirky:"🤪",food:"🍴",plan:"📌"};
-const CK={doc:"⛺",free:"🚐",paid:"🏕️",booked:"🏕️",unknown:"⛺"};
+const CK={doc:"⛺",docpaid:"⛺",free:"🚐",paid:"🏕️",booked:"🏕️",unknown:"⛺"};
 const MAPK=[["done","✓ Show done"],["all","All"],["camp","⛺ Camps"],["hike","🥾 Hikes"],["multi","🏔️ Overnight"],["bike","🚵 Bike"],["place","📸 Sights"],["paid","🎟️ Paid"],["disc","🥏 Disc golf"],["food","🍴 Food"],["quirky","🤪 Quirky"]];
 let LF=null,lmap=null,lyr=null,meDot=null,meWatch=null;
 function loadLeaflet(){if(window.L)return Promise.resolve(window.L);if(LF)return LF;
@@ -1370,7 +1371,7 @@ function openPaid(id){const x=S.docs.spots[id];if(!x)return;
 /* ---- paid campsites into Kea ----
    Ticking a night at a paid (or booked) campsite as slept asks what it cost and logs it in Kea
    on that date; unticking the night removes it again. */
-const paidNight=n=>n.type==="paid"||n.type==="booked";
+const paidNight=n=>n.type==="paid"||n.type==="booked"||n.type==="docpaid";
 function lastCampPrice(name,d){const o=Object.entries(S.docs.nights).filter(([k,x])=>k!==d&&x.price>0&&sameCamp(x.camp,name)).sort((a,b)=>b[0].localeCompare(a[0]))[0];return o?o[1].price:""}
 function nightKeaRec(d,o,meta){const old=keaLocal()?.expenses?.[o.keaId]||{},me=keaMe();
   return {id:o.keaId,amount:Math.round(o.price*100)/100,category:o.cat||"camp",spent_on:d,payer:meta.payer||old.payer||me,account:meta.account??old.account??"",personal:meta.personal??old.personal??"",
@@ -1404,6 +1405,9 @@ function markDone(id,on,extra={}){const x=S.docs.spots[id];if(!x)return;
 const OUTDOOR=new Set(["hike","multi","bike","disc","place","quirky"]);
 const wet=w=>w&&(w.p>=12||(w.c>=63&&w.c<=67&&w.p>=6)||w.c>=95);
 function rainAlt(d){const s=stopFor(d),w=wxFor(d);if(!s||!w)return null;return stopDays(s).filter(x=>x>=today()&&x!==d).map(x=>[x,wxFor(x)]).filter(([,v])=>v&&v.p<Math.max(3,w.p*.35)).sort((a,b)=>a[1].p-b[1].p||a[0].localeCompare(b[0]))[0]?.[0]||null}
+const statusNote=x=>{const st=x.status;if(!st||!st.t)return "";const ic=st.ok==="go"?"🟢":st.ok==="no"?"🔴":"🟡";
+  const age=st.at?Math.round((Date.now()-new Date(st.at))/36e5):null;
+  return `<span class="stnote">${ic} ${esc(st.t)}${age!=null?` <i>· ${age<1?"just now":age<24?age+" h ago":Math.round(age/24)+" d ago"}</i>`:""}</span>`};
 function rainRow(x,d){if(!d||d<today()||x.done||!OUTDOOR.has(x.kind||"place"))return "";const w=wxFor(d);if(!wet(w))return "";const alt=rainAlt(d),aw=alt&&wxFor(alt);
   return `<div class="rainrow">🌧️ ${Math.round(w.p)} mm forecast${alt?` · <button type="button" class="pill go" data-mvplan="${esc(x.id)}:${alt}">Move to ${wd(alt)} ${fmt(alt)} ${WMO(aw.c)} ${Math.round(aw.p)} mm</button>`:" · no drier day at this stop"}</div>`}
 /* the day as one Google Maps route: from last night's campsite, past every plan (in your order), to tonight's campsite if you have one */
@@ -1450,7 +1454,7 @@ function renderToday(){
       <span class="s">${esc(cur.name)}${here&&next?` · ${left<=1?"moving on tomorrow":left+" nights here"}`:""}</span></button>
     <div class="tplan">${shown.map(x=>`<div class="trow ${x.done?"done":""}">
         <button class="chk tw ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}${x.tide?`<small class="tsub">${tideNote(x).replace(/<[^>]+>/g,"")}</small>`:""}</button>
+        <button class="tn" type="button" data-open="spot:${esc(x.id)}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <small>${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId?" ✓":""}</small>`:""}${x.tide?`<small class="tsub">${tideNote(x).replace(/<[^>]+>/g,"")}</small>`:""}${statusNote(x)}</button>
         <a class="gobtn tw" href="${esc(navUrl(x,x.kind))}" data-waze="${esc(wazeUrl(x,x.kind))}" target="_blank" rel="noopener" aria-label="Directions to ${esc(x.name)}">${icon("nav")}</a></div>`).join("")||`<div class="s">Nothing planned yet.</div>`}
       ${plan.length>MAX?`<button type="button" class="tmore" data-todaymore>${state.todayOpen?"Show less":`Show ${plan.length-MAX} more`}</button>`:""}
       <div class="tfoot"><button type="button" class="tadd" data-newplan="${d}">${icon("plus")} Add</button><span class="tfr">${plan.length?`<span class="s">${done}/${plan.length} done</span>`:""}${dayRouteUrl(d)?`<a class="tshare" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener" aria-label="Today's route in Google Maps"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg></a>`:""}${here?`<button type="button" class="tshare" data-todayrecap="${d}" aria-label="Share today's recap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>`:""}</span></div></div>
@@ -1725,7 +1729,7 @@ function reviewHTML(){const t=today(),open=state.spots.filter(x=>x.day&&x.day<t&
       <button type="button" class="tx" data-open="spot:${esc(x.id)}" style="background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer"><b>${esc(x.name)}</b><span class="sub">${wd(x.day)} ${fmt(x.day)}</span></button>
       <button type="button" class="rm" data-skip="${esc(x.id)}" aria-label="Didn't do it">×</button></div>`).join("")}
     ${open.length>5&&!state.reviewAll?`<button type="button" class="pill" data-reviewall>Show all ${open.length}</button>`:""}</div>`}
-function nightTypes(a,b){const o={free:0,doc:0,paid:0,other:0};for(let d=a;d<b;d=addDays(d,1)){const ty=nightInfo(d).type;o[ty==="free"?"free":ty==="doc"?"doc":ty==="paid"||ty==="booked"?"paid":"other"]++}return o}
+function nightTypes(a,b){const o={free:0,doc:0,paid:0,other:0};for(let d=a;d<b;d=addDays(d,1)){const ty=nightInfo(d).type;o[ty==="free"?"free":ty==="doc"||ty==="docpaid"?"doc":ty==="paid"||ty==="booked"?"paid":"other"]++}return o}
 function recapHTML(){const t=today(),st=sortStops(),L=legs();const km=Math.round(kmSoFar(addDays(t,-1)));
   const r=tripRange();if(!r)return "";const nights=[];for(let d=r.first;d<t;d=addDays(d,1))nights.push(d);
   const stayCats=["camp","stay"],paidN=nights.filter(d=>spentOn(d).some(e=>stayCats.includes(e.c))),paidSum=sumA(nights.flatMap(d=>spentOn(d).filter(e=>stayCats.includes(e.c))));
@@ -1824,7 +1828,7 @@ function renderDay(){
     <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><span style="display:flex;gap:8px;align-items:center">${dayRouteUrl(d)?`<a class="pill routepill" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener">🗺️ Route in Google Maps</a>`:""}<button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></span></div>
       <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
         ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${statusNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
         <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div>${rainRow(x,d)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       </div>
@@ -1949,7 +1953,7 @@ function openSpot(it,fresh,ll){
   if(!it){const r=regionNear(ll)||stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
     sheet(head("New place")+spotFields({region:r,kind:"place",...(ll?{lat:ll.lat,lng:ll.lng}:{})})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
   sheet(head(esc(it.name))+`
-    ${sgBox(it)}
+    ${sgBox(it)}${it.status?.t?`<div class="card" style="padding:10px 12px;margin:0 0 6px">${statusNote(it)}${it.status.src?`<a class="muted" style="font-size:.78rem" href="${esc(safeUrl(it.status.src)||"#")}" target="_blank" rel="noopener">Source</a>`:""}</div>`:""}
     <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${townOf(it)?" · 📍 "+esc(townOf(it)):ctxName(it)?" · "+esc(ctxName(it)):""}${it.region?" · "+esc(it.region):""}</div>
     ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="spots:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}

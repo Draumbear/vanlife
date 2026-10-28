@@ -488,6 +488,22 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+/* aurora card */
+.aur{position:relative;overflow:hidden;border-radius:22px;padding:14px 16px;margin:0 0 12px;color:#e9f6ef;background:radial-gradient(120% 90% at 85% 120%,rgba(64,220,150,.35),transparent 60%),radial-gradient(90% 70% at 20% 130%,rgba(150,90,230,.25),transparent 60%),linear-gradient(180deg,#0b1430,#13244a);border:0;width:100%;text-align:left;font:inherit;display:block;cursor:pointer}
+.aur .k{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.75;font-weight:700}
+.aur .v{font:800 1.1rem var(--display);margin:2px 0 8px;display:flex;align-items:center;gap:8px}
+.aur .anights{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.aur .an{background:rgba(255,255,255,.08);border-radius:12px;padding:6px 8px;font-size:.74rem;line-height:1.35;color:#d5e6ee}
+.aur .an b{display:flex;align-items:center;gap:5px;font-size:.8rem;color:#fff}
+.aur .top{display:flex;align-items:center;gap:8px}.aur .top .k{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aur .dot{width:10px;height:10px;border-radius:50%;flex:none;background:#56607a}.aur .l1{background:#c9b458}.aur .l2{background:#56d39a}.aur .l3{background:#7cf5c0;box-shadow:0 0 10px #7cf5c0}
+.aur .live{flex:none;font-size:.7rem;font-weight:800;background:#56d39a;color:#062016;padding:3px 8px;border-radius:99px;animation:aurPulse 1.6s ease-in-out infinite}
+@keyframes aurPulse{50%{opacity:.55}}
+.aursheet .nrow{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.aursheet .nrow:last-of-type{border-bottom:0}.aursheet .bar{height:8px;border-radius:5px;background:var(--line);position:relative;overflow:hidden;margin-top:4px}
+.aursheet .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#56d39a,#7cf5c0)}.aursheet .bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.aursheet ul{margin:6px 0 0;padding-left:18px;font-size:.88rem;line-height:1.45}
+
 .gopop{position:fixed;z-index:60;display:flex;flex-direction:column;min-width:170px;padding:6px;border-radius:16px;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.22);animation:gpIn .14s ease-out}
 .gopop a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:11px;color:inherit;text-decoration:none;font-weight:700}
 .gopop a:active{background:var(--line)}
@@ -1283,6 +1299,42 @@ function alertCard(d){const a=shownAlerts(d);if(!a.length)return "";
   return `<div class="card alert">${a.slice(0,3).map(e=>`<details><summary><span>⚠️ <b>${esc(shortAlert(e))}</b><span class="sub">${esc(e.impact)}${e.until?` · ${esc(e.until)}`:""}</span></span></summary>
       ${e.note?`<p class="sub">${esc(e.note)}</p>`:""}<div class="row2"><a class="pill" href="https://www.journeys.nzta.govt.nz/" target="_blank" rel="noopener">NZTA road info</a><button type="button" class="pill" data-hidealert="${esc(akey(e))}">Hide</button></div></details>`).join("")}</div>`}
 
+
+/* ================= aurora: can we see it from where we sleep tonight? ================= */
+/* our edge function mixes NOAA's Kp forecast, live solar wind and the OVATION oval with Open-Meteo cloud cover */
+const AUK="sil-aurora";let aur=(()=>{try{return JSON.parse(localStorage.getItem(AUK))||null}catch{return null}})();
+function auroraLoc(){const t=today(),n=nightInfo(t),c=campOf(n),s=currentStop();
+  if(c&&hasLL(c))return {lat:+c.lat,lng:+c.lng,name:c.name};if(s&&hasLL(s))return {lat:+s.lat,lng:+s.lng,name:s.name};return null}
+let aurBusy=false;
+async function pullAurora(force){const c=keaCred()||cred,L=auroraLoc();if(aurBusy||!c?.url||!L||!navigator.onLine)return;
+  const key=L.lat.toFixed(2)+","+L.lng.toFixed(2);if(!force&&aur&&aur.key===key&&Date.now()-aur.at<15*60e3)return;aurBusy=true;
+  try{const r=await fetch(c.url.replace(/\/+$/,"")+`/functions/v1/aurora?lat=${L.lat}&lng=${L.lng}`);if(r.ok){aur={key,at:Date.now(),name:L.name,d:await r.json()};try{localStorage.setItem(AUK,JSON.stringify(aur))}catch{}renderExtras();if($("#form")?.dataset.type==="aurora")openAurora()}}
+  catch{}finally{aurBusy=false}}
+const AURL=["Unlikely","Maybe on camera","Good chance on camera","Visible by eye"];
+const kpTxt=k=>k==null?"–":(Math.round(k*10)/10).toString();
+function aurVerdict(n){if(!n)return {t:"No forecast",lvl:0};let lvl=n.level,t=AURL[lvl];
+  if(lvl>0&&n.clearest!=null&&n.clearest>85){t+=" · but cloudy";lvl=Math.min(lvl,1)}
+  return {t,lvl}}
+function auroraCard(){const o=aur?.d;if(!o||!o.nights?.length)return "";const t0=o.nights[0],v=aurVerdict(t0),live=o.now?.dark&&o.now.level>=2;
+  const nm=d=>d===today()||d===addDays(today(),-1)&&new Date().getHours()<12?"Tonight":wd(d);
+  return `<button type="button" class="aur" data-aurora aria-label="Aurora outlook">
+    <span class="top"><span class="k">🌌 Aurora · ${esc(aur.name||"here")}</span>${live?`<span class="live">HAPPENING NOW</span>`:""}</span>
+    <span class="v"><span class="dot l${v.lvl}"></span>${nm(t0.date)}: ${esc(v.t)}</span>
+    <span class="anights">${o.nights.map(n=>{const x=aurVerdict(n);return `<span class="an"><b><span class="dot l${x.lvl}" style="width:8px;height:8px"></span>${nm(n.date)}</b>Kp ${kpTxt(n.kpMax)}<br>☁️ ${n.cloud??"–"}% cloud</span>`}).join("")}</span></button>`}
+function openAurora(){const o=aur?.d;if(!o){pullAurora(true);return toast("Checking the aurora forecast…")}
+  const need=o.need,max=9,nm=d=>d===o.nights[0].date?"Tonight":wd(d)+" "+fmt(d),n=o.now||{};
+  const row=x=>{const v=aurVerdict(x);return `<div class="nrow"><span class="dot l${v.lvl}" style="width:12px;height:12px;border-radius:50%;margin-top:4px;background:${["#9aa3b5","#c9b458","#56d39a","#2fc48a"][v.lvl]}"></span>
+      <div><b>${nm(x.date)}</b> · ${esc(v.t)}<div class="muted" style="font-size:.82rem">Kp ${kpTxt(x.kpMax)} forecast · needs ~${kpTxt(need.cam)} for camera, ~${kpTxt(need.eye)} by eye · cloud ${x.cloud??"–"}% (clearest hour ${x.clearest??"–"}%) · moon ${x.moon?.illum??"–"}%</div>
+      <div class="bar"><i style="width:${Math.min(100,(x.kpMax||0)/max*100)}%"></i><u style="left:${need.cam/max*100}%"></u></div></div></div>`};
+  sheet(head("🌌 Aurora")+`<div class="aursheet">
+    <p class="muted" style="margin:-4px 0 8px">For ${esc(aur.name||"where you sleep tonight")} · the line on each bar is the Kp you need here.</p>
+    ${o.nights.map(row).join("")}
+    <div class="card" style="padding:10px 12px;margin:10px 0"><div style="font-weight:800">Right now${n.dark&&n.level>=2?` <span style="color:#1f9d6a">· active, look south!</span>`:""}</div>
+      <div class="muted" style="font-size:.84rem">Kp ${kpTxt(n.kp)} · Bz ${n.bz??"–"} nT${n.bz!=null?(n.bz<=-5?" (south, good)":" (north, quiet)"):""} · solar wind ${n.speed??"–"} km/s · oval strength south of you ${n.oval??"–"}% · cloud ${n.cloud!=null?Math.round(n.cloud):"–"}%</div></div>
+    <b>How to see it</b><ul><li>Darkest hours, about 10 pm – 2 am. Look south, away from town lights.</li><li>Phone on night mode (3–10 s), braced on something: the camera sees it long before your eyes do.</li><li>A bright moon washes out faint aurora; a clear southern horizon (lake, beach, hill) helps.</li><li>Bz going strongly south (−10 or lower) with fast wind (500+ km/s) is when it kicks off.</li></ul>
+    <p class="muted" style="font-size:.82rem;margin:8px 0 4px">You'll get a notification in the evening when a good night is forecast, and a "look south now" alert when it's actually happening and the sky is clear enough (on phones that have Kea's evening reminder on).</p>
+    <div class="row2" style="display:flex;gap:8px;flex-wrap:wrap"><a class="pill" href="https://www.swpc.noaa.gov/communities/aurora-dashboard-experimental" target="_blank" rel="noopener">NOAA aurora dashboard</a><a class="pill" href="https://www.spaceweatherlive.com/en/auroral-activity/auroral-oval.html" target="_blank" rel="noopener">Southern oval</a><button type="button" class="pill" data-aurorarefresh>Refresh</button></div></div>`,"aurora","")}
+
 /* ================= Kea (the budget app on this same site) ================= */
 const KEA_LS="vanbudget.v1",KEA_CACHE="sil-kea";
 const KCAT={fuel:["⛽","Fuel"],grocery:["🛒","Groceries"],eatout:["🍔","Eating out"],camp:["🏕️","Campsites"],stay:["🛏️","Stays"],activity:["🪂","Activities"],van:["🔧","Van"],transport:["⛴️","Transport"],utility:["🚿","Showers & laundry"],phone:["📱","Phone"],gear:["🎒","Gear"],health:["💊","Health"],gift:["🎁","Gifts"],drinks:["🍻","Drinks"],other:["✨","Other"]};
@@ -1716,7 +1768,7 @@ function todoCard(){const open=state.todos.filter(x=>!x.done).sort((a,b)=>(a.at|
     <form class="addrow" id="addtodo"><input id="f-todo" placeholder="${open.length?"Add":"Water, dump station, laundry…"}" autocomplete="off" aria-label="Add a to-do"><button class="btn" type="submit">Add</button></form></div>`}
 function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="past"){el.innerHTML="";return}
   const keep=$("#f-todo")?.value||"",focus=document.activeElement?.id==="f-todo";
-  el.innerHTML=bookCard()+sellCard()}
+  el.innerHTML=auroraCard()+bookCard()+sellCard()}
 /* ---- trip so far, at the top of Past ---- */
 /* past days with plans still unticked: one tap to confirm or drop them */
 function nightsReview(){const t=today(),r=tripRange();if(!r)return "";const open=[];let d=r.first,g=0;
@@ -2322,6 +2374,8 @@ document.addEventListener("click",e=>{
   else if("sellopen" in ds){state.sellOpen=!state.sellOpen;try{localStorage.setItem("sil-sellopen",state.sellOpen?"1":"0")}catch{}renderExtras()}
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
+  else if("aurora" in ds)openAurora();
+  else if("aurorarefresh" in ds){pullAurora(true);toast("Refreshing…")}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}
   else if(ds.day)openDay(ds.day);
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
@@ -2375,7 +2429,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preven
   openSpot({id,...S.docs.spots[id]},true)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx();pullTides();pullRoadAlerts()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx();pullTides();pullRoadAlerts();pullAurora()}});
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
 /* ================= start ================= */
@@ -2397,7 +2451,8 @@ setTimeout(syncReminders,3000);document.addEventListener("visibilitychange",()=>
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
-  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();syncPhotos();
+  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();syncPhotos();
+  if(/[?&]aurora=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openAurora(),2600)}
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>

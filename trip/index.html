@@ -319,6 +319,7 @@ textarea{min-height:72px;resize:vertical}
 .mk.sg .ic{border-color:#e0812a}
 .mk.camp .ic{border-color:#5f7d96;border-radius:9px}
 .mk.planned .ic{box-shadow:0 0 0 3px #fff,0 0 0 5px #2f6b4f}
+.mk.chk .ic{border-style:dashed;border-color:#d39b1c;opacity:.85}.mk.chk .nm::after{content:" ?";color:#b07d0e;font-weight:800}
 .mk.done .ic{border-color:#9aa3a6;filter:grayscale(1);opacity:.7}
 .mk.done .nm{text-decoration:line-through;color:#6b7470}
 .mk .ok{position:absolute;left:19px;top:-7px;width:17px;height:17px;border-radius:50%;background:#2f8f4e;color:#fff;font:800 11px/17px var(--body);text-align:center;box-shadow:0 0 0 2px #fff}
@@ -508,6 +509,12 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+.locwarn{background:#fff4d6;color:#5b4a14;border:1px solid #ecd58b;border-radius:14px;padding:10px 12px;display:grid;gap:4px;font-size:.9rem}
+.locwarn span{font-size:.82rem;opacity:.85}.locwarn .row2{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.locline{display:flex;gap:14px;font-size:.82rem}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .locwarn{background:#3a321a;color:#f3e3b0;border-color:#5e5124}}
+:root[data-theme="dark"] .locwarn{background:#3a321a;color:#f3e3b0;border-color:#5e5124}
+
 /* what's on */
 .won .wi{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;padding:9px 0;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer}
 .won .wi:last-child{border-bottom:0}.won .we{font-size:1.25rem;line-height:1.2;width:28px;text-align:center;flex:none}
@@ -954,7 +961,7 @@ function mapItems(){const k=state.mapKind;const out=[];
 let mks=[];
 function drawMarkers(){if(!lmap||!lyr)return;const L=window.L;lyr.clearLayers();mks=[];const t=today();
   mapItems().forEach(({x,p,camp})=>{const ic=camp?CK[x.type]||"⛺":MK[x.kind]||"📸",st=camp&&isStayed(x);
-    const cls=["mk",x.suggested?"sg":"ours",x.done&&!camp?"done":"",st?"stayed":"",x.day?"planned":"",camp?"camp":"",x.fav?"fav":""].join(" ");
+    const cls=["mk",x.suggested?"sg":"ours",x.done&&!camp?"done":"",st?"stayed":"",x.day?"planned":"",camp?"camp":"",x.fav?"fav":"",x.llcheck?"chk":""].join(" ");
     const html=`<div class="${cls}"><span class="ic">${ic}</span>${state.mapDay&&!camp?`<span class="num">${planFor(state.mapDay).indexOf(x)+1}</span>`:""}${x.done||st?`<span class="ok">✓</span>`:x.day&&!state.mapDay?`<span class="dt">${fmt(x.day)}</span>`:""}<span class="nm">${esc(x.name)}</span></div>`;
     const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html,iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:x.day?400:x.suggested?0:200});
     const kind=camp?(CAMPTYPES[x.type]||"Campsite"):kindLabel(x);
@@ -1914,9 +1921,9 @@ function renderPlaces(){if(state.tab==="places")wantHere();const me=state.here,a
   const reg=state.region||"all";
   const sel=$("#region");sel.innerHTML=`<option value="all">All regions</option>`+REGIONS.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join("");sel.value=reg;
   const q=state.q.toLowerCase(),base=allPlaces().filter(x=>q||reg==="all"||x.region===reg);
-  const f={all:x=>x._c==="spot",noloc:x=>!ptOf(x),fav:x=>x.fav,camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
+  const f={all:x=>x._c==="spot",noloc:x=>!ptOf(x)||!!x.llcheck,fav:x=>x.fav,camp:x=>x._c==="camp",planned:x=>x._c==="spot"&&x.day};
   Object.keys(KINDS).forEach(k=>f[k]=x=>x._c==="spot"&&(x.kind||"place")===k);
-  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["noloc","📍 No location"],...Object.entries(KINDS_PL)];
+  const labels=[["all","To see & do"],["camp","Campsites"],["fav","♥"],["planned","Planned"],["noloc",`📍 Check location${(()=>{const k=[...state.spots,...state.camps].filter(x=>!ptOf(x)||x.llcheck).length;return k?" · "+k:""})()}`],...Object.entries(KINDS_PL)];
   $("#src").innerHTML=[["both","All"],["ours","Our list"],["claude","✦ Claude"]].map(([k,l])=>`<button type="button" class="${k==="claude"?"c":""}" aria-pressed="${state.src===k}" data-src="${k}">${l}</button>`).join("");
   $("#kinds").innerHTML=labels.map(([k,l])=>`<button class="pill" type="button" aria-pressed="${state.kind===k}" data-kind="${k}">${l}</button>`).join("");
   const items=base.filter(x=>visSug(x)&&(f[state.kind]||f.all)(x)&&(!q||(x.name+" "+(x.notes||"")).toLowerCase().includes(q)))
@@ -2082,6 +2089,16 @@ function openNewPlan(d){
   sheet(head(`Add to ${wd(d)} ${fmt(d)}`)+`<div><span class="label">Van chores</span><div class="chorechips">${Object.entries(CHORES).map(([k,[i,l]])=>`<button type="button" class="pill" data-chore="${k}">${i} ${l}</button>`).join("")}</div></div>
     <label>Or something else<input name="name" placeholder="Swimming pool, hike…" autocomplete="off" enterkeyhint="done"></label>
     <div class="end"><div></div><div><button class="btn primary" type="submit">Add</button></div></div>`,"newplan",d);}
+/* pins we're not sure about: say why, and offer fix / it's right / delete right in the sheet */
+function locBox(it,c){if(!it.id)return "";const no=!ptOf(it),chk=it.llcheck;
+  if(!no&&!chk)return `<div class="locline"><button type="button" class="linkx" data-lb="fix">📍 Wrong spot? Fix location</button><button type="button" class="linkx" data-lb="del">Delete</button></div>`;
+  return `<div class="locwarn"><b>📍 ${no?"Not on the map yet":"Not sure this pin is right"}</b>${chk&&chk!==true?`<span>${esc(chk)}</span>`:""}
+    <div class="row2"><button type="button" class="pill go" data-lb="fix">${no?"Set location":"Fix location"}</button>${no?"":`<button type="button" class="pill" data-lb="ok">✓ Pin is right</button>`}<button type="button" class="pill" data-lb="del">🗑 Delete</button></div></div>`}
+function wireLocBox(it,c){const f=$("#form");
+  f.querySelectorAll("[data-lb=fix]").forEach(b=>b.onclick=()=>{const dt=f.querySelector("details");if(dt)dt.open=true;const lp=f.querySelector(".locpick");if(!lp)return;
+    lp.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>lp.querySelector("[data-lf=map]")?.click(),350)});
+  f.querySelectorAll("[data-lb=ok]").forEach(b=>b.onclick=()=>{patch(c,it.id,{llcheck:null,llok:true});closeSheet();toast("Thanks, pin confirmed")});
+  f.querySelectorAll("[data-lb=del]").forEach(b=>armed(b,"Tap again to delete",()=>{const had=c==="spots"&&keaUnpay(it.id,true);del(c,it.id);closeSheet();toast(had?"Deleted, and removed from Kea":"Deleted")}))}
 function openSpot(it,fresh,ll){
   if(!it){const r=regionNear(ll)||stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
     sheet(head("New place")+spotFields({region:r,kind:"place",...(ll?{lat:ll.lat,lng:ll.lng}:{})})+(state.day?`<input type="hidden" name="day" value="${state.day}">`:"")+saveRow(true),"spot");return}
@@ -2090,6 +2107,7 @@ function openSpot(it,fresh,ll){
     <div class="muted" style="font-size:.85rem">${esc(kindLabel(it))}${townOf(it)?" · 📍 "+esc(townOf(it)):ctxName(it)?" · "+esc(ctxName(it)):""}${it.region?" · "+esc(it.region):""}</div>
     ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="spots:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
+    ${locBox(it,"spots")}
     ${navLinks(it,it.kind)}
     ${it.kind==="task"?`<label>Do by<input type="date" id="q-by" value="${esc(it.by||"")}"></label>`:""}
     <label>Day<select id="q-day">${dayOpts(it.day,it.kind==="task"?"No set day":"Not planned")}</select></label>
@@ -2103,7 +2121,7 @@ function openSpot(it,fresh,ll){
     <label>Remind me to book<select id="q-lead">${LEADS.map(([v,l])=>`<option value="${v}" ${v===(+it.lead||14)?"selected":""}>${l}</option>`).join("")} before</select></label></div>
     <label class="check"><input type="checkbox" id="q-rain" ${rainOK(it)?"checked":""}> Good on a rainy day</label>
     <details><summary>Edit details</summary><div>${spotFields(it)}${saveRow(false)}</div></details>`,"spot",it.id);
-  sgWire("spots",it);
+  sgWire("spots",it);wireLocBox(it,"spots");
   $("#q-day").onchange=e=>{const d=e.target.value||null;if(!d)keaUnpay(it.id,true);patch("spots",it.id,{day:d,order:d?planFor(d).length:0,...(d?{}:{done:false})});keaSyncSpot(it.id);toast(d?`Planned for ${wd(d)} ${fmt(d)}`:"Back to ideas")};
   $("#q-book").onchange=e=>{$("#q-bookopts").hidden=!e.target.checked;patch("spots",it.id,{book:e.target.checked});toast(e.target.checked?"Shows in To book":"No booking needed")};
   $("#q-booked").onchange=e=>{patch("spots",it.id,{booked:e.target.checked,...(e.target.checked?{book:true}:{})});if(e.target.checked)$("#q-book").checked=true;toast(e.target.checked?"Booked ✓":"Not booked")};
@@ -2128,10 +2146,11 @@ function openCamp(it,ll){
     ${isStayed(it)||it.rate?`<div class="ratebox">${it.rate?`<b>${rateTag(it)}</b> `:""}${it.review?`“${esc(it.review)}” `:""}<button type="button" class="linkx" data-rate="${esc(it.id)}">${it.rate?"change":"How was it?"}</button></div>`:""}
     ${it.id?`<button type="button" class="pill favpill ${it.fav?"on":""}" data-favsheet="camps:${esc(it.id)}" aria-pressed="${!!it.fav}">♥ ${it.fav?"Favourite":"Add to favourites"}</button>`:""}
     ${it.notes?`<div>${esc(it.notes)}</div>`:""}
+    ${locBox(it,"camps")}
     ${navLinks(it,"camp")}
     <label>Sleep here<select id="q-sleep">${dayOpts("","Pick a night…")}</select></label>
     <details><summary>Edit details</summary><div>${campFields(it)}${saveRow(false)}</div></details>`,"camp",it.id);
-  sgWire("camps",it);
+  sgWire("camps",it);wireLocBox(it,"camps");
   $("#q-sleep").onchange=e=>{const d=e.target.value;if(!d)return;setNight(d,it.name,it.type||"unknown","");toast(`Sleeping here ${wd(d)} ${fmt(d)}`);closeSheet()};
   armed($("#del"),"Tap again",()=>{del("camps",it.id);closeSheet();toast("Deleted")})}
 function openStop(it){const isNew=!it;it=it||{};const last=sortStops().slice(-1)[0];
@@ -2291,6 +2310,7 @@ $("#form").addEventListener("submit",e=>{
     if(isFinite(la)&&isFinite(lg)){v.lat=la;v.lng=lg;v.llok=true;if(parseLL(v.loc))v.loc="";if(!v.region)v.region=regionNear(v)}
     else{const p=parseLL(v.loc);if(p){v.lat=p.lat;v.lng=p.lng;v.llok=true;v.loc=""}else if(id){v.lat=null;v.lng=null}}}
   const c=COLL[type],prev=id?S.docs[c][id]:null,doc={...(prev||{}),...v};
+  if(prev&&(type==="spot"||type==="camp")&&doc.lat!=null&&(prev.lat!==doc.lat||prev.lng!==doc.lng))doc.llcheck=null;
   if(!id&&type==="spot"){doc.fav=false;doc.done=false;doc.day=v.day||null;if(doc.day)doc.order=planFor(doc.day).length}
   if(!id&&type==="camp")doc.fav=false;
   if(id)put(c,id,doc);else add(c,doc);

@@ -1052,132 +1052,154 @@ function wrapLines(ctx,text,maxW,maxL){const words=String(text).split(/\s+/),out
   if(out.length===maxL&&words.join(" ").length>out.join(" ").length){let l=out[maxL-1];while(ctx.measureText(l+"…").width>maxW&&l)l=l.slice(0,-1);out[maxL-1]=l.trimEnd()+"…"}
   return out}
 const loadImg=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=src});
+/* the recap is a scrapbook page: polaroid photo, a taped-in map clipping, handwritten note.
+   The layout follows the photo: wide photos go across the top, tall ones down the left. */
+const RFONTS="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap";
+async function recapFonts(){if(!document.querySelector("link[data-rf]")){const l=document.createElement("link");l.rel="stylesheet";l.href=RFONTS;l.dataset.rf="1";document.head.appendChild(l);
+    await new Promise(ok=>{l.onload=ok;l.onerror=ok;setTimeout(ok,2500)})}
+  try{await Promise.race([Promise.all(["700 40px Caveat","500 40px Caveat","800 60px Fraunces","600 30px Fraunces"].map(f=>document.fonts.load(f))),new Promise(ok=>setTimeout(ok,3000))])}catch{}}
 async function buildRecap(d){
-  await document.fonts?.ready;
+  await recapFonts();await document.fonts?.ready;
   const W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
-  const DF='"Bricolage Grotesque","Avenir Next",system-ui,sans-serif',BF='"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif';
+  const HF='"Fraunces",Georgia,"Times New Roman",serif',SF='"Caveat","Segoe Print","Bradley Hand",cursive',BF='"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif';
+  const INK="#2b2925",SOFT="#7a7264",ACC="#b4532a",PAPER="#efe8d8";
   const r=tripRange(),dayN=r?daysBetween(r.first,d)+1:null,total=r?daysBetween(r.first,r.last):null;
   const n=nightInfo(d),s=n.stop,w=wxDay(d),j=S.docs.journal[d]||{},R=dayRoute(d),photo=j.photo?await getPhoto(d):null;
-  // paper + header band
-  g.fillStyle="#f4f1e8";g.fillRect(0,0,W,H);
-  g.fillStyle="#2f6b4f";g.fillRect(0,0,W,200);
-  g.fillStyle="#cfe3d6";g.font=`700 30px ${BF}`;g.fillText((dayN?`DAY ${dayN}${total?" OF "+total:""}`:"OUR TRIP")+(s?"  ·  "+shortStop(s.name).toUpperCase():""),60,70);
-  g.fillStyle="#fff";g.font=`800 66px ${DF}`;g.fillText(new Date(d+"T12:00").toLocaleDateString("en-NZ",{weekday:"long",day:"numeric",month:"long"}),60,148);
-  if(w){g.textAlign="right";g.font=`86px ${BF}`;g.fillText(WMO(w.c),W-60,130);g.font=`700 30px ${BF}`;g.fillStyle="#cfe3d6";g.fillText(`${Math.round(w.hi)}° / ${Math.round(w.lo)}°${w.p>=1?` · ${Math.round(w.p)} mm`:""}`,W-60,178);g.textAlign="left"}
-  // layout: route + list block is fixed at the bottom; the photo takes what's left above the note
-  const BH=400,by=H-150-BH-10,bh=BH,lx=60,lw=470,rx=lx+lw+40,rw=W-rx-60;
-  g.font=`italic 400 36px ${BF}`;let L=j.note?wrapLines(g,j.note,W-180,photo?3:7):[];
-  const noteH=L.length?L.length*46+40:0;let y=230;
-  // the photo keeps its shape: a wide one gets a shorter frame, a tall one sits on a blurred copy of itself
-  if(photo){try{const im=await loadImg(photo),bw=W-120,avail=Math.max(260,by-30-noteH-y),ar=im.width/im.height;
-    let bh2=Math.min(avail,bw/ar);y+=Math.round((avail-bh2)/2);
-    g.save();g.beginPath();g.roundRect(60,y,bw,bh2,28);g.clip();
-    const fitW=bh2*ar;
-    if(fitW>=bw*.88){const sc=Math.max(bw/im.width,bh2/im.height),sw=bw/sc,sh=bh2/sc;g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,60,y,bw,bh2)}
-    else{const sc=Math.max(bw/im.width,bh2/im.height),sw=bw/sc,sh=bh2/sc;g.filter="blur(28px) brightness(.8)";g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,40,y-20,bw+40,bh2+40);g.filter="none";
-      g.drawImage(im,60+(bw-fitW)/2,y,fitW,bh2)}
-    g.restore();y+=bh2+34}catch{}}
-  if(L.length){g.fillStyle="#2f6b4f";g.font=`800 64px ${DF}`;g.fillText("“",54,y+40);g.fillStyle="#1d2621";g.font=`italic 400 36px ${BF}`;
-    L.forEach((l,i)=>g.fillText(l,110,y+30+i*46))}
+  let im=null;if(photo)try{im=await loadImg(photo)}catch{}
+  const rnd=(()=>{let x=[...d].reduce((a,c)=>a*31+c.charCodeAt(0),7)%2147483647;return ()=>(x=x*48271%2147483647)/2147483647})();
+  // paper with a little grain
+  g.fillStyle=PAPER;g.fillRect(0,0,W,H);
+  for(let i=0;i<5200;i++){g.fillStyle=`rgba(${rnd()<.5?"90,70,40":"255,255,255"},${.04+rnd()*.06})`;g.fillRect(rnd()*W,rnd()*H,1+rnd()*1.6,1+rnd()*1.6)}
+  // header: day + place, the date, and the weather in handwriting
+  g.fillStyle=SOFT;g.font=`700 23px ${BF}`;try{g.letterSpacing="4px"}catch{}
+  g.fillText(((dayN?`DAY ${dayN}${total?" OF "+total:""}`:"OUR TRIP")+(s?"   ·   "+shortStop(s.name).toUpperCase():"")),64,80);try{g.letterSpacing="0px"}catch{}
+  g.fillStyle=INK;g.font=`800 70px ${HF}`;g.fillText(new Date(d+"T12:00").toLocaleDateString("en-NZ",{weekday:"long",day:"numeric",month:"long"}),60,158);
+  if(w){g.textAlign="right";g.font=`68px ${BF}`;g.fillText(WMO(w.c),W-64,112);g.fillStyle=SOFT;g.font=`700 40px ${SF}`;g.fillText(`${Math.round(w.hi)}° / ${Math.round(w.lo)}°${w.p>=1?` · ${Math.round(w.p)} mm`:""}`,W-64,160);g.textAlign="left"}
+  g.strokeStyle="rgba(43,41,37,.35)";g.lineWidth=2;g.setLineDash([2,8]);g.lineCap="round";g.beginPath();g.moveTo(60,196);g.lineTo(W-60,196);g.stroke();g.setLineDash([]);
+  const TOP=232,BOT=H-142;
+  // pieces
+  function tape(x,y,ang,len=120){g.save();g.translate(x,y);g.rotate(ang);g.fillStyle="rgba(236,222,170,.78)";g.fillRect(-len/2,-17,len,34);
+    g.fillStyle="rgba(255,255,255,.18)";for(let i=-len/2;i<len/2;i+=9)g.fillRect(i,-17,3,34);g.restore()}
+  function polaroid(x,y,pw,ph,rot,cap){const fw=pw+44,fh=ph+22+(cap?Math.max(84,cap.length*42+34):24);
+    g.save();g.translate(x+fw/2,y+fh/2);g.rotate(rot);g.translate(-fw/2,-fh/2);
+    g.shadowColor="rgba(40,30,10,.32)";g.shadowBlur=26;g.shadowOffsetY=10;g.fillStyle="#fbfaf5";g.fillRect(0,0,fw,fh);g.shadowColor="transparent";
+    const sc=Math.max(pw/im.width,ph/im.height),sw=pw/sc,sh=ph/sc;g.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,22,22,pw,ph);
+    if(cap){g.fillStyle=INK;g.font=`700 40px ${SF}`;cap.forEach((l,i)=>g.fillText(l,30,22+ph+48+i*42))}
+    g.restore();tape(x+fw/2,y+4,rot+(rnd()-.5)*.12,150);return {w:fw,h:fh}}
+  // the map clipping (same map as before, rotated a touch and taped down)
+  async function mapClip(lx,by,lw,bh,rot){g.save();g.translate(lx+lw/2,by+bh/2);g.rotate(rot);g.translate(-(lx+lw/2),-(by+bh/2));
+    g.shadowColor="rgba(40,30,10,.25)";g.shadowBlur=18;g.shadowOffsetY=6;g.fillStyle="#fbfaf5";g.fillRect(lx-10,by-10,lw+20,bh+20);g.shadowColor="transparent";
+    await drawMap(lx,by,lw,bh);g.restore();tape(lx+18,by+6,-.7,96);tape(lx+lw-18,by+bh-6,-.7,96)}
+  async function drawMap(lx,by,lw,bh){
   // the route on a real map (OpenStreetMap tiles); activity icons on it, and a zoomed-in box when several sit on top of each other
-  const P=R.pts,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
-  async function tiles(z,MS,ox,oy,x0,y0,w,h){const tw=256*MS,jobs=[];let ok=false;
-    for(let tx=Math.floor((x0-ox)/tw);tx<=Math.floor((x0+w-ox)/tw);tx++)for(let ty=Math.floor((y0-oy)/tw);ty<=Math.floor((y0+h-oy)/tw);ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
-      try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);ok=true}catch{}finally{clearTimeout(tm)}})());
-    await Promise.all(jobs);return ok}
-  function pin(p,x,y,s=1){if(p.k==="act"){g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=4*s;g.beginPath();g.arc(x,y,22*s,0,7);g.fill();g.stroke();
-      g.font=`${Math.round(24*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(p.ic,x,y+1)}
-    else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4*s;g.beginPath();g.arc(x,y,(p.k==="to"?21:14)*s,0,7);g.fill();g.stroke();
-      g.font=`${Math.round((p.k==="to"?21:15)*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,y+1)}
-    g.textAlign="left";g.textBaseline="alphabetic"}
-  function road(pts,X,Y,w){if(pts.length<2)return;g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=w;g.lineCap="round";g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
-    g.strokeStyle="#f1e3a6";g.lineWidth=Math.max(2,w/4);g.setLineDash([w*1.2,w]);g.stroke();g.setLineDash([])}
-  g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,24);g.fill();
-  g.save();g.beginPath();g.roundRect(lx,by,lw,bh,24);g.clip();
-  const moved=P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng);
-  const rest=P.filter(p=>p.k!=="from"),farFrom=P[0]?.k==="from"&&rest.length>=2&&rest.every(p=>hav(p,P[0])>25);
-  const focus=farFrom?rest:P.length?P:[nightLoc(d)].filter(Boolean),MS=1.5;
-  let X=null,Y=null,tilesOk=false;
-  if(focus.length){const pad=64,aw=lw-2*pad,ah=bh-2*pad-40;let z=14;
-    if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}else z=13;
-    const cxw=(Math.max(...focus.map(p=>wx(p.lng,z)))+Math.min(...focus.map(p=>wx(p.lng,z))))/2,cyw=(Math.max(...focus.map(p=>wy(p.lat,z)))+Math.min(...focus.map(p=>wy(p.lat,z))))/2;
-    const ox=lx+lw/2-cxw*MS,oy=by+(bh-40)/2-cyw*MS;X=p=>ox+wx(p.lng,z)*MS;Y=p=>oy+wy(p.lat,z)*MS;
-    tilesOk=await tiles(z,MS,ox,oy,lx,by,lw,bh)}
-  if(!tilesOk){g.strokeStyle="#d2dcc8";g.lineWidth=2;for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}}
-  // pins that would cover each other: the biggest such group goes into a zoomed-in box
-  let clu=[];
-  if(X){const pts=P.filter(p=>p.k!=="from"),near=(a,b)=>Math.hypot(X(a)-X(b),Y(a)-Y(b))<46,seen=new Set();
-    for(const a of pts){if(seen.has(a))continue;const grp=[a];seen.add(a);for(let i=0;i<grp.length;i++)for(const b of pts)if(!seen.has(b)&&near(grp[i],b)){grp.push(b);seen.add(b)}
-      if(grp.length>clu.length&&grp.length>=2)clu=grp}}
-  if(X&&moved)road(P,X,Y,11);
-  if(X){P.forEach(p=>{if(!clu.includes(p))pin(p,X(p),Y(p))});if(!P.length){const p=focus[0];pin({k:"to"},X(p),Y(p))}}
-  let box=null;
-  if(clu.length){const cx=clu.reduce((t,p)=>t+X(p),0)/clu.length,cy=clu.reduce((t,p)=>t+Y(p),0)/clu.length;
-    const r0=Math.max(...clu.map(p=>Math.hypot(X(p)-cx,Y(p)-cy)))+28;
-    g.fillStyle="rgba(255,255,255,.35)";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.setLineDash([8,6]);g.beginPath();g.arc(cx,cy,r0,0,7);g.fill();g.stroke();g.setLineDash([]);
-    g.fillStyle="#2f6b4f";g.beginPath();g.arc(cx,cy,17,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(clu.length),cx,cy+1);g.textAlign="left";g.textBaseline="alphabetic";
-    const BW=196,BH=168,corners=[[lx+12,by+40],[lx+lw-BW-12,by+12],[lx+12,by+bh-BH-96],[lx+lw-BW-12,by+bh-BH-96]];
-    const hit=(x,y,px,py,m)=>px>x-m&&px<x+BW+m&&py>y-m&&py<y+BH+m;
-    const pick=corners.map(([x,y])=>({x,y,d:Math.hypot(x+BW/2-cx,y+BH/2-cy)-P.filter(p=>hit(x,y,X(p),Y(p),p.k==="from"?30:24)).length*400-(hit(x,y,cx,cy,r0)?800:0)})).sort((a,b)=>b.d-a.d)[0];
-    box={x:pick.x,y:pick.y,w:BW,h:BH,cx,cy,r0}}
-  if(box){const {x:bx,y:byy,w:BW,h:BH}=box;
-    // a line from the circle to the box
-    g.strokeStyle="#2f6b4f";g.lineWidth=2.5;g.beginPath();const ang=Math.atan2(byy+BH/2-box.cy,bx+BW/2-box.cx);g.moveTo(box.cx+Math.cos(ang)*box.r0,box.cy+Math.sin(ang)*box.r0);
-    g.lineTo(Math.min(Math.max(box.cx+Math.cos(ang)*9999,bx),bx+BW),Math.min(Math.max(box.cy+Math.sin(ang)*9999,byy),byy+BH));g.stroke();
-    g.save();g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.fillStyle="#e3eadb";g.fill();g.clip();
-    const MS2=1.25,padI=34;let zi=Math.min(18,14);
-    for(zi=18;zi>8;zi--){const xs=clu.map(p=>wx(p.lng,zi)*MS2),ys=clu.map(p=>wy(p.lat,zi)*MS2);if(Math.max(...xs)-Math.min(...xs)<=BW-2*padI&&Math.max(...ys)-Math.min(...ys)<=BH-2*padI)break}
-    const icx=(Math.max(...clu.map(p=>wx(p.lng,zi)))+Math.min(...clu.map(p=>wx(p.lng,zi))))/2,icy=(Math.max(...clu.map(p=>wy(p.lat,zi)))+Math.min(...clu.map(p=>wy(p.lat,zi))))/2;
-    const iox=bx+BW/2-icx*MS2,ioy=byy+BH/2-icy*MS2,IX=p=>iox+wx(p.lng,zi)*MS2,IY=p=>ioy+wy(p.lat,zi)*MS2;
-    await tiles(zi,MS2,iox,ioy,bx,byy,BW,BH);
-    road(P,IX,IY,8);
-    // pins at (almost) the same spot are fanned out a little, with a short stalk to where they really are
-    const pos=clu.map(p=>({p,x:IX(p),y:IY(p),x0:IX(p),y0:IY(p)}));
-    for(let it=0;it<60;it++)for(let i=0;i<pos.length;i++)for(let j=i+1;j<pos.length;j++){const a=pos[i],b2=pos[j];let dx=b2.x-a.x,dy=b2.y-a.y,dd=Math.hypot(dx,dy);
-      if(dd<40){if(dd<.5){dx=Math.cos(i+j);dy=Math.sin(i+j);dd=1}const push=(40-dd)/2;a.x-=dx/dd*push;a.y-=dy/dd*push;b2.x+=dx/dd*push;b2.y+=dy/dd*push}}
-    pos.forEach(q=>{q.x=Math.min(Math.max(q.x,bx+22),bx+BW-22);q.y=Math.min(Math.max(q.y,byy+22),byy+BH-22);
-      if(Math.hypot(q.x-q.x0,q.y-q.y0)>4){g.strokeStyle="#2f6b4f";g.lineWidth=2;g.beginPath();g.moveTo(q.x0,q.y0);g.lineTo(q.x,q.y);g.stroke();g.fillStyle="#2f6b4f";g.beginPath();g.arc(q.x0,q.y0,3.5,0,7);g.fill()}});
-    pos.forEach(q=>pin(q.p,q.x,q.y,.82));
-    g.restore();g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.stroke()}
-  if(X){const f=P[0];if(f&&f.k==="from"&&moved){const ang=Math.atan2(Y(f)-(by+bh/2),X(f)-(lx+lw/2)),arw="→↘↓↙←↖↑↗"[(Math.round(ang/(Math.PI/4))+8)%8],lab=(farFrom?arw+" ":"")+"from "+(townOf(f).replace(/^\d+ km from /,"")||f.name);
-      g.font=`700 21px ${BF}`;const w2=g.measureText(lab).width,fx=Math.min(Math.max(X(f),lx+20),lx+lw-20),fy=Math.min(Math.max(Y(f),by+20),by+bh-100);
-      // try above, below, right and left of the pin; take the first spot that covers nothing
-      const blocks=[...(box?[[box.x,box.y,box.w,box.h],[box.cx-box.r0,box.cy-box.r0,box.r0*2,box.r0*2]]:[]),[lx+lw-92,by+bh-200,92,100],[lx,by+bh-130,lw,130],
-        ...P.filter(p=>p!==f).map(p=>[X(p)-24,Y(p)-24,48,48])];
-      const clamp=(x,y)=>[Math.min(Math.max(x,lx+12),lx+lw-w2-12),Math.min(Math.max(y,by+50),by+bh-110)];
-      const cands=[clamp(fx-w2/2,fy-30),clamp(fx-w2/2,fy+46),clamp(fx+26,fy+8),clamp(fx-26-w2,fy+8)];
-      const bad=([x,y])=>blocks.some(([bx2,by2,bw2,bh2])=>x-8<bx2+bw2&&x+w2+8>bx2&&y-22<by2+bh2&&y+8>by2);
-      let [tx,ty]=cands.find(c=>!bad(c))||cands[0];
-      g.fillStyle="rgba(255,255,255,.92)";g.beginPath();g.roundRect(tx-8,ty-22,w2+16,30,10);g.fill();g.fillStyle="#56645a";g.fillText(lab,tx,ty)}}
-  if(!moved&&!tilesOk){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
-  if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
-  // where in Aotearoa: a small South Island in a free corner
-  {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,cand=[[lx+lw-iw-14,by+bh-ih-112],[lx+lw-iw-14,by+40],[lx+21,by+bh-ih-112]];
-    const free=cand.find(([x,y])=>!(box&&x<box.x+box.w+10&&x+iw>box.x-10&&y<box.y+box.h+10&&y+ih>box.y-10))||cand[0],[ix,iy]=free;
-    const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
-    g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
-    g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
-    g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
-  g.restore();
-  g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd",CL=wrapLines(g,tn,lw-56,2),cbh=CL.length>1?74:44;
-  g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-12-cbh,lw-28,cbh,14);g.fill();
-  g.fillStyle="#1d2621";CL.forEach((l,i)=>g.fillText(l,lx+28,by+bh-12-cbh+30+i*30));
-  // what we did, with the same icons as on the map; long names wrap onto a second line
-  g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE DID",rx,by+30);
-  let ly=by+76;const acts=R.acts,fs=acts.length>5?26:29,lh=fs+8;
-  if(!acts.length){g.fillStyle="#1d2621";g.font=`700 34px ${DF}`;g.fillText(d===today()?"Still to come…":"A lazy day 😌",rx,ly)}
-  let shown=0;
-  for(const x of acts){g.font=`700 ${fs}px ${BF}`;const L=wrapLines(g,x.name,rw-52,2);if(ly+(L.length-1)*lh>by+bh-4)break;
-    g.font=`${fs}px ${BF}`;g.fillStyle="#000";g.fillText(MK[x.kind]||"📸",rx,ly);
-    g.fillStyle="#1d2621";g.font=`700 ${fs}px ${BF}`;L.forEach((l,i)=>g.fillText(l,rx+44,ly+i*lh));ly+=L.length*lh+14;shown++}
-  if(shown<acts.length){g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText(`+${acts.length-shown} more`,rx+44,Math.min(ly,by+bh))}
-  // stats strip
-  const so=kmSoFar(d),sy=H-120;g.fillStyle="#2f6b4f";g.beginPath();g.roundRect(60,sy,W-120,74,20);g.fill();
-  g.fillStyle="#fff";g.font=`700 30px ${BF}`;
-  const stats=[R.km?`🚐 ≈${Math.round(R.km)} km today`:"🚐 no driving",so?`🗺️ ${Math.round(so).toLocaleString("en-NZ")} km so far`:"",w&&w.sr&&w.ss?`🌅 ${w.sr} · 🌇 ${w.ss}`:""].filter(Boolean);
-  const gap=(W-120)/stats.length;stats.forEach((t,i)=>{g.textAlign="center";g.fillText(t,60+gap*i+gap/2,sy+48)});g.textAlign="left";
-  g.fillStyle="#8d9493";g.font=`700 22px ${BF}`;g.textAlign="right";g.fillText("Aotearoa Loop · Tanguy & Zita",W-60,H-18);g.textAlign="left";
-  try{const ic=await loadImg("icon.svg");g.save();g.beginPath();g.roundRect(60,H-42,30,30,7);g.clip();g.drawImage(ic,60,H-42,30,30);g.restore()}catch{}
+    const P=R.pts,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
+    async function tiles(z,MS,ox,oy,x0,y0,w,h){const tw=256*MS,jobs=[];let ok=false;
+      for(let tx=Math.floor((x0-ox)/tw);tx<=Math.floor((x0+w-ox)/tw);tx++)for(let ty=Math.floor((y0-oy)/tw);ty<=Math.floor((y0+h-oy)/tw);ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
+        try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);ok=true}catch{}finally{clearTimeout(tm)}})());
+      await Promise.all(jobs);return ok}
+    function pin(p,x,y,s=1){if(p.k==="act"){g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=4*s;g.beginPath();g.arc(x,y,22*s,0,7);g.fill();g.stroke();
+        g.font=`${Math.round(24*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(p.ic,x,y+1)}
+      else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4*s;g.beginPath();g.arc(x,y,(p.k==="to"?21:14)*s,0,7);g.fill();g.stroke();
+        g.font=`${Math.round((p.k==="to"?21:15)*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,y+1)}
+      g.textAlign="left";g.textBaseline="alphabetic"}
+    function road(pts,X,Y,w){if(pts.length<2)return;g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=w;g.lineCap="round";g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
+      g.strokeStyle="#f1e3a6";g.lineWidth=Math.max(2,w/4);g.setLineDash([w*1.2,w]);g.stroke();g.setLineDash([])}
+    g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,6);g.fill();
+    g.save();g.beginPath();g.roundRect(lx,by,lw,bh,6);g.clip();
+    const moved=P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng);
+    const rest=P.filter(p=>p.k!=="from"),farFrom=P[0]?.k==="from"&&rest.length>=2&&rest.every(p=>hav(p,P[0])>25);
+    const focus=farFrom?rest:P.length?P:[nightLoc(d)].filter(Boolean),MS=1.5;
+    let X=null,Y=null,tilesOk=false;
+    if(focus.length){const pad=64,aw=lw-2*pad,ah=bh-2*pad-40;let z=14;
+      if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}else z=13;
+      const cxw=(Math.max(...focus.map(p=>wx(p.lng,z)))+Math.min(...focus.map(p=>wx(p.lng,z))))/2,cyw=(Math.max(...focus.map(p=>wy(p.lat,z)))+Math.min(...focus.map(p=>wy(p.lat,z))))/2;
+      const ox=lx+lw/2-cxw*MS,oy=by+(bh-40)/2-cyw*MS;X=p=>ox+wx(p.lng,z)*MS;Y=p=>oy+wy(p.lat,z)*MS;
+      tilesOk=await tiles(z,MS,ox,oy,lx,by,lw,bh)}
+    if(!tilesOk){g.strokeStyle="#d2dcc8";g.lineWidth=2;for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}}
+    // pins that would cover each other: the biggest such group goes into a zoomed-in box
+    let clu=[];
+    if(X){const pts=P.filter(p=>p.k!=="from"),near=(a,b)=>Math.hypot(X(a)-X(b),Y(a)-Y(b))<46,seen=new Set();
+      for(const a of pts){if(seen.has(a))continue;const grp=[a];seen.add(a);for(let i=0;i<grp.length;i++)for(const b of pts)if(!seen.has(b)&&near(grp[i],b)){grp.push(b);seen.add(b)}
+        if(grp.length>clu.length&&grp.length>=2)clu=grp}}
+    if(X&&moved)road(P,X,Y,11);
+    if(X){P.forEach(p=>{if(!clu.includes(p))pin(p,X(p),Y(p))});if(!P.length){const p=focus[0];pin({k:"to"},X(p),Y(p))}}
+    let box=null;
+    if(clu.length){const cx=clu.reduce((t,p)=>t+X(p),0)/clu.length,cy=clu.reduce((t,p)=>t+Y(p),0)/clu.length;
+      const r0=Math.max(...clu.map(p=>Math.hypot(X(p)-cx,Y(p)-cy)))+28;
+      g.fillStyle="rgba(255,255,255,.35)";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.setLineDash([8,6]);g.beginPath();g.arc(cx,cy,r0,0,7);g.fill();g.stroke();g.setLineDash([]);
+      g.fillStyle="#2f6b4f";g.beginPath();g.arc(cx,cy,17,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(clu.length),cx,cy+1);g.textAlign="left";g.textBaseline="alphabetic";
+      const BW=196,BH=168,corners=[[lx+12,by+40],[lx+lw-BW-12,by+12],[lx+12,by+bh-BH-96],[lx+lw-BW-12,by+bh-BH-96]];
+      const hit=(x,y,px,py,m)=>px>x-m&&px<x+BW+m&&py>y-m&&py<y+BH+m;
+      const pick=corners.map(([x,y])=>({x,y,d:Math.hypot(x+BW/2-cx,y+BH/2-cy)-P.filter(p=>hit(x,y,X(p),Y(p),p.k==="from"?30:24)).length*400-(hit(x,y,cx,cy,r0)?800:0)})).sort((a,b)=>b.d-a.d)[0];
+      box={x:pick.x,y:pick.y,w:BW,h:BH,cx,cy,r0}}
+    if(box){const {x:bx,y:byy,w:BW,h:BH}=box;
+      // a line from the circle to the box
+      g.strokeStyle="#2f6b4f";g.lineWidth=2.5;g.beginPath();const ang=Math.atan2(byy+BH/2-box.cy,bx+BW/2-box.cx);g.moveTo(box.cx+Math.cos(ang)*box.r0,box.cy+Math.sin(ang)*box.r0);
+      g.lineTo(Math.min(Math.max(box.cx+Math.cos(ang)*9999,bx),bx+BW),Math.min(Math.max(box.cy+Math.sin(ang)*9999,byy),byy+BH));g.stroke();
+      g.save();g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.fillStyle="#e3eadb";g.fill();g.clip();
+      const MS2=1.25,padI=34;let zi=Math.min(18,14);
+      for(zi=18;zi>8;zi--){const xs=clu.map(p=>wx(p.lng,zi)*MS2),ys=clu.map(p=>wy(p.lat,zi)*MS2);if(Math.max(...xs)-Math.min(...xs)<=BW-2*padI&&Math.max(...ys)-Math.min(...ys)<=BH-2*padI)break}
+      const icx=(Math.max(...clu.map(p=>wx(p.lng,zi)))+Math.min(...clu.map(p=>wx(p.lng,zi))))/2,icy=(Math.max(...clu.map(p=>wy(p.lat,zi)))+Math.min(...clu.map(p=>wy(p.lat,zi))))/2;
+      const iox=bx+BW/2-icx*MS2,ioy=byy+BH/2-icy*MS2,IX=p=>iox+wx(p.lng,zi)*MS2,IY=p=>ioy+wy(p.lat,zi)*MS2;
+      await tiles(zi,MS2,iox,ioy,bx,byy,BW,BH);
+      road(P,IX,IY,8);
+      // pins at (almost) the same spot are fanned out a little, with a short stalk to where they really are
+      const pos=clu.map(p=>({p,x:IX(p),y:IY(p),x0:IX(p),y0:IY(p)}));
+      for(let it=0;it<60;it++)for(let i=0;i<pos.length;i++)for(let j=i+1;j<pos.length;j++){const a=pos[i],b2=pos[j];let dx=b2.x-a.x,dy=b2.y-a.y,dd=Math.hypot(dx,dy);
+        if(dd<40){if(dd<.5){dx=Math.cos(i+j);dy=Math.sin(i+j);dd=1}const push=(40-dd)/2;a.x-=dx/dd*push;a.y-=dy/dd*push;b2.x+=dx/dd*push;b2.y+=dy/dd*push}}
+      pos.forEach(q=>{q.x=Math.min(Math.max(q.x,bx+22),bx+BW-22);q.y=Math.min(Math.max(q.y,byy+22),byy+BH-22);
+        if(Math.hypot(q.x-q.x0,q.y-q.y0)>4){g.strokeStyle="#2f6b4f";g.lineWidth=2;g.beginPath();g.moveTo(q.x0,q.y0);g.lineTo(q.x,q.y);g.stroke();g.fillStyle="#2f6b4f";g.beginPath();g.arc(q.x0,q.y0,3.5,0,7);g.fill()}});
+      pos.forEach(q=>pin(q.p,q.x,q.y,.82));
+      g.restore();g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.stroke()}
+    if(!moved&&!tilesOk){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
+    if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
+    // where in Aotearoa: a small South Island in a free corner
+    {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,cand=[[lx+lw-iw-14,by+bh-ih-112],[lx+lw-iw-14,by+40],[lx+21,by+bh-ih-112]];
+      const free=cand.find(([x,y])=>!(box&&x<box.x+box.w+10&&x+iw>box.x-10&&y<box.y+box.h+10&&y+ih>box.y-10))||cand[0],[ix,iy]=free;
+      const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
+      g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
+      g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
+      g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
+    g.restore();
+    g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd",CL=wrapLines(g,tn,lw-56,2),cbh=CL.length>1?74:44;
+    g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-12-cbh,lw-28,cbh,14);g.fill();
+    g.fillStyle="#1d2621";CL.forEach((l,i)=>g.fillText(l,lx+28,by+bh-12-cbh+30+i*30));
+  }
+  // what we did, handwritten heading, icons as on the map
+  const from=R.pts[0]?.k==="from"&&R.pts.length>1&&R.pts.some(p=>p.k!=="from"&&hav(p,R.pts[0])>1)?R.pts[0]:null;
+  function listBlock(x,y,wd2,maxY){g.fillStyle=ACC;g.font=`700 46px ${SF}`;g.fillText("What we did",x,y+34);let ly=y+92;
+    if(from){g.fillStyle=SOFT;g.font=`600 24px ${BF}`;const L=wrapLines(g,`🚐 from ${townOf(from).replace(/^\d+ km from /,"")||from.name}${R.km?` · ≈${Math.round(R.km)} km`:""}`,wd2,2);L.forEach((l,i)=>g.fillText(l,x,ly-8+i*30));ly+=L.length*30+14}
+    const acts=R.acts,fs=acts.length>5?26:29,lh=fs+7;let shown=0;
+    if(!acts.length){g.fillStyle=INK;g.font=`700 40px ${SF}`;g.fillText(d===today()?"Still to come…":"A lazy day 😌",x,ly)}
+    for(const a of acts){g.font=`700 ${fs}px ${BF}`;const L=wrapLines(g,a.name,wd2-50,2);if(ly+(L.length-1)*lh>maxY)break;
+      g.font=`${fs}px ${BF}`;g.fillStyle="#000";g.fillText(MK[a.kind]||"📸",x,ly);g.fillStyle=INK;g.font=`700 ${fs}px ${BF}`;L.forEach((l,i)=>g.fillText(l,x+46,ly+i*lh));ly+=L.length*lh+16;shown++}
+    if(shown<acts.length){g.fillStyle=SOFT;g.font=`700 34px ${SF}`;g.fillText(`+ ${acts.length-shown} more`,x+46,Math.min(ly,maxY+20))}return ly}
+  function noteBlock(x,y,wd2,maxL){if(!j.note)return y;g.font=`500 42px ${SF}`;const L=wrapLines(g,j.note,wd2,maxL);g.fillStyle=INK;L.forEach((l,i)=>g.fillText(l,x,y+38+i*44));return y+38+L.length*44+10}
+  const ar=im?im.width/im.height:0;
+  if(im&&ar>=1.15){
+    // wide photo across the top; the note goes in the polaroid's margin when it's short
+    let ph=Math.min(520,900/ar),pw=ph*ar;if(pw>900){pw=900;ph=pw/ar}
+    g.font=`700 40px ${SF}`;const capL=j.note?wrapLines(g,j.note,pw-16,3):null,inCap=capL&&capL.length<=2;
+    const fr=polaroid((W-pw-44)/2,TOP,pw,ph,-.012,inCap?capL:null),y2=TOP+fr.h+44;
+    const mw=470,mh=Math.max(260,BOT-y2-10);await mapClip(76,y2,mw,mh,.01);
+    let ly=y2-6;if(j.note&&!inCap)ly=noteBlock(600,y2-14,W-660,3);listBlock(604,ly,W-664,BOT-10)}
+  else if(im){
+    // tall or square photo down the left; note, map and list on the right
+    const colW=ar<.9?400:440,rx=W-60-colW;let pw=Math.min(540,rx-60-44-30),ph=pw/ar;const maxPh=BOT-TOP-90;if(ph>maxPh){ph=maxPh;pw=ph*ar}
+    const fr=polaroid(56,TOP+6,pw,ph,-.022,null),listLeft=BOT-(TOP+6+fr.h)-40>=230;
+    const y=noteBlock(rx,TOP-12,colW,4);
+    const mh=listLeft?Math.min(600,BOT-y-50):Math.min(420,Math.max(280,(BOT-y)*.55));
+    await mapClip(rx+12,y+18,colW-24,mh,.015);
+    if(listLeft)listBlock(70,TOP+6+fr.h+44,rx-110,BOT-10);else listBlock(rx,y+mh+50,colW,BOT-10)}
+  else{
+    // no photo: the map is the hero
+    const mh=Math.min(560,BOT-TOP-300);await mapClip(76,TOP+8,W-152,mh,-.008);
+    const y2=TOP+mh+60;let ly=y2;if(j.note)ly=noteBlock(600,y2-14,W-660,6);listBlock(76,y2,480,BOT-10)}
+  // footer: the numbers, handwritten, and our name
+  const so=kmSoFar(d),stats=[R.km?`≈${Math.round(R.km)} km today`:"no driving today",so?`${Math.round(so).toLocaleString("en-NZ")} km so far`:"",w&&w.sr&&w.ss?`☀ ${w.sr} – ${w.ss}`:""].filter(Boolean);
+  g.strokeStyle="rgba(43,41,37,.35)";g.lineWidth=2;g.setLineDash([2,8]);g.beginPath();g.moveTo(60,H-118);g.lineTo(W-60,H-118);g.stroke();g.setLineDash([]);
+  g.fillStyle=INK;g.font=`700 40px ${SF}`;g.textAlign="center";g.fillText(stats.join("   ·   "),W/2,H-66);
+  g.fillStyle=SOFT;g.font=`700 20px ${BF}`;try{g.letterSpacing="3px"}catch{}g.fillText("AOTEAROA LOOP  ·  TANGUY & ZITA",W/2,H-26);try{g.letterSpacing="0px"}catch{}g.textAlign="left";
   return cv}
 let recapFile=null;
 async function openRecap(d){sheet(head(`Day recap · ${wd(d)} ${fmt(d)}`)+`<div id="recap-prev" class="recapprev"><p class="muted">Making your picture…</p></div>

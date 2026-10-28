@@ -285,6 +285,12 @@ textarea{min-height:72px;resize:vertical}
 #van .beam{left:-11px;top:26px;width:40px;height:52px;clip-path:polygon(28% 0,72% 0,100% 100%,0 100%);background:linear-gradient(rgba(255,236,170,.75),rgba(255,236,170,.25) 55%,rgba(255,236,170,0));z-index:-1}
 #van .tl{top:1px;width:4px;height:2.4px;border-radius:1px;background:#ff3b2f;box-shadow:0 0 5px 2px rgba(255,59,47,.75)}
 #van .tl.l{left:1.5px}#van .tl.r{right:1.5px}
+/* reversing: white reverse lights at the back (and a soft glow behind) while the van rolls backwards */
+#van .rl,#van .rglow{position:absolute;pointer-events:none;opacity:0;transition:opacity .15s}
+#van .rl{top:1px;width:3px;height:2.4px;border-radius:1px;background:#fff;box-shadow:0 0 4px 2px rgba(255,255,240,.9)}
+#van .rl.l{left:5.5px}#van .rl.r{right:5.5px}
+#van .rglow{left:-6px;top:-22px;width:30px;height:24px;clip-path:polygon(0 0,100% 0,72% 100%,28% 100%);background:linear-gradient(0deg,rgba(255,255,235,.55),rgba(255,255,235,0));z-index:-1}
+#van.rev .rl,#van.rev .rglow{opacity:1}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #van .beam,:root:not([data-theme="light"]) #van .tl{display:block}}
 :root[data-theme="dark"] #van .beam,:root[data-theme="dark"] #van .tl{display:block}
 #van{position:absolute;left:0;top:0;width:18px;height:28px;pointer-events:none;will-change:transform;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
@@ -1752,7 +1758,7 @@ function drawRoad(){const el=$("#daylist");if(!el||!el.offsetParent)return;el.qu
       ${Array.from({length:Math.floor((y1-y0)/22)},(_,i)=>`<circle cx="${bx-28}" cy="${y0+8+i*22}" r="1.6" fill="#ffd36a"/><circle cx="${bx+28}" cy="${y0+8+i*22}" r="1.6" fill="#ffd36a"/>`).join("")}
       <rect class="bru-twr" x="${bx-62}" y="${F.end-38}" width="8" height="30" fill="#d6dadd" stroke="#33424a" stroke-width="1"/><path d="M${bx-66} ${F.end-38}h16l-2 -9h-12z" fill="#7fb2d4" stroke="#33424a" stroke-width="1"/></g>`})()}<g transform="translate(${F.SG.x} ${F.SG.y})">${LM.mbs}</g>${welcomeSVG(Math.round(W*.45),F.BR.y+128)}<g transform="translate(${F.BR.x+96} ${F.BR.y-4}) scale(1.35)">${LM.mpis}</g>`}
   el.insertAdjacentHTML("afterbegin",`<svg class="road" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${fly}<path class="asph" d="${d}"/><path class="mid" d="${d}"/>${pins}${road.ferry?`<g id="ferryg" transform="translate(${FX} ${road.ferry.fa})">${FERRY}</g>`:""}${road.endFerry?`<g transform="translate(${FX} ${road.endFerry.fa})">${FERRY}</g>`:""}</svg>
-    <div id="van" aria-hidden="true"><i class="beam"></i>${VAN}<i class="tl l"></i><i class="tl r"></i><b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
+    <div id="van" aria-hidden="true"><i class="beam"></i><i class="rglow"></i>${VAN}<i class="tl l"></i><i class="tl r"></i><i class="rl l"></i><i class="rl r"></i><b class="sold">$</b></div>${road.fly?`<div id="people" aria-hidden="true"><i></i><i></i></div><div id="plane" aria-hidden="true">${PLANE}</div>`:""}`);
   moveVan()}
 function moveVan(){const el=$("#daylist"),v=$("#van");
   const bg=$("#bg");if(bg)bg.style.maskPosition=bg.style.webkitMaskPosition=`0 ${-Math.round(scrollY*.25)}px`;
@@ -1765,6 +1771,10 @@ function moveVan(){const el=$("#daylist"),v=$("#van");
   const f=road.ferry,fg=$("#ferryg");
   if(f&&fg){const top=Math.max(f.fa,Math.min(f.fb,y-110));fg.setAttribute("transform",`translate(${FX} ${top})`)}
   const dx=(X(y+3)-X(y-3))/6,ang=Math.atan(dx)*57.3;
+  // going backwards? (down the page is forwards on Coming up; on Past the van faces up the page)
+  const back=state.dview==="past"?y>moveVan.y+.5:y<moveVan.y-.5;
+  if(Math.abs(y-(moveVan.y??y))>.5){v.classList.toggle("rev",back);clearTimeout(moveVan.t);if(back)moveVan.t=setTimeout(()=>v.classList.remove("rev"),700)}
+  moveVan.y=y;
   v.classList.toggle("aboard",!!(f&&y>f.fa+20&&y<f.fb+236));
   v.classList.toggle("sold",!!((road.sell!=null&&y>=road.sell)||(road.fly&&y>=road.fly.A0)));
   // Past lists newest first, so there the van drives up the page (back towards today)

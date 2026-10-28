@@ -509,6 +509,9 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+.locwarn .pill.go,.scancard .pill.go{background:var(--fern);color:#fff;border-color:var(--fern)}
+.scancard{display:grid;gap:6px;margin-bottom:12px}.scancard .pill{justify-self:start}.scancard .bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden}.scancard .bar i{display:block;height:100%;background:var(--fern)}
+
 .locwarn{background:#fff4d6;color:#5b4a14;border:1px solid #ecd58b;border-radius:14px;padding:10px 12px;display:grid;gap:4px;font-size:.9rem}
 .locwarn span{font-size:.82rem;opacity:.85}.locwarn .row2{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .locline{display:flex;gap:14px;font-size:.82rem}
@@ -1930,13 +1933,43 @@ function renderPlaces(){if(state.tab==="places")wantHere();const me=state.here,a
     .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(me?away(a)-away(b):(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||"")));
   const by={};items.forEach(x=>(by[me?"Nearest first":x.region||"Other"]??=[]).push(x));
   const order=me?["Nearest first"].filter(r=>by[r]):[...REGIONS,...Object.keys(by).filter(r=>!REGIONS.includes(r))].filter(r=>by[r]);
-  $("#plist").innerHTML=items.length?order.map(r=>(order.length>1||me?`<div class="reg">${me?"📍 Nearest to you first":esc(r)}</div>`:"")+by[r].map(x=>{
+  $("#plist").innerHTML=(state.kind==="noloc"?scanCard():"")+(items.length?order.map(r=>(order.length>1||me?`<div class="reg">${me?"📍 Nearest to you first":esc(r)}</div>`:"")+by[r].map(x=>{
     const st=x._c==="camp"&&isStayed(x),tw=townOf(x),ka=me&&ptOf(x)?Math.round(away(x)*1.25):null;
     const meta=(x.suggested?`<span class="tag">✦ Claude</span> · `:"")+(x._c==="camp"?`<span class="chip c-${esc(x.type||"unknown")}">${esc(CAMPTYPES[x.type]||"To sort")}</span>${ka!=null?` · <b class="away">${ka<1?"here":ka+" km"}</b>`:""}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${st?` · <span class="stayed">✓ ${esc(stayLabel(x))}${x.rate?" "+rateTag(x):""}</span>`:""}`:`${ka!=null?`<b class="away">${ka<1?"here":ka+" km"}</b> · `:""}${esc(kindLabel(x))}${tw?` · <span class="tw">📍 ${esc(tw)}</span>`:""}${+x.price>0?` · ${nzd(x.price)}`:""}${x.day?` · <span class="pl">${wd(x.day)} ${fmt(x.day)}</span>`:""}${x.done?" · done":""}`);
     return `<div class="item ${x.done&&x._c==="spot"?"done":""} ${st?"stayedi":""} ${x.suggested?"sg":""}"><button class="main" type="button" data-open="${x._c}:${esc(x.id)}"><div class="nm">${esc(x.name)}${x.fav?` <span class="favdot" aria-label="favourite">♥</span>`:""}</div><div class="meta">${meta}</div></button>
       <span class="itemr">${ptOf(x)?`<button class="ib sm mapgo" type="button" data-mapfocus="${x._c}:${esc(x.id)}" aria-label="View ${esc(x.name)} on the map">${icon("map")}</button>`:""}${x._c==="spot"?`<button class="chk sm ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="${x.done?"Mark not done":"Mark done"}">✓</button>`:`<button class="chk sm ${st?"on":""}" type="button" data-tog="camps:done:${esc(x.id)}" aria-pressed="${st}" aria-label="${st?"Not stayed":"We stayed here"}">✓</button>`}</span></div>`}).join("")).join("")
-    :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`;
+    :`<p class="empty">Nothing here${reg!=="all"&&!q?" in "+esc(reg):""}.</p>`);
   $("#fab").setAttribute("aria-label",state.kind==="camp"?"Add campsite":"Add place")}
+
+
+/* ================= pin check: runs on the phone, asks OpenStreetMap what's under each pin and where the name really is ================= */
+const PWATER=new Set(["water","bay","lake","strait","sea","ocean","river","reservoir","lagoon","riverbank","wetland","coastline"]);
+const PGEN=new Set("track lake walk park campsite campground camp camping river beach mount scenic reserve lookout falls walkway trail loop point creek valley holiday freedom domain ground bridge viewpoint summit glacier harbour island south north great cycle disc golf market centre center pools area road street saddle peak cruise tour hike gorge stream forest conservation recreation site zealand the and".split(" "));
+const deacc=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const keyWord=q=>deacc(q).replace(/[^a-z' ]/g," ").split(/\s+/).filter(w=>w.length>=4&&!PGEN.has(w)).sort((a,b)=>b.length-a.length)[0]||"";
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function photonJ(u){for(let i=0;i<3;i++){try{const r=await fetch(u);if(r.ok)return await r.json()}catch{}await pause(2500*(i+1))}return null}
+async function checkPin(x){const lat=+x.lat,lng=+x.lng,q=String(x.osm||x.name||"").trim(),me={lat,lng};
+  const rv=await photonJ(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=en`);await pause(1100);
+  const sr=q?await photonJ(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${lat}&lon=${lng}&limit=6&lang=en&bbox=166,-47.6,178.9,-34.2`):{features:[]};await pause(1100);
+  if(!rv||!sr)return null;
+  const p0=rv.features?.[0]?.properties||{},kw=keyWord(q);
+  const hits=(sr.features||[]).map(f=>({n:f.properties.name||"",v:f.properties.osm_value||"",lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0]})).filter(h=>!kw||deacc(h.n).includes(kw)).map(h=>({...h,km:hav(me,h)})).sort((a,b)=>a.km-b.km);
+  const best=hits.find(h=>!PWATER.has(h.v))||hits[0],water=["natural","water","waterway"].includes(p0.osm_key)&&PWATER.has(p0.osm_value);
+  if(water&&best&&best.km>.15)return {msg:`The pin looks like it's in ${p0.name||"the water"}. OpenStreetMap has "${best.n}" ${best.km<1?Math.round(best.km*1000)+" m":best.km.toFixed(1)+" km"} away.`,fix:{lat:best.lat,lng:best.lng,n:best.n}};
+  if(water)return {msg:`The pin looks like it's in ${p0.name||"the water"}.`};
+  if(best&&best.km>2.5)return {msg:`OpenStreetMap has "${best.n}" ${best.km.toFixed(1)} km from this pin.`,fix:{lat:best.lat,lng:best.lng,n:best.n}};
+  return {ok:true}}
+const scanState={run:false,i:0,n:0,found:0};
+const toScan=()=>[...state.spots.map(x=>["spots",x]),...state.camps.map(x=>["camps",x])].filter(([,x])=>ptOf(x)&&x.lat!=null&&!x.llv&&!x.llcheck);
+function scanCard(){const left=toScan().length;
+  if(scanState.run)return `<div class="card scancard"><b>🔍 Checking pins… ${scanState.i}/${scanState.n}</b><span class="muted">${scanState.found} to look at so far · keep Loop open</span><div class="bar"><i style="width:${scanState.n?scanState.i/scanState.n*100:0}%"></i></div><button type="button" class="pill" data-scan="stop">Stop</button></div>`;
+  return left?`<div class="card scancard"><b>🔍 Check ${left} pins against OpenStreetMap</b><span class="muted">Looks for pins in the water or far from the real place, and suggests a fix. Takes about ${Math.max(1,Math.round(left*2.4/60))} min with signal.</span><button type="button" class="pill go" data-scan="go">Start check</button></div>`:""}
+async function runScan(){if(scanState.run)return;const list=toScan();Object.assign(scanState,{run:true,i:0,n:list.length,found:0});renderPlaces();
+  for(const [c,x] of list){if(!scanState.run)break;let r=null;try{r=await checkPin(x)}catch{}scanState.i++;
+    const cur=S.docs[c][x.id];if(r&&cur){if(r.ok)patch(c,x.id,{llv:today()});else{scanState.found++;patch(c,x.id,{llcheck:r.msg,llfix:r.fix||null})}}
+    if(scanState.i%3===0||!r)renderPlaces()}
+  scanState.run=false;renderPlaces();toast(scanState.found?`${scanState.found} pins to look at`:"All pins look fine")}
 
 /* ================= day view ================= */
 function openDay(d){state.day=d;state.ideaQ="";state.ideaAll=false;state.ideasOpen=false;document.body.style.overflow="hidden";renderDay();$("#dayview").scrollTop=0}
@@ -2093,11 +2126,12 @@ function openNewPlan(d){
 function locBox(it,c){if(!it.id)return "";const no=!ptOf(it),chk=it.llcheck;
   if(!no&&!chk)return `<div class="locline"><button type="button" class="linkx" data-lb="fix">📍 Wrong spot? Fix location</button><button type="button" class="linkx" data-lb="del">Delete</button></div>`;
   return `<div class="locwarn"><b>📍 ${no?"Not on the map yet":"Not sure this pin is right"}</b>${chk&&chk!==true?`<span>${esc(chk)}</span>`:""}
-    <div class="row2"><button type="button" class="pill go" data-lb="fix">${no?"Set location":"Fix location"}</button>${no?"":`<button type="button" class="pill" data-lb="ok">✓ Pin is right</button>`}<button type="button" class="pill" data-lb="del">🗑 Delete</button></div></div>`}
+    <div class="row2">${it.llfix?`<button type="button" class="pill go" data-lb="move">Move to “${esc(it.llfix.n)}”</button>`:""}<button type="button" class="pill ${it.llfix?"":"go"}" data-lb="fix">${no?"Set location":it.llfix?"Pick myself":"Fix location"}</button>${no?"":`<button type="button" class="pill" data-lb="ok">✓ Pin is right</button>`}<button type="button" class="pill" data-lb="del">🗑 Delete</button></div></div>`}
 function wireLocBox(it,c){const f=$("#form");
   f.querySelectorAll("[data-lb=fix]").forEach(b=>b.onclick=()=>{const dt=f.querySelector("details");if(dt)dt.open=true;const lp=f.querySelector(".locpick");if(!lp)return;
     lp.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>lp.querySelector("[data-lf=map]")?.click(),350)});
-  f.querySelectorAll("[data-lb=ok]").forEach(b=>b.onclick=()=>{patch(c,it.id,{llcheck:null,llok:true});closeSheet();toast("Thanks, pin confirmed")});
+  f.querySelectorAll("[data-lb=move]").forEach(b=>b.onclick=()=>{const fx=it.llfix;patch(c,it.id,{lat:+fx.lat,lng:+fx.lng,llok:true,llcheck:null,llfix:null,llv:today()});closeSheet();toast("Pin moved");if(lmap)drawMarkers()});
+  f.querySelectorAll("[data-lb=ok]").forEach(b=>b.onclick=()=>{patch(c,it.id,{llcheck:null,llfix:null,llok:true,llv:today()});closeSheet();toast("Thanks, pin confirmed")});
   f.querySelectorAll("[data-lb=del]").forEach(b=>armed(b,"Tap again to delete",()=>{const had=c==="spots"&&keaUnpay(it.id,true);del(c,it.id);closeSheet();toast(had?"Deleted, and removed from Kea":"Deleted")}))}
 function openSpot(it,fresh,ll){
   if(!it){const r=regionNear(ll)||stopFor(state.day||today())?.region||(state.region!=="all"?state.region:"");
@@ -2310,7 +2344,7 @@ $("#form").addEventListener("submit",e=>{
     if(isFinite(la)&&isFinite(lg)){v.lat=la;v.lng=lg;v.llok=true;if(parseLL(v.loc))v.loc="";if(!v.region)v.region=regionNear(v)}
     else{const p=parseLL(v.loc);if(p){v.lat=p.lat;v.lng=p.lng;v.llok=true;v.loc=""}else if(id){v.lat=null;v.lng=null}}}
   const c=COLL[type],prev=id?S.docs[c][id]:null,doc={...(prev||{}),...v};
-  if(prev&&(type==="spot"||type==="camp")&&doc.lat!=null&&(prev.lat!==doc.lat||prev.lng!==doc.lng))doc.llcheck=null;
+  if(prev&&(type==="spot"||type==="camp")&&doc.lat!=null&&(prev.lat!==doc.lat||prev.lng!==doc.lng)){doc.llcheck=null;doc.llfix=null}
   if(!id&&type==="spot"){doc.fav=false;doc.done=false;doc.day=v.day||null;if(doc.day)doc.order=planFor(doc.day).length}
   if(!id&&type==="camp")doc.fav=false;
   if(id)put(c,id,doc);else add(c,doc);
@@ -2473,6 +2507,7 @@ document.addEventListener("click",e=>{
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("aurora" in ds)openAurora();
+  else if(ds.scan){if(ds.scan==="go")runScan();else{scanState.run=false;renderPlaces()}}
   else if(ds.hap){const [id,d]=ds.hap.split(":");openHap(id,d)}
   else if("wonmore" in ds){state.wonOpen=!state.wonOpen;renderExtras()}
   else if(ds.happlan){const [id,d]=ds.happlan.split(":"),h=HAP.find(x=>x.id===id);if(h){const sp={name:h.title,kind:"place",region:stopFor(d)?.region||"",notes:[h.time,h.where,h.note].filter(Boolean).join(" · "),fav:false,done:false,day:d,order:planFor(d).length,...(h.near?{lat:h.near[0],lng:h.near[1],llok:true}:{}),url:h.url||""};add("spots",sp);closeSheet();toast(`Added to ${wd(d)} ${fmt(d)}`)}}

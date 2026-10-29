@@ -1659,7 +1659,12 @@ async function sync(silent){
       if (!r.ok) throw new Error(await r.text());
       dirty.forEach(e => e.dirty = false);
     }
-    // 2. push dirty settings
+    // 2. push dirty settings — but a phone/browser that has never synced must not overwrite
+    //    the shared trip settings with its fresh defaults: it takes the shared ones first.
+    if (S.settings.dirty && !S.sync.lastPull){
+      const rr = await fetch(sbURL(STABLE) + '?select=id&id=eq.trip', {headers: sbHeaders()});
+      if (rr.ok && (await rr.json()).length){ S.settings.dirty = false; S.settings.updated_at = ''; }
+    }
     if (S.settings.dirty){
       const st = S.settings;
       const r = await fetch(sbURL(STABLE), {

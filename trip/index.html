@@ -2258,8 +2258,21 @@ function moveNight(d,toId,force){
     for(let x=addDays(d,-1);x>=oldEnd;x=addDays(x,-1))moveDate(x,addDays(x,1));
     setS(A.id,{start:addDays(A.start,1)});nd=oldEnd}
   D.nights[nd]={camp:null,campType:"",notes:"",flex:true};mark("nights",nd);
+  settleFlex(A.id,true);settleFlex(B.id,true);
   persist();refresh();scheduleSync();
   toast(`${A.name} ${stopDays(D.stops[A.id]).length} · ${B.name} ${stopDays(D.stops[B.id]).length} nights`);return true}
+/* flexible nights always sit at the end of their stop: the fixed nights (with their campsite and plans) move up, the flexible ones go last.
+   Only nights from tomorrow on are reshuffled. */
+function settleFlex(sid,quiet){const D=S.docs,s=D.stops[sid];if(!s)return false;const t=today();
+  const days=stopDays(s).filter(d=>d>t);if(days.length<2)return false;
+  const isFx=d=>!!D.nights[d]?.flex,order=[...days.filter(d=>!isFx(d)),...days.filter(isFx)];
+  if(order.every((d,i)=>d===days[i]))return false;
+  const nights=order.map(d=>D.nights[d]),spots=order.map(d=>Object.keys(D.spots).filter(id=>D.spots[id].day===d));
+  days.forEach((d,i)=>{const from=order[i];if(from===d)return;
+    if(nights[i])D.nights[d]=nights[i];else delete D.nights[d];S.pending["nights/"+d]=1;
+    spots[i].forEach(id=>{D.spots[id]={...D.spots[id],day:d};S.pending["spots/"+id]=1})});
+  if(!quiet){persist();refresh();scheduleSync()}return true}
+function settleAllFlex(){let ch=false;Object.keys(S.docs.stops).forEach(id=>{ch=settleFlex(id,true)||ch});if(ch){persist();refresh();scheduleSync()}}
 function confirmMove(d,toId,booked){const B=S.docs.stops[toId];
   sheet(head("Move a booked stop?")+`<p style="margin:0">This changes the dates of <b>${booked.map(s=>esc(s.name)).join(", ")}</b>, which is booked. Only do it if you've moved the booking too.</p>
     <div class="end"><div><button type="button" class="btn" data-cancel>Cancel</button></div><div><button type="button" class="btn primary" id="mv-go">Move anyway</button></div></div>`,"confirm");
@@ -2339,6 +2352,7 @@ $("#form").addEventListener("submit",e=>{
     if(v.all){const s=stopFor(id);patch("stops",s.id,{camp:v.camp,campType:v.campType});stopDays(s).forEach(d=>{const o=S.docs.nights[d];if(!o)return;if(o.flex&&d!==id)put("nights",d,{camp:v.camp,campType:v.campType,notes:"",flex:true,...(o.stayed?{stayed:true}:{})});else setNight(d,v.camp,v.campType,"",false)});setNight(id,v.camp,v.campType,v.notes,!!v.flex,id<=today()?!!v.stayed:undefined)}
     else setNight(id,v.camp,v.campType,v.notes,!!v.flex,id<=today()?!!v.stayed:undefined);
     syncStayCamp(v.camp,id);if(!sameCamp(oldCamp,v.camp))syncStayCamp(oldCamp,id);
+    {const st=stopFor(id);if(st&&settleFlex(st.id,true)){persist();refresh();scheduleSync();toast("Flexible night moved to the end of the stop")}}
     closeSheet();const grp=v.all?stopDays(stopFor(id)).filter(k=>k>=id&&sameCamp(nightInfo(k).camp,v.camp)):[id];if(!afterNight(id,grp))toast("Saved");return}
   if(type==="stop"){if(!v.start){toast("Pick an arrival date");return}
     v.book=!!v.book;v.booked=!!v.booked;v.lead=+v.lead||14;
@@ -2592,6 +2606,7 @@ setTimeout(syncReminders,3000);document.addEventListener("visibilitychange",()=>
   try{navigator.storage?.persist?.()}catch{}
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
+  setTimeout(settleAllFlex,6000);
   pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();pullHappenings();syncPhotos();
   if(/[?&]aurora=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openAurora(),2600)}
 })();

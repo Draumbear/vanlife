@@ -1499,8 +1499,10 @@ function paidFields(amount,cat,meta={}){const me=keaMe(),acc=keaAccounts();
     <div><span class="label">From</span>${radio("account",acc.list.map(a=>[a,a]),meta.account||acc.last||acc.list[0])}</div>
     <div><span class="label">For</span>${radio("personal",[["","Both of us"],["p1","Just "+PEOPLE.p1],["p2","Just "+PEOPLE.p2]],meta.personal||"")}</div>`}
 function openPaid(id){const x=S.docs.spots[id];if(!x)return;
-  sheet(head(`Paid for ${esc(x.name)}?`)+paidFields(x.price,x.cat||"activity")+`
-    <div class="end"><div><button type="button" class="btn" id="pd-skip">We didn't pay</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
+  const chore=x.chore&&CHORES[x.chore];
+  sheet(head(chore?`${chore[0]} How much was ${esc(chore[1].toLowerCase())}?`:`Paid for ${esc(x.name)}?`)+paidFields(+x.price>0?x.price:"",x.cat||(chore?chore[2]:"activity"))+`
+    <div class="end"><div><button type="button" class="btn" id="pd-skip">${chore?"It was free":"We didn't pay"}</button></div><div><button class="btn primary" type="submit">Save to Kea</button></div></div>`,"paid",id);
+  setTimeout(()=>$("#form [name=amount]")?.focus(),250);
   $("#pd-skip").onclick=()=>{markDone(id,true,{nopay:true});closeSheet();toast("Done ✓ · nothing added to Kea")};
   if(x.pp)$("#form").querySelectorAll("[name=personal]").forEach(r=>r.onchange=()=>{$("#form [name=amount]").value=r.value?Math.round(x.price/2*100)/100:x.price})}
 /* ---- paid campsites into Kea ----
@@ -1576,7 +1578,7 @@ function dayRouteUrl(d){const t=today(),from=campQ(addDays(d,-1)),to=campQ(d);
     ids.forEach((id,k)=>{const x=S.docs.spots[id];if(x&&x.order!==k){S.docs.spots[id]={...x,order:k,by:keaMe()};S.pending["spots/"+id]=1}});persist();refresh();scheduleSync()};
   document.addEventListener("pointerup",end);document.addEventListener("pointercancel",end)})();
 function setDone(id,on){const x=S.docs.spots[id];if(!x)return;
-  if(on&&+x.price>0&&!x.keaId)return openPaid(id);
+  if(on&&!x.keaId&&(+x.price>0||PAIDCHORE.has(x.chore)))return openPaid(id);
   if(!on&&x.keaId){keaUnpay(id,true);markDone(id,false);return toast("Not done · removed from Kea")}
   markDone(id,on,on?{}:{nopay:false});toast(on?"Done ✓":"Not done")}
 loadKea();
@@ -2116,6 +2118,7 @@ function campFields(it){return `<label>Name<input name="name" value="${esc(it.na
 
 const sgBox=it=>it.suggested?`<div class="sgbox"><span><b>✦ Claude's suggestion</b></span><div class="row2"><button type="button" class="btn sm" id="sg-keep">Keep it</button><button type="button" class="btn sm" id="sg-drop">Not for us</button></div></div>`:"";
 function sgWire(c,it){if(!it.suggested)return;$("#sg-keep").onclick=()=>{patch(c,it.id,{suggested:false});closeSheet();toast("Kept")};$("#sg-drop").onclick=()=>{del(c,it.id);closeSheet();toast("Removed")}}
+const PAIDCHORE=new Set(["laundry","shower","groceries","fuel"]);
 const CHORES={water:["🚰","Fill water","utility"],dump:["🚽","Dump station","utility"],laundry:["🧺","Laundry","utility"],shower:["🚿","Showers","utility"],groceries:["🛒","Groceries","grocery"],fuel:["⛽","Fuel","fuel"]};
 function addChore(d,k){const [ic,name,cat]=CHORES[k];add("spots",{name,kind:"chore",chore:k,cat,region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});toast(`${ic} ${name} added`)}
 function openNewPlan(d){

@@ -1,6 +1,6 @@
 /* Van Budget NZ — offline shell.
    Bump CACHE when you change index.html so phones pick up the new version. */
-const CACHE = 'kea-v38';
+const CACHE = 'kea-v39';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './trip/icon-192.png', './kea-icon.svg'];
 
 self.addEventListener('install', e => {
@@ -37,7 +37,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (err) {}
   e.waitUntil(self.registration.showNotification(d.title || 'Spent anything today?', {
-    body: d.body || 'Log it in Kea before you forget.', tag: d.tag || 'evening', icon: d.icon || 'icon-192.png', badge: 'icon-192.png', data: { url: d.url || './?add=1' } }));
+    body: d.body || 'Log it in Kea before you forget.', tag: d.tag || 'evening', icon: d.icon || 'icon-192.png', badge: d.badge || (String(d.url || '').includes('trip/') ? 'trip/badge-van.png' : 'badge-kea.png'), data: { url: d.url || './?add=1' } }));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();

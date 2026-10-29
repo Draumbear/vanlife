@@ -595,6 +595,14 @@ const DEFAULTS = {
   sync: { url:'', key:'', lastPull:'', skipCols:[] },
 };
 
+/* a set-up link (…#join=…) fills in the sync connection for Kea and Loop on this browser */
+(function(){ const m=/[#&]join=([^&]+)/.exec(location.hash); if(!m) return;
+  try{ const j=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+    if(j.url && j.key){ localStorage.setItem(LS_SYNC, JSON.stringify({url:j.url, key:j.key})); localStorage.setItem('sil-sync-v1', JSON.stringify({url:j.url, key:j.key}));
+      try{ const raw=JSON.parse(localStorage.getItem('vanbudget.v1')||'null'); if(raw){ raw.sync=Object.assign({}, raw.sync||{}, {url:j.url, key:j.key, lastPull:''}); localStorage.setItem('vanbudget.v1', JSON.stringify(raw)); } }catch(e){}
+      window.__joined = true; } }catch(e){}
+  history.replaceState(null, '', location.pathname + location.search);
+})();
 let S = load();
 
 /* Carry settings saved by an earlier version over to the current shape. */
@@ -655,7 +663,7 @@ function saveSyncCreds(){
    changed, so we only re-test the connection when it actually differs. */
 function captureSyncFields(){
   const url = document.getElementById('s-url').value.trim();
-  const key = document.getElementById('s-key').value.trim();
+  const key = document.getElementById('s-key').value.replace(/[\s"'`]+/g, '');
   if (url === S.sync.url && key === S.sync.key) return false;
   S.sync.url = url;
   S.sync.key = key;

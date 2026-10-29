@@ -782,6 +782,11 @@ function replaceAll(docs){
   persist();refresh();scheduleSync(300)}
 async function fetchPlan(){const r=await fetch("plan.json",{cache:"no-store"});if(!r.ok)throw new Error("plan");return r.json()}
 
+/* a set-up link (…#join=…) from the other browser/phone fills in the connection for Loop and Kea in one go */
+(()=>{const m=/[#&]join=([^&]+)/.exec(location.hash);if(!m)return;try{const j=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+  if(j.url&&j.key){localStorage.setItem(LS_CRED,JSON.stringify({url:j.url,key:j.key}));localStorage.setItem(KEA_CRED,JSON.stringify({url:j.url,key:j.key}));setTimeout(()=>toast("Connected ✓ · Loop and Kea are set up on this browser"),2600)}}catch{}
+  history.replaceState(null,"",location.pathname+location.search)})();
+const joinLink=c=>`${location.origin}${location.pathname.replace(/trip\/?(index\.html)?$/,"")}#join=${encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({url:c.url,key:c.key})))))}`;
 let cred=loadCred(),syncing=false,syncTimer=null,lastErr=null;
 function loadCred(){let c={};try{c=JSON.parse(localStorage.getItem(LS_CRED)||"{}")}catch{}
   if(c.off)return {off:true};
@@ -2481,15 +2486,17 @@ function openSettings(){
     <details><summary>Check map positions</summary><div style="display:grid;gap:8px">
       <p class="muted" style="margin:0;font-size:.85rem">Places already checked by hand are skipped. Looks the rest up in OpenStreetMap (about one per second, so a few minutes with the screen on) and suggests fixes for ones that are off. Nothing changes until you tap Apply.</p>
       <button type="button" class="btn" id="geo-go">Start checking</button><div id="geo-out"></div></div></details>
+    ${syncOn()?`<button type="button" class="btn" id="s-join">📲 Link to set up another phone or browser</button>`:""}
     <button type="button" class="btn primary" id="s-check">📱 Check this phone</button>
     <a class="btn" href="../">Open Kea</a>`,"settings");
   $("#s-check").onclick=phoneCheck;
+  if($("#s-join"))$("#s-join").onclick=async()=>{const l=joinLink(cred);try{if(navigator.share)await navigator.share({title:"Set up Loop & Kea",text:"Open this in the browser you want to set up:",url:l});else{await navigator.clipboard.writeText(l);toast("Link copied")}}catch{try{await navigator.clipboard.writeText(l);toast("Link copied")}catch{prompt("Copy this link",l)}}};
   const test=async(url,key)=>{const msg=$("#s-msg");msg.innerHTML=`<span class="muted">Testing…</span>`;
     try{await api("trip_docs?select=id&limit=1",{},{url,key});const changed=url!==cred.url||key!==cred.key;cred={url,key};try{localStorage.setItem(LS_CRED,JSON.stringify(cred))}catch{}
       if(changed){S.synced=false;S.lastPull=""}lastErr=null;persist();msg.innerHTML=`<span class="ok">✓ Connected</span>`;$("#s-sql").hidden=true;sync(true)}
     catch(e){if(missingTable(e)){cred={url,key};try{localStorage.setItem(LS_CRED,JSON.stringify(cred))}catch{}lastErr=e;msg.innerHTML=`<span class="bad">Connected, table missing.</span>`;$("#s-sql").hidden=false}
       else msg.innerHTML=`<span class="bad">${e.status===401||e.status===403?"Key rejected — use the anon key.":"Couldn't connect — check the URL and signal."}</span>`;setChip()}};
-  $("#s-test").onclick=()=>{const url=$("#s-url").value.trim(),key=$("#s-key").value.trim();if(!/^https?:\/\/.+/.test(url)||!key){$("#s-msg").innerHTML=`<span class="bad">Fill in both.</span>`;return}test(url,key)};
+  $("#s-test").onclick=()=>{const url=$("#s-url").value.trim().replace(/\/+$/,""),key=$("#s-key").value.replace(/[\s"'`]+/g,"");if(!/^https?:\/\/.+/.test(url)||!key){$("#s-msg").innerHTML=`<span class="bad">Fill in both.</span>`;return}test(url,key)};
   $("#s-retest").onclick=()=>{if(syncOn()){$("#form details").open=true;test(cred.url,cred.key)}};
   $("#s-copy").onclick=async e=>{try{await navigator.clipboard.writeText(SQL);e.target.textContent="Copied ✓"}catch{const r=document.createRange();r.selectNodeContents($(".sql"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected — copy it from the menu")}};
   $("#s-off")?.addEventListener("click",()=>{cred={off:true};try{localStorage.setItem(LS_CRED,JSON.stringify(cred))}catch{}S.synced=false;S.lastPull="";persist();setChip();closeSheet();toast("Sharing off")});

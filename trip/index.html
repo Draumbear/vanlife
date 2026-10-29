@@ -132,6 +132,7 @@ textarea{min-height:72px;resize:vertical}
 @keyframes burst{0%{transform:scale(.2);opacity:0}25%{opacity:1}70%{transform:scale(1);opacity:.9}100%{transform:scale(1.15);opacity:0}}
 @media (prefers-reduced-motion:reduce){.deco.fw svg{animation:none;opacity:1}.deco .flame{animation:none}}
 .stop-h .t{flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.stop-h .recapgo{flex:none;width:34px;height:34px;align-self:center}.stop-h .recapgo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .stop-h b{display:block;font:800 1.1rem/1.2 var(--display)}
 .stop-h small{font-size:.82rem;color:var(--muted)}
 .leg{font:500 .72rem var(--mono);color:var(--muted);margin-top:16px}
@@ -1076,6 +1077,83 @@ function wrapLines(ctx,text,maxW,maxL){const words=String(text).split(/\s+/),out
 const loadImg=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src=src});
 /* the recap is a scrapbook page: polaroid photo, a taped-in map clipping, handwritten note.
    The layout follows the photo: wide photos go across the top, tall ones down the left. */
+/* the route map used by the recaps: real OSM tiles, activity icons, a zoom box for crowded spots, a small South Island inset.
+   pts: [{lat,lng,k:"from"|"act"|"to",ic}], opt: {home, label, road} */
+async function drawRouteMap(g,BF,lx,by,lw,bh,pts,opt={}){
+  // the route on a real map (OpenStreetMap tiles); activity icons on it, and a zoomed-in box when several sit on top of each other
+    const P=pts,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
+    async function tiles(z,MS,ox,oy,x0,y0,w,h){const tw=256*MS,jobs=[];let ok=false;
+      for(let tx=Math.floor((x0-ox)/tw);tx<=Math.floor((x0+w-ox)/tw);tx++)for(let ty=Math.floor((y0-oy)/tw);ty<=Math.floor((y0+h-oy)/tw);ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
+        try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);ok=true}catch{}finally{clearTimeout(tm)}})());
+      await Promise.all(jobs);return ok}
+    function pin(p,x,y,s=1){if(p.k==="act"){g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=4*s;g.beginPath();g.arc(x,y,22*s,0,7);g.fill();g.stroke();
+        g.font=`${Math.round(24*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(p.ic,x,y+1)}
+      else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4*s;g.beginPath();g.arc(x,y,(p.k==="to"?21:14)*s,0,7);g.fill();g.stroke();
+        g.font=`${Math.round((p.k==="to"?21:15)*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,y+1)}
+      g.textAlign="left";g.textBaseline="alphabetic"}
+    function road(pts,X,Y,w){if(pts.length<2)return;g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=w;g.lineCap="round";g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
+      g.strokeStyle="#f1e3a6";g.lineWidth=Math.max(2,w/4);g.setLineDash([w*1.2,w]);g.stroke();g.setLineDash([])}
+    g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,6);g.fill();
+    g.save();g.beginPath();g.roundRect(lx,by,lw,bh,6);g.clip();
+    const moved=P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng);
+    const rest=P.filter(p=>p.k!=="from"),farFrom=P[0]?.k==="from"&&rest.length>=2&&rest.every(p=>hav(p,P[0])>25);
+    const focus=farFrom?rest:P.length?P:[opt.home].filter(Boolean),MS=1.5;
+    let X=null,Y=null,tilesOk=false;
+    if(focus.length){const pad=64,aw=lw-2*pad,ah=bh-2*pad-40;let z=14;
+      if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}else z=13;
+      const cxw=(Math.max(...focus.map(p=>wx(p.lng,z)))+Math.min(...focus.map(p=>wx(p.lng,z))))/2,cyw=(Math.max(...focus.map(p=>wy(p.lat,z)))+Math.min(...focus.map(p=>wy(p.lat,z))))/2;
+      const ox=lx+lw/2-cxw*MS,oy=by+(bh-40)/2-cyw*MS;X=p=>ox+wx(p.lng,z)*MS;Y=p=>oy+wy(p.lat,z)*MS;
+      tilesOk=await tiles(z,MS,ox,oy,lx,by,lw,bh)}
+    if(!tilesOk){g.strokeStyle="#d2dcc8";g.lineWidth=2;for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}}
+    // pins that would cover each other: the biggest such group goes into a zoomed-in box
+    let clu=[];
+    if(X){const pts=P.filter(p=>p.k!=="from"),near=(a,b)=>Math.hypot(X(a)-X(b),Y(a)-Y(b))<46,seen=new Set();
+      for(const a of pts){if(seen.has(a))continue;const grp=[a];seen.add(a);for(let i=0;i<grp.length;i++)for(const b of pts)if(!seen.has(b)&&near(grp[i],b)){grp.push(b);seen.add(b)}
+        if(grp.length>clu.length&&grp.length>=2)clu=grp}}
+    if(X&&moved&&opt.road!==false)road(P,X,Y,11);
+    if(X){P.forEach(p=>{if(!clu.includes(p))pin(p,X(p),Y(p))});if(!P.length){const p=focus[0];pin({k:"to"},X(p),Y(p))}}
+    let box=null;
+    if(clu.length){const cx=clu.reduce((t,p)=>t+X(p),0)/clu.length,cy=clu.reduce((t,p)=>t+Y(p),0)/clu.length;
+      const r0=Math.max(...clu.map(p=>Math.hypot(X(p)-cx,Y(p)-cy)))+28;
+      g.fillStyle="rgba(255,255,255,.35)";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.setLineDash([8,6]);g.beginPath();g.arc(cx,cy,r0,0,7);g.fill();g.stroke();g.setLineDash([]);
+      g.fillStyle="#2f6b4f";g.beginPath();g.arc(cx,cy,17,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(clu.length),cx,cy+1);g.textAlign="left";g.textBaseline="alphabetic";
+      const BW=196,BH=168,corners=[[lx+12,by+40],[lx+lw-BW-12,by+12],[lx+12,by+bh-BH-96],[lx+lw-BW-12,by+bh-BH-96]];
+      const hit=(x,y,px,py,m)=>px>x-m&&px<x+BW+m&&py>y-m&&py<y+BH+m;
+      const pick=corners.map(([x,y])=>({x,y,d:Math.hypot(x+BW/2-cx,y+BH/2-cy)-P.filter(p=>hit(x,y,X(p),Y(p),p.k==="from"?30:24)).length*400-(hit(x,y,cx,cy,r0)?800:0)})).sort((a,b)=>b.d-a.d)[0];
+      box={x:pick.x,y:pick.y,w:BW,h:BH,cx,cy,r0}}
+    if(box){const {x:bx,y:byy,w:BW,h:BH}=box;
+      // a line from the circle to the box
+      g.strokeStyle="#2f6b4f";g.lineWidth=2.5;g.beginPath();const ang=Math.atan2(byy+BH/2-box.cy,bx+BW/2-box.cx);g.moveTo(box.cx+Math.cos(ang)*box.r0,box.cy+Math.sin(ang)*box.r0);
+      g.lineTo(Math.min(Math.max(box.cx+Math.cos(ang)*9999,bx),bx+BW),Math.min(Math.max(box.cy+Math.sin(ang)*9999,byy),byy+BH));g.stroke();
+      g.save();g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.fillStyle="#e3eadb";g.fill();g.clip();
+      const MS2=1.25,padI=34;let zi=Math.min(18,14);
+      for(zi=18;zi>8;zi--){const xs=clu.map(p=>wx(p.lng,zi)*MS2),ys=clu.map(p=>wy(p.lat,zi)*MS2);if(Math.max(...xs)-Math.min(...xs)<=BW-2*padI&&Math.max(...ys)-Math.min(...ys)<=BH-2*padI)break}
+      const icx=(Math.max(...clu.map(p=>wx(p.lng,zi)))+Math.min(...clu.map(p=>wx(p.lng,zi))))/2,icy=(Math.max(...clu.map(p=>wy(p.lat,zi)))+Math.min(...clu.map(p=>wy(p.lat,zi))))/2;
+      const iox=bx+BW/2-icx*MS2,ioy=byy+BH/2-icy*MS2,IX=p=>iox+wx(p.lng,zi)*MS2,IY=p=>ioy+wy(p.lat,zi)*MS2;
+      await tiles(zi,MS2,iox,ioy,bx,byy,BW,BH);
+      if(opt.road!==false)road(P,IX,IY,8);
+      // pins at (almost) the same spot are fanned out a little, with a short stalk to where they really are
+      const pos=clu.map(p=>({p,x:IX(p),y:IY(p),x0:IX(p),y0:IY(p)}));
+      for(let it=0;it<60;it++)for(let i=0;i<pos.length;i++)for(let j=i+1;j<pos.length;j++){const a=pos[i],b2=pos[j];let dx=b2.x-a.x,dy=b2.y-a.y,dd=Math.hypot(dx,dy);
+        if(dd<40){if(dd<.5){dx=Math.cos(i+j);dy=Math.sin(i+j);dd=1}const push=(40-dd)/2;a.x-=dx/dd*push;a.y-=dy/dd*push;b2.x+=dx/dd*push;b2.y+=dy/dd*push}}
+      pos.forEach(q=>{q.x=Math.min(Math.max(q.x,bx+22),bx+BW-22);q.y=Math.min(Math.max(q.y,byy+22),byy+BH-22);
+        if(Math.hypot(q.x-q.x0,q.y-q.y0)>4){g.strokeStyle="#2f6b4f";g.lineWidth=2;g.beginPath();g.moveTo(q.x0,q.y0);g.lineTo(q.x,q.y);g.stroke();g.fillStyle="#2f6b4f";g.beginPath();g.arc(q.x0,q.y0,3.5,0,7);g.fill()}});
+      pos.forEach(q=>pin(q.p,q.x,q.y,.82));
+      g.restore();g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.stroke()}
+    if(!moved&&!tilesOk&&opt.road!==false){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
+    if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
+    // where in Aotearoa: a small South Island in a free corner
+    {const p=opt.home;if(p&&p.lat<-40.3){const iw=64,ih=76,cand=[[lx+lw-iw-14,by+bh-ih-112],[lx+lw-iw-14,by+40],[lx+21,by+bh-ih-112]];
+      const free=cand.find(([x,y])=>!(box&&x<box.x+box.w+10&&x+iw>box.x-10&&y<box.y+box.h+10&&y+ih>box.y-10))||cand[0],[ix,iy]=free;
+      const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
+      g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
+      g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
+      g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
+    g.restore();
+    g.font=`700 24px ${BF}`;const tn=opt.label||"",CL=tn?wrapLines(g,tn,lw-56,2):[],cbh=CL.length>1?74:44;
+    if(CL.length){g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-12-cbh,lw-28,cbh,14);g.fill();
+    g.fillStyle="#1d2621";CL.forEach((l,i)=>g.fillText(l,lx+28,by+bh-12-cbh+30+i*30));}
+  }
 const RFONTS="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap";
 async function recapFonts(){if(!document.querySelector("link[data-rf]")){const l=document.createElement("link");l.rel="stylesheet";l.href=RFONTS;l.dataset.rf="1";document.head.appendChild(l);
     await new Promise(ok=>{l.onload=ok;l.onerror=ok;setTimeout(ok,2500)})}
@@ -1112,81 +1190,8 @@ async function buildRecap(d){
   async function mapClip(lx,by,lw,bh,rot){g.save();g.translate(lx+lw/2,by+bh/2);g.rotate(rot);g.translate(-(lx+lw/2),-(by+bh/2));
     g.shadowColor="rgba(40,30,10,.25)";g.shadowBlur=18;g.shadowOffsetY=6;g.fillStyle="#fbfaf5";g.fillRect(lx-10,by-10,lw+20,bh+20);g.shadowColor="transparent";
     await drawMap(lx,by,lw,bh);g.restore();tape(lx+18,by+6,-.7,96);tape(lx+lw-18,by+bh-6,-.7,96)}
-  async function drawMap(lx,by,lw,bh){
-  // the route on a real map (OpenStreetMap tiles); activity icons on it, and a zoomed-in box when several sit on top of each other
-    const P=R.pts,wx=(ln,z)=>(ln+180)/360*256*2**z,wy=(la,z)=>{const r=la*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*2**z};
-    async function tiles(z,MS,ox,oy,x0,y0,w,h){const tw=256*MS,jobs=[];let ok=false;
-      for(let tx=Math.floor((x0-ox)/tw);tx<=Math.floor((x0+w-ox)/tw);tx++)for(let ty=Math.floor((y0-oy)/tw);ty<=Math.floor((y0+h-oy)/tw);ty++)jobs.push((async()=>{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),7000);
-        try{const r=await fetch(`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`,{mode:"cors",signal:ctl.signal});if(!r.ok)return;const bm=await createImageBitmap(await r.blob());g.drawImage(bm,ox+tx*tw,oy+ty*tw,tw,tw);ok=true}catch{}finally{clearTimeout(tm)}})());
-      await Promise.all(jobs);return ok}
-    function pin(p,x,y,s=1){if(p.k==="act"){g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=4*s;g.beginPath();g.arc(x,y,22*s,0,7);g.fill();g.stroke();
-        g.font=`${Math.round(24*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#000";g.fillText(p.ic,x,y+1)}
-      else{g.fillStyle=p.k==="to"?"#2f6b4f":"#8d9493";g.strokeStyle="#fff";g.lineWidth=4*s;g.beginPath();g.arc(x,y,(p.k==="to"?21:14)*s,0,7);g.fill();g.stroke();
-        g.font=`${Math.round((p.k==="to"?21:15)*s)}px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillStyle="#fff";g.fillText(p.k==="to"?"⛺":"•",x,y+1)}
-      g.textAlign="left";g.textBaseline="alphabetic"}
-    function road(pts,X,Y,w){if(pts.length<2)return;g.strokeStyle="rgba(29,38,33,.85)";g.lineWidth=w;g.lineCap="round";g.lineJoin="round";g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p),Y(p)):g.moveTo(X(p),Y(p)));g.stroke();
-      g.strokeStyle="#f1e3a6";g.lineWidth=Math.max(2,w/4);g.setLineDash([w*1.2,w]);g.stroke();g.setLineDash([])}
-    g.fillStyle="#e3eadb";g.beginPath();g.roundRect(lx,by,lw,bh,6);g.fill();
-    g.save();g.beginPath();g.roundRect(lx,by,lw,bh,6);g.clip();
-    const moved=P.length>=2&&P.some(p=>p.lat!==P[0].lat||p.lng!==P[0].lng);
-    const rest=P.filter(p=>p.k!=="from"),farFrom=P[0]?.k==="from"&&rest.length>=2&&rest.every(p=>hav(p,P[0])>25);
-    const focus=farFrom?rest:P.length?P:[nightLoc(d)].filter(Boolean),MS=1.5;
-    let X=null,Y=null,tilesOk=false;
-    if(focus.length){const pad=64,aw=lw-2*pad,ah=bh-2*pad-40;let z=14;
-      if(moved){for(z=15;z>5;z--){const xs=focus.map(p=>wx(p.lng,z)),ys=focus.map(p=>wy(p.lat,z));if((Math.max(...xs)-Math.min(...xs))*MS<=aw&&(Math.max(...ys)-Math.min(...ys))*MS<=ah)break}}else z=13;
-      const cxw=(Math.max(...focus.map(p=>wx(p.lng,z)))+Math.min(...focus.map(p=>wx(p.lng,z))))/2,cyw=(Math.max(...focus.map(p=>wy(p.lat,z)))+Math.min(...focus.map(p=>wy(p.lat,z))))/2;
-      const ox=lx+lw/2-cxw*MS,oy=by+(bh-40)/2-cyw*MS;X=p=>ox+wx(p.lng,z)*MS;Y=p=>oy+wy(p.lat,z)*MS;
-      tilesOk=await tiles(z,MS,ox,oy,lx,by,lw,bh)}
-    if(!tilesOk){g.strokeStyle="#d2dcc8";g.lineWidth=2;for(let i=0;i<9;i++){g.beginPath();for(let x=0;x<=lw;x+=20){const yy=by+20+i*(bh/8)+Math.sin((x+i*37)/60)*10;x?g.lineTo(lx+x,yy):g.moveTo(lx,yy)}g.stroke()}}
-    // pins that would cover each other: the biggest such group goes into a zoomed-in box
-    let clu=[];
-    if(X){const pts=P.filter(p=>p.k!=="from"),near=(a,b)=>Math.hypot(X(a)-X(b),Y(a)-Y(b))<46,seen=new Set();
-      for(const a of pts){if(seen.has(a))continue;const grp=[a];seen.add(a);for(let i=0;i<grp.length;i++)for(const b of pts)if(!seen.has(b)&&near(grp[i],b)){grp.push(b);seen.add(b)}
-        if(grp.length>clu.length&&grp.length>=2)clu=grp}}
-    if(X&&moved)road(P,X,Y,11);
-    if(X){P.forEach(p=>{if(!clu.includes(p))pin(p,X(p),Y(p))});if(!P.length){const p=focus[0];pin({k:"to"},X(p),Y(p))}}
-    let box=null;
-    if(clu.length){const cx=clu.reduce((t,p)=>t+X(p),0)/clu.length,cy=clu.reduce((t,p)=>t+Y(p),0)/clu.length;
-      const r0=Math.max(...clu.map(p=>Math.hypot(X(p)-cx,Y(p)-cy)))+28;
-      g.fillStyle="rgba(255,255,255,.35)";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.setLineDash([8,6]);g.beginPath();g.arc(cx,cy,r0,0,7);g.fill();g.stroke();g.setLineDash([]);
-      g.fillStyle="#2f6b4f";g.beginPath();g.arc(cx,cy,17,0,7);g.fill();g.fillStyle="#fff";g.font=`800 18px ${BF}`;g.textAlign="center";g.textBaseline="middle";g.fillText(String(clu.length),cx,cy+1);g.textAlign="left";g.textBaseline="alphabetic";
-      const BW=196,BH=168,corners=[[lx+12,by+40],[lx+lw-BW-12,by+12],[lx+12,by+bh-BH-96],[lx+lw-BW-12,by+bh-BH-96]];
-      const hit=(x,y,px,py,m)=>px>x-m&&px<x+BW+m&&py>y-m&&py<y+BH+m;
-      const pick=corners.map(([x,y])=>({x,y,d:Math.hypot(x+BW/2-cx,y+BH/2-cy)-P.filter(p=>hit(x,y,X(p),Y(p),p.k==="from"?30:24)).length*400-(hit(x,y,cx,cy,r0)?800:0)})).sort((a,b)=>b.d-a.d)[0];
-      box={x:pick.x,y:pick.y,w:BW,h:BH,cx,cy,r0}}
-    if(box){const {x:bx,y:byy,w:BW,h:BH}=box;
-      // a line from the circle to the box
-      g.strokeStyle="#2f6b4f";g.lineWidth=2.5;g.beginPath();const ang=Math.atan2(byy+BH/2-box.cy,bx+BW/2-box.cx);g.moveTo(box.cx+Math.cos(ang)*box.r0,box.cy+Math.sin(ang)*box.r0);
-      g.lineTo(Math.min(Math.max(box.cx+Math.cos(ang)*9999,bx),bx+BW),Math.min(Math.max(box.cy+Math.sin(ang)*9999,byy),byy+BH));g.stroke();
-      g.save();g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.fillStyle="#e3eadb";g.fill();g.clip();
-      const MS2=1.25,padI=34;let zi=Math.min(18,14);
-      for(zi=18;zi>8;zi--){const xs=clu.map(p=>wx(p.lng,zi)*MS2),ys=clu.map(p=>wy(p.lat,zi)*MS2);if(Math.max(...xs)-Math.min(...xs)<=BW-2*padI&&Math.max(...ys)-Math.min(...ys)<=BH-2*padI)break}
-      const icx=(Math.max(...clu.map(p=>wx(p.lng,zi)))+Math.min(...clu.map(p=>wx(p.lng,zi))))/2,icy=(Math.max(...clu.map(p=>wy(p.lat,zi)))+Math.min(...clu.map(p=>wy(p.lat,zi))))/2;
-      const iox=bx+BW/2-icx*MS2,ioy=byy+BH/2-icy*MS2,IX=p=>iox+wx(p.lng,zi)*MS2,IY=p=>ioy+wy(p.lat,zi)*MS2;
-      await tiles(zi,MS2,iox,ioy,bx,byy,BW,BH);
-      road(P,IX,IY,8);
-      // pins at (almost) the same spot are fanned out a little, with a short stalk to where they really are
-      const pos=clu.map(p=>({p,x:IX(p),y:IY(p),x0:IX(p),y0:IY(p)}));
-      for(let it=0;it<60;it++)for(let i=0;i<pos.length;i++)for(let j=i+1;j<pos.length;j++){const a=pos[i],b2=pos[j];let dx=b2.x-a.x,dy=b2.y-a.y,dd=Math.hypot(dx,dy);
-        if(dd<40){if(dd<.5){dx=Math.cos(i+j);dy=Math.sin(i+j);dd=1}const push=(40-dd)/2;a.x-=dx/dd*push;a.y-=dy/dd*push;b2.x+=dx/dd*push;b2.y+=dy/dd*push}}
-      pos.forEach(q=>{q.x=Math.min(Math.max(q.x,bx+22),bx+BW-22);q.y=Math.min(Math.max(q.y,byy+22),byy+BH-22);
-        if(Math.hypot(q.x-q.x0,q.y-q.y0)>4){g.strokeStyle="#2f6b4f";g.lineWidth=2;g.beginPath();g.moveTo(q.x0,q.y0);g.lineTo(q.x,q.y);g.stroke();g.fillStyle="#2f6b4f";g.beginPath();g.arc(q.x0,q.y0,3.5,0,7);g.fill()}});
-      pos.forEach(q=>pin(q.p,q.x,q.y,.82));
-      g.restore();g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.roundRect(bx,byy,BW,BH,16);g.stroke()}
-    if(!moved&&!tilesOk){g.fillStyle="#56645a";g.font=`700 28px ${BF}`;g.textAlign="center";g.fillText("Stayed put today 😌",lx+lw/2,by+bh/2);g.textAlign="left"}
-    if(tilesOk){g.font=`600 15px ${BF}`;g.fillStyle="rgba(255,255,255,.85)";const at="© OpenStreetMap";const aw2=g.measureText(at).width;g.fillRect(lx+10,by+10,aw2+10,20);g.fillStyle="#56645a";g.fillText(at,lx+15,by+25)}
-    // where in Aotearoa: a small South Island in a free corner
-    {const p=nightLoc(d);if(p&&p.lat<-40.3){const iw=64,ih=76,cand=[[lx+lw-iw-14,by+bh-ih-112],[lx+lw-iw-14,by+40],[lx+21,by+bh-ih-112]];
-      const free=cand.find(([x,y])=>!(box&&x<box.x+box.w+10&&x+iw>box.x-10&&y<box.y+box.h+10&&y+ih>box.y-10))||cand[0],[ix,iy]=free;
-      const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min(iw/((LN1-LN0)*kx),ih/(LA0-LA1)),IX=(la,ln)=>ix+(ln-LN0)*kx*sc,IY=la=>iy+(LA0-la)*sc;
-      g.fillStyle="rgba(255,255,255,.88)";g.beginPath();g.roundRect(ix-7,iy-7,iw+14,ih+14,12);g.fill();
-      g.fillStyle="#9fb894";g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(IX(la,ln),IY(la)):g.moveTo(IX(la,ln),IY(la)));g.closePath();g.fill();
-      g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(IX(p.lat,p.lng),IY(p.lat),5,0,7);g.fill();g.stroke()}}
-    g.restore();
-    g.font=`700 24px ${BF}`;const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp)),tn=n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd",CL=wrapLines(g,tn,lw-56,2),cbh=CL.length>1?74:44;
-    g.fillStyle="rgba(255,255,255,.94)";g.beginPath();g.roundRect(lx+14,by+bh-12-cbh,lw-28,cbh,14);g.fill();
-    g.fillStyle="#1d2621";CL.forEach((l,i)=>g.fillText(l,lx+28,by+bh-12-cbh+30+i*30));
-  }
+  async function drawMap(lx,by,lw,bh){const rc=n.camp&&state.camps.find(x=>sameCamp(x.name,n.camp));
+    return drawRouteMap(g,BF,lx,by,lw,bh,R.pts,{home:nightLoc(d),label:n.camp?`⛺ ${n.camp}${rc?.rate?" "+rateTag(rc):""}`:"⛺ campsite tbd"})}
   // what we did, handwritten heading, icons as on the map
   const from=R.pts[0]?.k==="from"&&R.pts.length>1&&R.pts.some(p=>p.k!=="from"&&hav(p,R.pts[0])>1)?R.pts[0]:null;
   function listBlock(x,y,wd2,maxY){g.fillStyle=ACC;g.font=`700 46px ${SF}`;g.fillText("What we did",x,y+34);let ly=y+92;
@@ -1233,63 +1238,86 @@ async function openRecap(d){sheet(head(`Day recap · ${wd(d)} ${fmt(d)}`)+`<div 
   if(navigator.canShare?.({files:[recapFile]})){b.disabled=false;b.onclick=async()=>{try{await navigator.share({files:[recapFile],title:`${wd(d)} ${fmt(d)} · Aotearoa Loop`})}catch{}}}
   else{b.textContent="Save to share";b.disabled=false;b.onclick=()=>dl.click()}}
 /* ---- the trip so far (or just this week) as one picture to send home ---- */
+/* recap of a stretch of the trip, scrapbook style: the week, one place (stop), or the whole trip so far.
+   mode: "week" | "all" | "place:<stopId>" */
+function recapSpan(mode){const r=tripRange();if(!r)return null;const t=today(),end=t>r.last?r.last:t;
+  if(mode.startsWith("place:")){const st=S.docs.stops[mode.slice(6)];if(!st)return null;const days=stopDays(st).filter(d=>d<=t);if(!days.length)return null;
+    return {from:days[0],end:addDays(days[days.length-1],1),title:st.name,stop:{...st,id:mode.slice(6)},kind:"place"}}
+  if(mode==="week"){const from=addDays(end,-7)<r.first?r.first:addDays(end,-7);return {from,end,title:"Our week",kind:"week"}}
+  return {from:r.first,end,title:"Our trip so far",kind:"all"}}
 async function buildTripRecap(mode){
-  await document.fonts?.ready;const r=tripRange();if(!r)return null;const t=today(),end=t>r.last?r.last:t;
-  const from=mode==="week"?(addDays(end,-7)<r.first?r.first:addDays(end,-7)):r.first;
-  const days=[];for(let d=from;d<end;d=addDays(d,1))days.push(d);
+  await recapFonts();await document.fonts?.ready;const sp=recapSpan(mode),r=tripRange();if(!sp)return null;const {from,end}=sp,t=today();
+  const days=[];for(let d=from;d<end;d=addDays(d,1))days.push(d);if(!days.length)days.push(from);
   const W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
-  const DF='"Bricolage Grotesque","Avenir Next",system-ui,sans-serif',BF='"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif';
-  const dayN=daysBetween(r.first,end),total=daysBetween(r.first,r.last);
-  const acts=days.flatMap(d=>planFor(d).filter(x=>x.done&&x.kind!=="chore"&&x.kind!=="task"));
-  const byKind={};acts.forEach(x=>{const k=x.kind||"place";byKind[k]=(byKind[k]||0)+1});
-  const ty=nightTypes(from,end),km=kmSoFar(addDays(end,-1))-(mode==="week"?kmSoFar(addDays(from,-1)):0);
+  const HF='"Fraunces",Georgia,serif',SF='"Caveat","Segoe Print","Bradley Hand",cursive',BF='"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif';
+  const INK="#2b2925",SOFT="#7a7264",ACC="#b4532a",PAPER="#efe8d8";
+  let seed=[...mode+from].reduce((a,c)=>a*31+c.charCodeAt(0),7)%2147483647;const rnd=()=>(seed=seed*48271%2147483647)/2147483647;
+  const acts=days.flatMap(d=>planFor(d).filter(x=>x.done&&x.kind!=="chore"&&x.kind!=="task").map(x=>({...x,_d:d})));
+  const ty=nightTypes(from,end),km=Math.max(0,kmSoFar(addDays(end,-1))-kmSoFar(addDays(from,-1))),spent=sumA(days.flatMap(spentOn));
+  // paper
+  g.fillStyle=PAPER;g.fillRect(0,0,W,H);for(let i=0;i<5200;i++){g.fillStyle=`rgba(${rnd()<.5?"90,70,40":"255,255,255"},${.04+rnd()*.06})`;g.fillRect(rnd()*W,rnd()*H,1+rnd()*1.6,1+rnd()*1.6)}
+  const tape=(x,y,ang,len=120)=>{g.save();g.translate(x,y);g.rotate(ang);g.fillStyle="rgba(236,222,170,.78)";g.fillRect(-len/2,-17,len,34);g.fillStyle="rgba(255,255,255,.18)";for(let i=-len/2;i<len/2;i+=9)g.fillRect(i,-17,3,34);g.restore()};
   // header
-  g.fillStyle="#f4f1e8";g.fillRect(0,0,W,H);g.fillStyle="#2f6b4f";g.fillRect(0,0,W,210);
-  g.fillStyle="#cfe3d6";g.font=`700 30px ${BF}`;g.fillText(`AOTEAROA · DAY ${dayN} OF ${total}`,60,72);
-  g.fillStyle="#fff";g.font=`800 70px ${DF}`;g.fillText(mode==="week"?"Our week":"Our trip so far",60,152);
-  g.fillStyle="#cfe3d6";g.font=`700 30px ${BF}`;g.fillText(`${fmt(from)} – ${fmt(addDays(end,-1))}`,60,192);
-  // map: South Island with the whole route faint, this stretch bold
-  const mx=60,my=240,mw=420,mh=520;g.fillStyle="#dfe9ec";g.beginPath();g.roundRect(mx,my,mw,mh,26);g.fill();
-  const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min((mw-30)/((LN1-LN0)*kx),(mh-30)/(LA0-LA1));
-  const ox=mx+(mw-(LN1-LN0)*kx*sc)/2,oy=my+(mh-(LA0-LA1)*sc)/2,PX=(la,ln)=>ox+(ln-LN0)*kx*sc,PY=la=>oy+(LA0-la)*sc;
-  g.save();g.beginPath();g.roundRect(mx,my,mw,mh,26);g.clip();
-  g.fillStyle="#e4e8dc";g.strokeStyle="#b9c9b0";g.lineWidth=2;g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(PX(la,ln),PY(la)):g.moveTo(PX(la,ln),PY(la)));g.closePath();g.fill();g.stroke();
-  const pts=nightPts(),line=(arr,col,w,dash)=>{if(arr.length<2)return;g.strokeStyle=col;g.lineWidth=w;g.setLineDash(dash||[]);g.lineJoin="round";g.lineCap="round";g.beginPath();arr.forEach((p,i)=>i?g.lineTo(PX(p.lat,p.lng),PY(p.lat)):g.moveTo(PX(p.lat,p.lng),PY(p.lat)));g.stroke();g.setLineDash([])};
-  line(pts.filter(p=>p.d>=end),"#9aa79b",3,[6,8]);line(pts.filter(p=>p.d<end&&p.d>=r.first),mode==="week"?"#9aa79b":"#2f6b4f",5);
-  if(mode==="week"){const wk=pts.filter(p=>p.d>=addDays(from,-1)&&p.d<end);line(wk,"#2f6b4f",6)}
-  pts.filter(p=>p.d>=from&&p.d<end).forEach(p=>{g.fillStyle="#fff";g.strokeStyle="#2f6b4f";g.lineWidth=3;g.beginPath();g.arc(PX(p.lat,p.lng),PY(p.lat),6,0,7);g.fill();g.stroke()});
-  const here=nightLoc(addDays(end,-1));if(here){g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=3;g.beginPath();g.arc(PX(here.lat,here.lng),PY(here.lat),11,0,7);g.fill();g.stroke()}
-  g.restore();
-  // stat tiles
-  const tiles=[[`${Math.round(km).toLocaleString("en-NZ")}`,"km driven"],[`${days.length}`,"nights"],[`${acts.length}`,"things done"],[`${ty.free}`,"🚐 free nights"],[`${ty.doc}`,"⛺ DOC nights"],[`${ty.paid}`,"🏕️ paid nights"]];
-  const tx=510,tw=(W-60-tx-20)/2;tiles.forEach(([v,l],i)=>{const x=tx+(i%2)*(tw+20),y=my+Math.floor(i/2)*176;g.fillStyle="#fff";g.beginPath();g.roundRect(x,y,tw,156,22);g.fill();
-    g.fillStyle="#1d2621";g.font=`800 60px ${DF}`;g.fillText(v,x+24,y+80);g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText(l,x+24,y+124)});
-  // what we did, by kind
-  let y=my+mh+56;g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("WHAT WE GOT UP TO",60,y);y+=48;
-  const kinds=Object.entries(byKind).sort((a,b)=>b[1]-a[1]).slice(0,6);g.font=`700 32px ${BF}`;let x=60;
-  kinds.forEach(([k,n])=>{const lab=`${MK[k]||"📸"} ${n} ${({place:"sights",hike:"hikes",multi:"overnight hikes",bike:"rides",disc:"disc golf rounds",paid:"paid activities",quirky:"quirky stops",food:"food stops",plan:"other things"}[k]||"sights")}`,w=g.measureText(lab).width+40;if(x+w>W-60){x=60;y+=64}
-    g.fillStyle="#e3eadb";g.beginPath();g.roundRect(x,y-40,w,54,27);g.fill();g.fillStyle="#1d2621";g.fillText(lab,x+20,y-3);x+=w+14});
-  if(!kinds.length){g.fillStyle="#1d2621";g.fillText("Taking it easy 😌",60,y)}
-  y+=70;
-  // photos: up to four, spread over the period
+  const dN=r?daysBetween(r.first,from)+1:1,dE=r?daysBetween(r.first,end):days.length;
+  g.fillStyle=SOFT;g.font=`700 23px ${BF}`;try{g.letterSpacing="4px"}catch{}
+  g.fillText((sp.kind==="place"?`${(sp.stop.region||"").toUpperCase()}   ·   ${days.length} NIGHT${days.length>1?"S":""}`:`DAYS ${dN}–${dE}${r?" OF "+daysBetween(r.first,r.last):""}`),64,80);try{g.letterSpacing="0px"}catch{}
+  g.fillStyle=INK;let tf=74;g.font=`800 ${tf}px ${HF}`;while(g.measureText(sp.title).width>W-130&&tf>44){tf-=4;g.font=`800 ${tf}px ${HF}`}g.fillText(sp.title,60,160);
+  g.textAlign="right";g.fillStyle=SOFT;g.font=`700 40px ${SF}`;g.fillText(`${fmt(from)} – ${fmt(addDays(end,-1))}`,W-64,80);g.textAlign="left";
+  g.strokeStyle="rgba(43,41,37,.35)";g.lineWidth=2;g.setLineDash([2,8]);g.lineCap="round";g.beginPath();g.moveTo(60,196);g.lineTo(W-60,196);g.stroke();g.setLineDash([]);
+  // the map clipping
+  const mx=76,my=236,mw=470,mh=520;g.save();g.translate(mx+mw/2,my+mh/2);g.rotate(-.012);g.translate(-(mx+mw/2),-(my+mh/2));
+  g.shadowColor="rgba(40,30,10,.25)";g.shadowBlur=18;g.shadowOffsetY=6;g.fillStyle="#fbfaf5";g.fillRect(mx-10,my-10,mw+20,mh+20);g.shadowColor="transparent";
+  if(sp.kind==="all"){
+    g.fillStyle="#dfe9ec";g.fillRect(mx,my,mw,mh);
+    const LA0=-40.35,LA1=-46.85,LN0=166.3,LN1=174.6,kx=Math.cos(43.6*Math.PI/180),sc=Math.min((mw-30)/((LN1-LN0)*kx),(mh-30)/(LA0-LA1));
+    const ox=mx+(mw-(LN1-LN0)*kx*sc)/2,oy=my+(mh-(LA0-LA1)*sc)/2,PX=(la,ln)=>ox+(ln-LN0)*kx*sc,PY=la=>oy+(LA0-la)*sc;
+    g.fillStyle="#e4e8dc";g.strokeStyle="#b9c9b0";g.lineWidth=2;g.beginPath();COAST.forEach(([la,ln],i)=>i?g.lineTo(PX(la,ln),PY(la)):g.moveTo(PX(la,ln),PY(la)));g.closePath();g.fill();g.stroke();
+    const pts=nightPts(),line=(arr,col,w,dash)=>{if(arr.length<2)return;g.strokeStyle=col;g.lineWidth=w;g.setLineDash(dash||[]);g.lineJoin="round";g.lineCap="round";g.beginPath();arr.forEach((p,i)=>i?g.lineTo(PX(p.lat,p.lng),PY(p.lat)):g.moveTo(PX(p.lat,p.lng),PY(p.lat)));g.stroke();g.setLineDash([])};
+    line(pts.filter(p=>p.d>=end),"#9aa79b",3,[6,8]);line(pts.filter(p=>p.d<end),"#2f6b4f",5);
+    const here=nightLoc(addDays(end,-1));if(here){g.fillStyle="#c0392b";g.strokeStyle="#fff";g.lineWidth=3;g.beginPath();g.arc(PX(here.lat,here.lng),PY(here.lat),11,0,7);g.fill();g.stroke()}
+  }else{
+    // real map: campsites we slept at (and the drive between them for a week), plus the things we did
+    const nights=[];days.forEach(d=>{const l=nightLoc(d);if(l&&!nights.some(q=>q.lat===l.lat&&q.lng===l.lng))nights.push({...l,k:"to"})});
+    const before=sp.kind==="week"?nightLoc(addDays(from,-1)):null;
+    const P=[...(before?[{...before,k:"from"}]:[]),...nights,...acts.map(x=>{const p=ptOf(x);return p?{lat:+p.lat,lng:+p.lng,k:"act",ic:MK[x.kind]||"📸",name:x.name}:null}).filter(Boolean)];
+    const home=sp.kind==="place"&&hasLL(sp.stop)?{lat:+sp.stop.lat,lng:+sp.stop.lng}:nightLoc(addDays(end,-1));
+    await drawRouteMap(g,BF,mx,my,mw,mh,sp.kind==="week"?[...(before?[{...before,k:"from"}]:[]),...nights]:P,{home,label:"",road:sp.kind==="week"});
+    if(sp.kind==="week"){} }
+  g.restore();tape(mx+20,my+4,-.7,100);tape(mx+mw-20,my+mh-4,-.7,100);
+  // the numbers, handwritten
+  const rx=600,rw=W-60-rx;let y=262;g.fillStyle=ACC;g.font=`700 46px ${SF}`;g.fillText(sp.kind==="place"?"Our time here":"By the numbers",rx,y);y+=58;
+  const nums=[km>=1?`${Math.round(km).toLocaleString("en-NZ")} km on the road`:"no driving 😌",`${days.length} night${days.length>1?"s":""} · ${acts.length} thing${acts.length===1?"":"s"} done`,
+    [ty.free?`🚐 ${ty.free} free`:"",ty.doc?`⛺ ${ty.doc} DOC`:"",ty.paid?`🏕️ ${ty.paid} paid`:""].filter(Boolean).join("  ·  "),spent?`💸 ${nzd(spent)} spent`:""].filter(Boolean);
+  g.fillStyle=INK;g.font=`700 38px ${SF}`;nums.forEach(l=>{wrapLines(g,l,rw,2).forEach(x=>{g.fillText(x,rx,y);y+=44});y+=4});
+  // highlights: favourites first, then the rest of what we did
+  y+=20;g.fillStyle=ACC;g.font=`700 46px ${SF}`;g.fillText("Highlights",rx,y);y+=50;
+  const hl=[...acts.filter(x=>x.fav),...acts.filter(x=>!x.fav)];const seen=new Set();let shown=0;
+  for(const x of hl){if(seen.has(x.name))continue;seen.add(x.name);g.font=`700 27px ${BF}`;const L=wrapLines(g,x.name,rw-48,1);if(y>my+mh+10)break;
+    g.font=`27px ${BF}`;g.fillStyle="#000";g.fillText(MK[x.kind]||"📸",rx,y);g.fillStyle=INK;g.font=`700 27px ${BF}`;g.fillText((x.fav?"♥ ":"")+L[0],rx+44,y);y+=40;shown++}
+  if(!hl.length){g.fillStyle=INK;g.font=`700 38px ${SF}`;g.fillText("Taking it easy 😌",rx,y)}
+  else{const uniq=new Set(hl.map(x=>x.name)).size;if(shown<uniq){g.fillStyle=SOFT;g.font=`700 32px ${SF}`;g.fillText(`+ ${uniq-shown} more`,rx+44,y+4)}}
+  // polaroids along the bottom
   const ph=days.filter(d=>S.docs.journal[d]?.photo),pick=ph.length<=4?ph:[0,1,2,3].map(i=>ph[Math.round(i*(ph.length-1)/3)]);
-  const imgs=(await Promise.all(pick.map(async d=>{try{const src=await getPhoto(d);return src?await loadImg(src):null}catch{return null}}))).filter(Boolean);
-  const favs=[...new Set([...acts.filter(x=>x.fav).map(x=>x.name),...state.camps.filter(c=>c.rate==="up"&&stayedDates(c).some(d=>d>=from&&d<end)).map(c=>"⛺ "+c.name)])];
-  const bottom=H-140-(favs.length?86:0);
-  if(imgs.length){const n=imgs.length,gap=16,size=Math.max(80,Math.min((W-120-gap*(n-1))/n,bottom-y));const x0=(W-(n*size+(n-1)*gap))/2;imgs.forEach((im,i)=>{const sx=x0+i*(size+gap),s=Math.min(im.width,im.height);
-    g.save();g.beginPath();g.roundRect(sx,y,size,size,20);g.clip();g.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,sx,y,size,size);g.restore()});y+=size+50}
-  y=Math.max(y,bottom+40);if(favs.length){g.fillStyle="#56645a";g.font=`700 24px ${BF}`;g.fillText("FAVOURITES",60,y);g.fillStyle="#1d2621";g.font=`700 30px ${BF}`;
-    g.fillText(wrapLines(g,"♥ "+favs.join(" · "),W-120,1)[0]||"",60,y+42)}
+  const imgs=(await Promise.all(pick.map(async d=>{try{const src=await getPhoto(d);return src?{d,im:await loadImg(src)}:null}catch{return null}}))).filter(Boolean);
+  const top=my+mh+56,bot=H-150;
+  if(imgs.length){const n=imgs.length,slot=(W-120)/n,size=Math.min(slot-36,bot-top-64);
+    imgs.forEach(({d,im},i)=>{const fw=size+28,fh=size+28+46,cx=60+slot*i+slot/2,cy=top+(bot-top)/2+(i%2?10:-6),rot=(i%2?1:-1)*(.025+rnd()*.03);
+      g.save();g.translate(cx,cy);g.rotate(rot);g.shadowColor="rgba(40,30,10,.3)";g.shadowBlur=20;g.shadowOffsetY=8;g.fillStyle="#fbfaf5";g.fillRect(-fw/2,-fh/2,fw,fh);g.shadowColor="transparent";
+      const s2=Math.min(im.width,im.height);g.drawImage(im,(im.width-s2)/2,(im.height-s2)/2,s2,s2,-fw/2+14,-fh/2+14,size,size);
+      g.fillStyle=INK;g.font=`700 32px ${SF}`;g.textAlign="center";g.fillText(`${wd(d)} ${fmt(d)}`,0,fh/2-16);g.textAlign="left";g.restore();tape(cx+(i%2?-20:20),cy-fh/2+4,(i%2?.4:-.4),90)})}
+  else{const notes=days.map(d=>S.docs.journal[d]?.note).filter(Boolean);if(notes.length){g.fillStyle=INK;g.font=`500 42px ${SF}`;let yy=top+20;
+    notes.slice(0,3).forEach(n2=>{wrapLines(g,"“"+n2+"”",W-160,2).forEach(l=>{if(yy<bot){g.fillText(l,80,yy);yy+=46}});yy+=16})}}
   // footer
-  g.fillStyle="#2f6b4f";g.beginPath();g.roundRect(60,H-110,W-120,70,20);g.fill();g.fillStyle="#fff";g.font=`700 30px ${BF}`;g.textAlign="center";
-  const left=daysBetween(end,r.last);g.fillText(left>0?`${left} days to go · now in ${shortStop(currentStop()?.name||"")}`:"Home again 🇧🇪",W/2,H-64);g.textAlign="right";
-  g.fillStyle="#8d9493";g.font=`700 22px ${BF}`;g.fillText("Aotearoa Loop · Tanguy & Zita",W-60,H-12);g.textAlign="left";
+  g.strokeStyle="rgba(43,41,37,.35)";g.lineWidth=2;g.setLineDash([2,8]);g.beginPath();g.moveTo(60,H-118);g.lineTo(W-60,H-118);g.stroke();g.setLineDash([]);
+  const left=r?daysBetween(t,r.last):0,now=currentStop();g.fillStyle=INK;g.font=`700 40px ${SF}`;g.textAlign="center";
+  g.fillText(left>0?`${left} days to go${now?` · now in ${shortStop(now.name)}`:""}`:"Home again 🇧🇪",W/2,H-66);
+  g.fillStyle=SOFT;g.font=`700 20px ${BF}`;try{g.letterSpacing="3px"}catch{}g.fillText("AOTEAROA LOOP  ·  TANGUY & ZITA",W/2,H-26);try{g.letterSpacing="0px"}catch{}g.textAlign="left";
   return cv}
-async function openTripRecap(mode){const title=mode==="week"?"This week":"The trip so far";
+async function openTripRecap(mode){const sp=recapSpan(mode);if(!sp)return toast("Nothing to recap yet");const title=sp.kind==="week"?"This week":sp.kind==="place"?sp.title:"The trip so far";
   sheet(head(title)+`<div id="recap-prev" class="recapprev"><p class="muted">Making your picture…</p></div>
-    <div class="end"><div><a class="btn" id="recap-dl" download="loop-${mode}.jpg" hidden>Save</a></div><div><button class="btn primary" type="button" id="recap-share" disabled>📤 Share</button></div></div>`,"recap","");
+    <div class="end"><div><a class="btn" id="recap-dl" download="loop-${mode.replace(":","-")}.jpg" hidden>Save</a></div><div><button class="btn primary" type="button" id="recap-share" disabled>📤 Share</button></div></div>`,"recap","");
   const cv=await buildTripRecap(mode);if(!cv)return;const blob=await new Promise(ok=>cv.toBlob(ok,"image/jpeg",.9));
-  const file=new File([blob],`loop-${mode}-${today()}.jpg`,{type:"image/jpeg"}),url=URL.createObjectURL(blob);const pv=$("#recap-prev");if(!pv)return;
+  const file=new File([blob],`loop-${mode.replace(":","-")}-${today()}.jpg`,{type:"image/jpeg"}),url=URL.createObjectURL(blob);const pv=$("#recap-prev");if(!pv)return;
   pv.innerHTML=`<img src="${url}" alt="${title}">`;const dl=$("#recap-dl");dl.href=url;dl.hidden=false;const b=$("#recap-share");
   if(navigator.canShare?.({files:[file]})){b.disabled=false;b.onclick=async()=>{try{await navigator.share({files:[file],title:`${title} · Aotearoa Loop`})}catch{}}}else{b.textContent="Save to share";b.disabled=false;b.onclick=()=>dl.click()}}
 /* ---- the photobook: the trip so far plus every day's recap, one PDF to keep, print or send home ---- */
@@ -1649,7 +1677,7 @@ function stopSummary(s,days){const acts=days.flatMap(d=>planFor(d).filter(x=>x.d
 function stopBlock(s,days,t,L,i,showLeg,collapse){
   const nights=s.end&&s.start?Math.max(0,daysBetween(s.start,s.end)):0;
   return (showLeg&&L[i]?`<div class="leg">↓ ${legReal(i)?"":"~"}${L[i]} km</div>`:"")+
-   `<div class="stop-h" data-sid="${esc(s.id)}">${lmFor(s)}<button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${planTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button></div>`+
+   `<div class="stop-h" data-sid="${esc(s.id)}">${lmFor(s)}<button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>${nights?`${nights} night${nights>1?"s":""}`:"Day stop"}${(()=>{const tot=sumA(stopDays(s).filter(d=>d<=today()).flatMap(spentOn));return tot?` · spent ${nzd(tot)}`:""})()}${fitTag(s)}${planTag(s)}${s.camp?` · ⛺ ${esc(s.camp)}`:""}</small></button>${s.start&&s.start<=today()?`<button type="button" class="ib sm recapgo" data-triprecap="place:${esc(s.id)}" aria-label="Share a recap of ${esc(s.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg></button>`:""}</div>`+
    (s.fuel&&days.some(d=>d>=t)?`<div class="fuel">⛽ ${esc(s.fuel)}</div>`:"")+
    (collapse?stopSummary(s,days):days.map(d=>dayRow(d,t)).join(""))}
 /* ---- the road down the side of the day list, with our van driving along it as you scroll ---- */
@@ -1894,6 +1922,7 @@ function recapHTML(){const t=today(),st=sortStops(),L=legs();const km=Math.round
       ${(()=>{const ty=nightTypes(r.first,t);return `<div><b>${ty.free}</b><span>🚐 free nights</span></div><div><b>${ty.doc}</b><span>⛺ DOC nights</span></div><div><b>${ty.paid}</b><span>🏕️ paid nights${paidSum?` · ${nzd(paidSum)}`:""}</span></div>`})()}</div>
     <div class="muted" style="font-size:.75rem">km: from campsite to campsite, without side trips or day drives.${tot?` Spending ${nzd(tot/Math.max(1,nights.length+1))} a day.`:""}</div>
     <div class="row2"><button type="button" class="btn" data-triprecap="week">📤 Share this week</button><button type="button" class="btn" data-triprecap="all">📤 Share the trip so far</button></div>
+    <select id="placerecap" aria-label="Recap of a place"><option value="">📤 Recap of a place…</option>${sortStops().filter(s=>s.start&&s.start<=t).reverse().map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${fmt(s.start)}</option>`).join("")}</select>
     <button type="button" class="btn" data-book>📕 Make the photobook (PDF)</button>
     ${regs.length?`<span class="label" style="margin-top:4px">Spent by region · ${nzd(tot)}</span><div class="bars">${regs.map(([k,v])=>`<div class="r"><span class="clamp1">${esc(k)}</span><i style="width:${Math.max(4,v/mx*100)}%"></i><span class="mono">${nzd(v)}</span></div>`).join("")}</div>`:""}
     ${favs.length?`<span class="label" style="margin-top:4px">Favourites</span><div style="font-size:.9rem">♥ ${favs.slice(0,8).map(esc).join(" · ")}</div>`:""}</div>`}
@@ -2506,6 +2535,7 @@ function openSettings(){
   armed($("#s-undo"),"Tap again to undo",()=>{try{replaceAll(JSON.parse(localStorage.getItem(PREV)));localStorage.removeItem(PREV);closeSheet();toast("Undone")}catch{toast("Nothing to undo")}})}
 
 /* ================= events ================= */
+document.addEventListener("change",e=>{if(e.target.id==="placerecap"&&e.target.value){const v=e.target.value;e.target.value="";openTripRecap("place:"+v)}});
 document.addEventListener("click",e=>{
   const mf=e.target.closest?.("[data-mapfocus]");if(mf){e.stopPropagation();const [t,id]=mf.dataset.mapfocus.split(":");showOnMap(t==="camp"?"camps":"spots",id);return}
   const zt=e.target.closest?.("[data-zoomto]");if(zt&&lmap){e.stopPropagation();lmap.closePopup();const [a,c]=zt.dataset.zoomto.split(",").map(Number);lmap.setView([a,c],Math.min(lmap.getZoom()+2,17));return}

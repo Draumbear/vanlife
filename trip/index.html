@@ -519,6 +519,7 @@ textarea{min-height:72px;resize:vertical}
 :root[data-theme="dark"] .locwarn{background:#3a321a;color:#f3e3b0;border-color:#5e5124}
 
 /* what's on */
+.won .wonh{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}.won .wonh .label{flex:1}.won .wonh .chev{color:var(--muted);font-size:.9rem}.won:not(.shut) .wonh{margin-bottom:4px}
 .won .wi{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;padding:9px 0;border-bottom:1px solid var(--line);font:inherit;color:inherit;cursor:pointer}
 .won .wi:last-child{border-bottom:0}.won .we{font-size:1.25rem;line-height:1.2;width:28px;text-align:center;flex:none}
 .won .wt{flex:1;min-width:0}.won .wt b{display:block;font-size:.95rem;line-height:1.25}.won .wt span{display:block;font-size:.8rem;color:var(--muted);line-height:1.35}
@@ -1409,9 +1410,11 @@ function hapAhead(days=14){const t=today(),out=[],seen=new Set();
 const hapWhen=(h,d)=>{const t=today(),lbl=d===t?"Today":d===addDays(t,1)?"Tomorrow":`${wd(d)} ${fmt(d)}`;return h.weekly||d===h.end||h.end===h.start?lbl:(d<=t&&h.start<=t?"Now":lbl)+(h.end>d&&!h.weekly?` – ${fmt(h.end)}`:"")};
 function hapRow(h,d,inDay){const w=inDay?(h.weekly||h.end<=d?"":`until ${fmt(h.end)}`):hapWhen(h,d),sub=[h.time,h.where,hapAway(h,d)].filter(Boolean).join(" · ");
   return `<button type="button" class="wi" data-hap="${esc(h.id)}:${d}"><span class="we">${h.emoji||"✨"}</span><span class="wt"><b>${esc(h.title)}</b>${sub?`<span>${esc(sub)}</span>`:""}</span>${w?`<span class="wd ${/^(Today|Now)/.test(w)?"now":""}">${esc(w)}</span>`:""}</button>`}
-function whatsOnCard(){const a=hapAhead(14);if(!a.length)return "";const MAX=5,open=state.wonOpen;
-  return `<div class="card won"><div class="mini-h"><span class="label">What's on</span><span class="muted" style="font-size:.78rem">next 2 weeks</span></div>
-    ${(open?a:a.slice(0,MAX)).map(o=>hapRow(o.h,o.d)).join("")}${a.length>MAX?`<button type="button" class="tmore" style="color:var(--fern)" data-wonmore>${open?"Show less":`Show ${a.length-MAX} more`}</button>`:""}</div>`}
+const WONK="sil-won-shut";
+function whatsOnCard(){const a=hapAhead(14);if(!a.length)return "";const MAX=5,open=state.wonOpen;let shut=false;try{shut=localStorage.getItem(WONK)==="1"}catch{}
+  const soon=a.filter(o=>o.d<=addDays(today(),1)).length;
+  return `<div class="card won ${shut?"shut":""}"><button type="button" class="wonh" data-wontoggle aria-expanded="${!shut}"><span class="label">What's on</span><span class="muted" style="font-size:.78rem">${shut?`${a.length} in the next 2 weeks${soon?` · ${soon} today/tomorrow`:""}`:"next 2 weeks"}</span><span class="chev" aria-hidden="true">${shut?"▾":"▴"}</span></button>
+    ${shut?"":(open?a:a.slice(0,MAX)).map(o=>hapRow(o.h,o.d)).join("")+(a.length>MAX?`<button type="button" class="tmore" style="color:var(--fern)" data-wonmore>${open?"Show less":`Show ${a.length-MAX} more`}</button>`:"")}</div>`}
 function dayHaps(d){const a=HAP.filter(h=>hapOn(h,d));if(!a.length)return "";return `<div class="card won"><span class="label">What's on</span>${a.map(h=>hapRow(h,d,true)).join("")}</div>`}
 function openHap(id,d){const h=HAP.find(x=>x.id===id);if(!h)return;const away=hapAway(h,d);
   sheet(head(`${h.emoji||"✨"} ${esc(h.title)}`)+`<p class="muted" style="margin:-4px 0 8px">${esc(h.start===h.end?`${wd(h.start)} ${fmt(h.start)}`:h.weekly?`Every ${h.weekly.map(x=>["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][x]).join(" & ")}`:`${fmt(h.start)} – ${fmt(h.end)}`)}${h.time?" · "+esc(h.time):""}${h.where?" · "+esc(h.where):""}${away?" · "+esc(away):""}</p>
@@ -2526,6 +2529,7 @@ document.addEventListener("click",e=>{
   else if("aurora" in ds)openAurora();
   else if(ds.scan){if(ds.scan==="go")runScan();else{scanState.run=false;renderPlaces()}}
   else if(ds.hap){const [id,d]=ds.hap.split(":");openHap(id,d)}
+  else if("wontoggle" in ds){try{localStorage.setItem(WONK,localStorage.getItem(WONK)==="1"?"0":"1")}catch{}renderExtras()}
   else if("wonmore" in ds){state.wonOpen=!state.wonOpen;renderExtras()}
   else if(ds.happlan){const [id,d]=ds.happlan.split(":"),h=HAP.find(x=>x.id===id);if(h){const sp={name:h.title,kind:"place",region:stopFor(d)?.region||"",notes:[h.time,h.where,h.note].filter(Boolean).join(" · "),fav:false,done:false,day:d,order:planFor(d).length,...(h.near?{lat:h.near[0],lng:h.near[1],llok:true}:{}),url:h.url||""};add("spots",sp);closeSheet();toast(`Added to ${wd(d)} ${fmt(d)}`)}}
   else if("aurorarefresh" in ds){pullAurora(true);toast("Refreshing…")}

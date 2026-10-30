@@ -132,6 +132,7 @@ textarea{min-height:72px;resize:vertical}
 @keyframes burst{0%{transform:scale(.2);opacity:0}25%{opacity:1}70%{transform:scale(1);opacity:.9}100%{transform:scale(1.15);opacity:0}}
 @media (prefers-reduced-motion:reduce){.deco.fw svg{animation:none;opacity:1}.deco .flame{animation:none}}
 .stop-h .t{flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.stop-h .staybtn{flex:none;align-self:center;font-size:.8rem;padding:6px 12px;background:var(--fern);color:#fff;border-color:var(--fern)}
 .stop-h .recapgo{flex:none;width:34px;height:34px;align-self:center}.stop-h .recapgo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .stop-h b{display:block;font:800 1.1rem/1.2 var(--display)}
 .stop-h small{font-size:.82rem;color:var(--muted)}
@@ -1934,6 +1935,9 @@ function renderDays(){
   st.forEach((s,i)=>{const days=stopDays(s);
     const fut=days.filter(d=>d>t),pd=days.filter(d=>d<t);
     if(pd.length)past.push([s,pd,i]);
+    // the stop we're at tonight, with no nights left after tonight: still show its header, so a flexible night can be dropped on it
+    if(!fut.length&&days.includes(t)&&first){const fx=Object.keys(S.docs.nights).filter(d=>d>t&&S.docs.nights[d]?.flex).sort()[0];
+      html+=`<div class="stop-h" data-sid="${esc(s.id)}"><button class="t" type="button" data-edit="stop:${esc(s.id)}"><b>${esc(s.name)}</b><small>Last night here tonight${fx?" · drop a flexible night here to stay longer":""}</small></button>${fx?`<button type="button" class="pill go staybtn" data-staylonger="${esc(s.id)}">＋ Stay a night longer</button>`:""}</div>`}
     if(fut.length){html+=stopBlock(s,fut,t,L,i,!first&&!afterFerry&&fut[0]===s.start);first=false;afterFerry=false;
       const nx=st[i+1];if(isFerry(s)&&nx&&s.end){html+=`<div class="sea-panel"><div class="fcap"><b>⛴ Cook Strait ferry</b><span>${wd(s.end)} ${fmt(s.end)} · Picton → ${esc(shortStop(nx.name))}</span></div></div>`;afterFerry=true}}});
   const nPast=past.reduce((n,p)=>n+p[1].length,0),isPast=state.dview==="past";
@@ -2564,6 +2568,7 @@ document.addEventListener("click",e=>{
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("aurora" in ds)openAurora();
+  else if(ds.staylonger){const fx=Object.keys(S.docs.nights).filter(d=>d>today()&&S.docs.nights[d]?.flex).sort()[0];if(!fx)toast("No flexible nights left to move");else moveNight(fx,ds.staylonger)}
   else if(ds.scan){if(ds.scan==="go")runScan();else{scanState.run=false;renderPlaces()}}
   else if(ds.hap){const [id,d]=ds.hap.split(":");openHap(id,d)}
   else if("wontoggle" in ds){try{localStorage.setItem(WONK,localStorage.getItem(WONK)==="1"?"0":"1")}catch{}renderExtras()}

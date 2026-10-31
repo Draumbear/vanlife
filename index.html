@@ -1440,7 +1440,7 @@ function renderCatTrends(){
     const pts = vals.map((v, i) => (vals.length === 1 ? 42 : i / (vals.length - 1) * 80 + 2).toFixed(1) + ',' + (23 - v / mx * 20).toFixed(1)).join(' ');
     const all = W.map(w => (w.cat[id] || 0) / w.days), l2 = all.slice(-2), p2 = all.slice(-4, -2);
     const a = l2.reduce((x, z) => x + z, 0) / l2.length, b = p2.length ? p2.reduce((x, z) => x + z, 0) / p2.length : null;
-    return '<div class="trow"><div class="nm">' + c.icon + ' ' + esc(c.s || c.name) + '<small>' + nz(tot[id] / Math.max(1, days)) + '/day on average · ' + nz(tot[id]) + ' total</small></div>' +
+    return '<div class="trow"><div class="nm">' + c.icon + ' ' + esc(c.s || c.name) + '<small>' + nz(tot[id] / Math.max(1, days)) + '/day avg · ' + nz(tot[id]) + '</small></div>' +
       '<svg viewBox="0 0 84 26"><polyline fill="none" stroke="' + c.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="' + pts + '"/></svg>' +
       '<div class="ar">' + (b == null ? '<span class="dim">–</span>' : b === 0 && a === 0 ? '<span class="dim">≈</span>' : b === 0 ? '<span class="up">new</span>' : arrow(pct(a, b), 8)) + '<small>' + nz(a) + '/day now</small></div></div>';
   }).join('');

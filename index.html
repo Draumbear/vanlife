@@ -299,6 +299,30 @@ body.adding #v-add.hide{visibility:visible}
   opacity:0;pointer-events:none;transition:.22s;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toast{background:#e7ece6;color:#121815}}
+
+/* ---- expense analysis ---- */
+.seg4{grid-template-columns:repeat(4,1fr)}
+.pnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px}
+.pnav b{font:800 1rem var(--display,var(--sans));text-align:center;flex:1}
+.pnav .ib{width:40px;height:40px;font-size:1.4rem;line-height:1}
+.pnav .ib:disabled{opacity:.3}
+.pcust{display:flex;gap:8px;align-items:center;margin:0 0 10px}.pcust input{flex:1;min-width:0}
+.ins .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ins .kpi{background:var(--card2);border-radius:14px;padding:10px 12px}
+.ins .kpi small{display:block;font:700 .66rem var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.ins .kpi b{display:block;font:800 1.25rem var(--sans);margin:2px 0}
+.ins .kpi span{font-size:.75rem;color:var(--dim)}
+.ins .verdict{margin:10px 2px 0;font-size:.9rem;line-height:1.45}
+.up{color:var(--bad)}.down{color:var(--ok)}
+.wkcats{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}.wkcats::-webkit-scrollbar{display:none}
+.wkcats button{flex:none;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);font:700 .74rem var(--sans);color:var(--dim)}
+.wkcats button.sel{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+#l-wk svg{width:100%;display:block}#l-wk .wkbar{cursor:pointer}
+.chg{font:700 11px var(--sans);margin-left:6px}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) 84px 72px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.trow:first-child{border-top:0}.trow .nm{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .nm small{display:block;font-weight:500;color:var(--dim);font-size:.74rem}
+.trow svg{width:84px;height:26px}.trow .ar{text-align:right;font:800 .85rem var(--sans)}.trow .ar small{display:block;font:600 .7rem var(--sans);color:var(--dim)}
 </style>
 </head>
 <body>
@@ -412,15 +436,31 @@ body.adding #v-add.hide{visibility:visible}
 
   <!-- ============ LIST ============ -->
   <section id="v-list" class="hide">
-    <div class="seg">
+    <div class="seg seg4">
       <button data-per="week" class="sel">Week</button>
       <button data-per="month">Month</button>
-      <button data-per="all">All</button>
+      <button data-per="all">Trip</button>
+      <button data-per="custom">Pick dates</button>
+    </div>
+    <div class="pnav" id="l-nav"><button class="ib" data-step="-1" aria-label="Previous">‹</button><b id="l-plab"></b><button class="ib" data-step="1" aria-label="Next">›</button></div>
+    <div class="pcust hide" id="l-custom"><input type="date" id="l-from" aria-label="From"><span>–</span><input type="date" id="l-to" aria-label="To"></div>
+    <div class="card ins" id="l-ins"></div>
+    <div class="card" id="l-wkcard">
+      <h2 class="row"><span>Week by week</span><span class="dim" style="font:600 12px var(--sans)">per day · tap a week</span></h2>
+      <div class="wkcats" id="l-wkcats"></div>
+      <div id="l-wk"></div>
+      <div class="note" id="l-wknote"></div>
     </div>
     <div class="card">
+      <h2 class="row"><span id="l-cath">By category</span><span class="dim" id="l-catsub" style="font:600 12px var(--sans)"></span></h2>
       <div class="donut" id="l-donut"></div>
       <div id="l-cats"></div>
     </div>
+    <details class="card fold" id="l-trends-card" open>
+      <summary><h2>Category trends</h2></summary>
+      <div class="note" style="margin:0 0 8px">Per day, week by week. Arrow: the last 2 weeks against the 2 before.</div>
+      <div id="l-trends"></div>
+    </details>
     <details class="card fold" id="l-acct-card">
       <summary><h2>By account</h2></summary>
       <div id="l-accts"></div>
@@ -1226,17 +1266,56 @@ function itemHTML(e, inDay){
    biggest five keep their own colour and the rest fold into one grey slice. */
 const DONUT_TOP = 5, DONUT_REST = '__rest__', REST_COL = '#56645a';
 // Tapping a category (slice or row) narrows the list to it: a category id, or DONUT_REST.
-let period = 'week', selCat = null;
+let period = 'week', selCat = null, pOff = 0, cFrom = '', cTo = '', wkCat = '';
+
+/* ---- analysis helpers: which dates a period covers, and how many days of it we've actually lived ---- */
+const addD = (iso, n) => { const d = dparse(iso); d.setDate(d.getDate() + n); return dISO(d); };
+function firstDay(){ const st = S.settings, ex = live().map(e => e.spent_on).sort()[0]; return ex && ex < st.start ? ex : st.start; }
+/* days of [a,b] we have lived through (trip so far, or the first expense if earlier), so per-day figures compare fairly */
+function livedDays(a, b){ const t = todayISO(), f = firstDay(), last = S.settings.end < t ? S.settings.end : t;
+  const from = a > f ? a : f, to = b < last ? b : last; return Math.max(0, dayDiff(from, to) + 1); }
+function periodRange(per, off){
+  const t = todayISO();
+  if (per === 'week'){ const ws = addD(weekStart(t), off * 7), we = addD(ws, 6);
+    return {from: ws, to: we, label: off === 0 ? 'This week' : off === -1 ? 'Last week' : fmtShort(ws) + ' – ' + fmtShort(we), what: off === 0 ? 'this week' : 'that week', prevWhat: 'the week before'}; }
+  if (per === 'month'){ const d = dparse(monthStart(t)); d.setMonth(d.getMonth() + off); const ms = dISO(d), me = monthEnd(ms);
+    return {from: ms, to: me, label: d.toLocaleDateString('en-NZ', {month: 'long', year: 'numeric'}), what: off === 0 ? 'this month' : 'that month', prevWhat: 'the month before'}; }
+  if (per === 'custom'){ const to = cTo || t, from = cFrom || addD(to, -13);
+    return {from, to, label: fmtShort(from) + ' – ' + fmtShort(to), what: 'those days', prevWhat: 'the same number of days before'}; }
+  return {from: '0000-01-01', to: '9999-12-31', label: 'Whole trip so far', what: 'the trip so far', prevWhat: ''};
+}
+function prevRange(r){
+  if (period === 'all') return null;
+  if (period === 'week' || period === 'month') return periodRange(period, pOff - 1);
+  const n = dayDiff(r.from, r.to) + 1; return {from: addD(r.from, -n), to: addD(r.from, -1)};
+}
+const byCat = rows => { const o = {}; rows.forEach(e => o[e.category] = (o[e.category] || 0) + vamt(e)); return o; };
+const pct = (a, b) => b > 0 ? (a - b) / b * 100 : null;
+const arrow = (d, small) => d == null || Math.abs(d) < (small || 3) ? '<span class="dim">≈</span>' : d > 0 ? '<span class="up">▲ ' + Math.round(d) + '%</span>' : '<span class="down">▼ ' + Math.round(-d) + '%</span>';
+/* every week of the trip so far: per-day spend overall and per category */
+function weekBuckets(){
+  const t = todayISO(), out = [];
+  for (let ws = weekStart(firstDay()); ws <= t; ws = addD(ws, 7)){
+    const we = addD(ws, 6), days = livedDays(ws, we); if (!days) continue;
+    const rows = between(ws, we); out.push({ws, we, days, total: vsum(rows), cat: byCat(rows)});
+  }
+  return out;
+}
 
 function renderList(){
   const t = todayISO();
-  let from, to, label;
-  if (period === 'week'){ from = weekStart(t); to = weekEnd(t); label = 'this week'; }
-  else if (period === 'month'){ from = monthStart(t); to = monthEnd(t); label = 'this month'; }
-  else { from = '0000-01-01'; to = '9999-12-31'; label = 'all time'; }
+  const R = periodRange(period, pOff), from = R.from, to = R.to, label = R.what;
+  document.getElementById('l-plab').textContent = R.label;
+  document.getElementById('l-nav').classList.toggle('hide', period === 'all' || period === 'custom');
+  document.getElementById('l-custom').classList.toggle('hide', period !== 'custom');
+  document.querySelector('#l-nav [data-step="1"]').disabled = pOff >= 0;
+  if (period === 'custom'){ const f = document.getElementById('l-from'), tt = document.getElementById('l-to'); if (!f.value) f.value = from; if (!tt.value) tt.value = to; }
 
   const rows = between(from, to);
   const total = vsum(rows);
+  renderInsights(R, rows, total);
+  renderWeeks(R);
+  renderCatTrends();
 
   const by = {};
   rows.forEach(e => by[e.category] = (by[e.category] || 0) + vamt(e));
@@ -1248,11 +1327,15 @@ function renderList(){
   const isSel = id => id === selCat || (selCat === DONUT_REST && inRest(id));
 
   renderPie(ordered, total, label, folded);
-
+  // change per category against the period before, per day so a short week compares fairly
+  const PR = prevRange(R), dNow = Math.max(1, livedDays(from, to)), dPrev = PR ? livedDays(PR.from, PR.to) : 0, prevCat = PR && dPrev ? byCat(between(PR.from, PR.to)) : null;
+  document.getElementById('l-catsub').textContent = prevCat ? 'vs ' + R.prevWhat + ', per day' : '';
   document.getElementById('l-cats').innerHTML = ordered.map(([id, v]) => {
     const c = catOf(id), p = total ? v/total*100 : 0;
+    const ch = prevCat ? (v / dNow) - ((prevCat[id] || 0) / dPrev) : null;
+    const chTxt = ch == null || Math.abs(ch) < 0.5 ? '' : '<span class="chg ' + (ch > 0 ? 'up' : 'down') + '">' + (ch > 0 ? '▲ +' : '▼ −') + nz(Math.abs(ch)) + '/day</span>';
     return '<button class="catrow' + (selCat && !isSel(id) ? ' off' : '') + '" data-cat="' + id + '"><div class="row">' +
-      '<span>' + c.icon + ' ' + c.name + '</span>' +
+      '<span>' + c.icon + ' ' + c.name + chTxt + '</span>' +
       '<span><b>' + nz(v) + '</b> <span class="dim" style="font-size:12px">' + p.toFixed(0) + '%</span></span>' +
       '</div><div class="catbar"><i style="width:' + p + '%;background:' + (inRest(id) ? REST_COL : c.c) + '"></i></div></button>';
   }).join('');
@@ -1285,6 +1368,82 @@ function renderList(){
     '<div class="day"><span>' + fmtDay(d) + '</span><span>' + nz2(sum(groups[d])) + '</span></div>' +
     groups[d].sort((a,b) => b.updated_at.localeCompare(a.updated_at)).map(e => itemHTML(e, true)).join('')
   ).join('') : '<div class="empty">Nothing ' + label + '.</div>';
+}
+
+
+/* ---- the headline numbers for the chosen period, against the one before and the budget ---- */
+function renderInsights(R, rows, total){
+  const box = document.getElementById('l-ins'), s = stats(true), days = livedDays(R.from, R.to);
+  if (!days && !total){ box.innerHTML = '<div class="empty">Nothing yet for ' + esc(R.what) + '.</div>'; return; }
+  const pd = days ? total / days : total, PR = prevRange(R);
+  let prevPd = null, prevCat = null;
+  if (PR){ const pdays = livedDays(PR.from, PR.to); if (pdays){ const pr = between(PR.from, PR.to); prevPd = vsum(pr) / pdays; prevCat = byCat(pr); } }
+  const d = prevPd != null ? pct(pd, prevPd) : null, vsB = s.perDay > 0 ? pct(pd, s.perDay) : null;
+  let verdict = '';
+  if (prevPd != null){
+    const cur = byCat(rows), ids = new Set([...Object.keys(cur), ...Object.keys(prevCat)]), pdays = livedDays(PR.from, PR.to);
+    const moves = [...ids].map(id => ({id, ch: (cur[id] || 0) / Math.max(1, days) - (prevCat[id] || 0) / pdays})).filter(m => Math.abs(m.ch) >= 1).sort((a, b) => a.ch - b.ch);
+    const better = moves.filter(m => m.ch < 0).slice(0, 2), worse = moves.filter(m => m.ch > 0).reverse().slice(0, 2);
+    const nm = m => catOf(m.id).s || catOf(m.id).name, amt = m => (m.ch > 0 ? '+' : '−') + nz(Math.abs(m.ch)) + '/day';
+    const head = d == null ? '' : Math.abs(d) < 3 ? 'About the same per day as ' + R.prevWhat + '.' : d < 0 ? '<b class="down">Spending less</b> per day than ' + R.prevWhat + ' (' + Math.round(d) + '%).' : '<b class="up">Spending more</b> per day than ' + R.prevWhat + ' (+' + Math.round(d) + '%).';
+    verdict = head + (better.length ? ' Down: ' + better.map(m => esc(nm(m)) + ' ' + amt(m)).join(', ') + '.' : '') + (worse.length ? ' Up: ' + worse.map(m => esc(nm(m)) + ' ' + amt(m)).join(', ') + '.' : '');
+  }
+  const bTxt = vsB == null ? '' : vsB > 3 ? '<span class="up">' + nz(pd - s.perDay) + ' over</span>' : '<span class="down">' + nz(s.perDay - pd) + ' under</span>';
+  box.innerHTML = '<div class="kpis">' +
+    '<div class="kpi"><small>Spent</small><b>' + nz(total) + '</b><span>' + eur(total) + ' · ' + days + ' day' + (days === 1 ? '' : 's') + '</span></div>' +
+    '<div class="kpi"><small>Per day</small><b>' + nz(pd) + '</b><span>budget ' + nz(s.perDay) + (bTxt ? ' · ' + bTxt : '') + '</span></div>' +
+    '<div class="kpi"><small>' + (prevPd != null ? 'Vs before' : 'Trip average') + '</small><b>' + (prevPd != null ? arrow(d) : nz(s.avg)) + '</b><span>' + (prevPd != null ? nz(prevPd) + '/day before' : 'per day') + '</span></div></div>' +
+    (verdict ? '<p class="verdict">' + verdict + '</p>' : '');
+}
+
+/* ---- every week of the trip as a bar (per day), with the budget line and a 3-week average; tap a week to open it ---- */
+function renderWeeks(R){
+  const W = weekBuckets(), s = stats(true), box = document.getElementById('l-wk');
+  const cats = Object.entries(byCat(live())).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  if (wkCat && !cats.includes(wkCat)) wkCat = '';
+  document.getElementById('l-wkcats').innerHTML = '<button data-wkcat=""' + (!wkCat ? ' class="sel"' : '') + '>All</button>' +
+    cats.map(id => '<button data-wkcat="' + id + '"' + (wkCat === id ? ' class="sel"' : '') + '>' + catOf(id).icon + ' ' + esc(catOf(id).s || catOf(id).name) + '</button>').join('');
+  if (W.length < 2){ document.getElementById('l-wkcard').classList.add('hide'); return; }
+  document.getElementById('l-wkcard').classList.remove('hide');
+  const val = w => (wkCat ? (w.cat[wkCat] || 0) : w.total) / w.days;
+  const vals = W.map(val), target = wkCat ? null : s.perDay;
+  const peak = Math.max(...vals, target || 0, 1) * 1.12;
+  const H = 150, B = 128, n = W.length, bw = 100 / n, sel = period === 'week' ? R.from : null;
+  const y = v => B - v / peak * (B - 10);
+  const avg = vals.map((v, i) => { const a = vals.slice(Math.max(0, i - 2), i + 1); return a.reduce((x, z) => x + z, 0) / a.length; });
+  const col = wkCat ? catOf(wkCat).c : null;
+  let svg = '<svg viewBox="0 0 100 ' + H + '" preserveAspectRatio="none" style="height:170px">';
+  W.forEach((w, i) => { const v = vals[i], x = i * bw, on = sel === w.ws, over = target && v > target;
+    svg += '<rect class="wkbar" data-wk="' + w.ws + '" x="' + (x + bw * .14).toFixed(2) + '" y="' + y(v).toFixed(2) + '" width="' + (bw * .72).toFixed(2) + '" height="' + Math.max(.6, B - y(v)).toFixed(2) + '" rx="1" fill="' +
+      (col || (over ? 'var(--bad)' : 'var(--ok)')) + '" opacity="' + (sel && !on ? .45 : 1) + '"/>'; });
+  if (target) svg += '<line x1="0" y1="' + y(target).toFixed(2) + '" x2="100" y2="' + y(target).toFixed(2) + '" stroke="var(--dim)" stroke-width=".5" stroke-dasharray="1.6 1.6" vector-effect="non-scaling-stroke"/>';
+  svg += '<polyline fill="none" stroke="var(--tx)" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" points="' + avg.map((v, i) => (i * bw + bw / 2).toFixed(2) + ',' + y(v).toFixed(2)).join(' ') + '"/>';
+  svg += '<line x1="0" y1="' + B + '" x2="100" y2="' + B + '" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>';
+  const step = Math.ceil(n / 6);
+  box.innerHTML = svg + '<div class="sub" style="display:grid;grid-template-columns:repeat(' + n + ',1fr);font-size:10px;color:var(--dim);margin-top:2px">' +
+    W.map((w, i) => '<span style="text-align:center">' + (i % step === 0 || i === n - 1 ? fmtShort(w.ws) : '') + '</span>').join('') + '</div>';
+  // the trend in words: the last 2 weeks against the 2 before
+  const last = vals.slice(-2), before = vals.slice(-4, -2), a = last.reduce((x, z) => x + z, 0) / last.length, b = before.length ? before.reduce((x, z) => x + z, 0) / before.length : null;
+  const d = b ? pct(a, b) : null, nm = wkCat ? (catOf(wkCat).s || catOf(wkCat).name) : 'Spending';
+  document.getElementById('l-wknote').innerHTML = (d == null ? '' : esc(nm) + ': ' + nz(a) + '/day over the last 2 weeks, ' + (Math.abs(d) < 5 ? 'about the same as' : d < 0 ? '<b class="down">down ' + Math.round(-d) + '%</b> on' : '<b class="up">up ' + Math.round(d) + '%</b> on') + ' the 2 before (' + nz(b) + '/day).') +
+    ' <span class="dim">Bars: per day each week' + (target ? ', dashed: budget' : '') + ', line: 3-week average.</span>';
+}
+
+/* ---- which categories are getting better or worse: sparkline per category ---- */
+function renderCatTrends(){
+  const W = weekBuckets(), box = document.getElementById('l-trends'); if (W.length < 2){ document.getElementById('l-trends-card').classList.add('hide'); return; }
+  document.getElementById('l-trends-card').classList.remove('hide');
+  const tot = byCat(live()), ids = Object.keys(tot).filter(id => tot[id] > 0).sort((a, b) => tot[b] - tot[a]);
+  const days = W.reduce((t, w) => t + w.days, 0);
+  box.innerHTML = ids.map(id => {
+    const c = catOf(id), vals = W.slice(-8).map(w => (w.cat[id] || 0) / w.days), mx = Math.max(...vals, .01);
+    const pts = vals.map((v, i) => (vals.length === 1 ? 42 : i / (vals.length - 1) * 80 + 2).toFixed(1) + ',' + (23 - v / mx * 20).toFixed(1)).join(' ');
+    const all = W.map(w => (w.cat[id] || 0) / w.days), l2 = all.slice(-2), p2 = all.slice(-4, -2);
+    const a = l2.reduce((x, z) => x + z, 0) / l2.length, b = p2.length ? p2.reduce((x, z) => x + z, 0) / p2.length : null;
+    return '<div class="trow"><div class="nm">' + c.icon + ' ' + esc(c.s || c.name) + '<small>' + nz(tot[id] / Math.max(1, days)) + '/day on average · ' + nz(tot[id]) + ' total</small></div>' +
+      '<svg viewBox="0 0 84 26"><polyline fill="none" stroke="' + c.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="' + pts + '"/></svg>' +
+      '<div class="ar">' + (b == null ? '<span class="dim">–</span>' : b === 0 && a === 0 ? '<span class="dim">≈</span>' : b === 0 ? '<span class="up">new</span>' : arrow(pct(a, b), 8)) + '<small>' + nz(a) + '/day now</small></div></div>';
+  }).join('');
 }
 
 function renderPie(ordered, total, label, folded){
@@ -1901,9 +2060,21 @@ document.body.addEventListener('click', e => {
   openAdd(it.dataset.id);
 });
 
+document.getElementById('l-nav').addEventListener('click', e => { const b = e.target.closest('[data-step]'); if (!b || b.disabled) return; pOff = Math.min(0, pOff + +b.dataset.step); renderList(); });
+['l-from', 'l-to'].forEach(id => document.getElementById(id).addEventListener('change', () => {
+  cFrom = document.getElementById('l-from').value; cTo = document.getElementById('l-to').value;
+  if (cFrom && cTo && cFrom > cTo){ [cFrom, cTo] = [cTo, cFrom]; document.getElementById('l-from').value = cFrom; document.getElementById('l-to').value = cTo; }
+  renderList(); }));
+document.getElementById('l-wkcard').addEventListener('click', e => {
+  const c = e.target.closest('[data-wkcat]'); if (c){ wkCat = c.dataset.wkcat; return renderList(); }
+  const w = e.target.closest('[data-wk]'); if (!w) return;
+  period = 'week'; pOff = Math.round(dayDiff(weekStart(todayISO()), w.dataset.wk) / 7);
+  document.querySelectorAll('#v-list .seg button').forEach(x => x.classList.toggle('sel', x.dataset.per === 'week'));
+  renderList(); document.getElementById('l-ins').scrollIntoView({behavior: 'smooth', block: 'start'});
+});
 document.querySelectorAll('#v-list .seg button').forEach(b =>
   b.addEventListener('click', () => {
-    period = b.dataset.per;
+    period = b.dataset.per; pOff = 0;
     document.querySelectorAll('#v-list .seg button').forEach(x => x.classList.toggle('sel', x === b));
     renderList();
   }));

@@ -62,7 +62,7 @@ h1{font:800 clamp(1rem,4.4vw,1.2rem)/1.1 var(--display);letter-spacing:-.01em;ma
 .dot.err i{background:var(--rust);box-shadow:0 0 0 4px var(--rust-soft)}
 .progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:8px}
 .progress span{display:block;height:100%;background:var(--fern);width:0}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--line);border-radius:12px;padding:3px;margin:10px 0 0}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:var(--line);border-radius:12px;padding:3px;margin:10px 0 0}
 .seg button{border:0;background:none;border-radius:9px;padding:8px;font-weight:700;color:var(--muted);cursor:pointer}
 .seg button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 header::after{content:"";display:block;height:10px;border-bottom:1px solid var(--line)}
@@ -511,6 +511,28 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+/* ---- the wall: every photo and note, pinned up like a scrapbook ---- */
+#wall{margin:10px -16px 0;padding:14px 12px 120px;min-height:70vh;background:
+  radial-gradient(rgba(120,90,50,.10) 1px,transparent 1.4px) 0 0/7px 7px,
+  radial-gradient(rgba(255,255,255,.35) 1px,transparent 1.4px) 3px 4px/9px 9px,#e9e0cc}
+:root[data-theme="dark"] #wall{background:radial-gradient(rgba(0,0,0,.25) 1px,transparent 1.4px) 0 0/7px 7px,#3a3328}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #wall{background:radial-gradient(rgba(0,0,0,.25) 1px,transparent 1.4px) 0 0/7px 7px,#3a3328}}
+.wl-h{display:flex;align-items:baseline;justify-content:space-between;margin:2px 6px 10px;color:#4a3f2e}
+:root[data-theme="dark"] .wl-h{color:#e8dcc4}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wl-h{color:#e8dcc4}}
+.wl-h b{font:700 2rem/1 "Caveat",cursive}.wl-h span{font:700 1.1rem "Caveat",cursive;opacity:.75}
+.wl-stop{column-span:all;display:inline-block;margin:18px 4px 10px;padding:4px 14px 2px;background:#fff7d6;color:#3b3226;font:700 1.35rem "Caveat",cursive;transform:rotate(-1.5deg);box-shadow:0 2px 5px rgba(0,0,0,.18)}
+.wl-grid{columns:2;column-gap:12px}
+@media (min-width:640px){.wl-grid{columns:3}}
+.wl-p{break-inside:avoid;display:block;width:100%;margin:0 0 18px;padding:9px 9px 6px;background:#fdfcf7;border:0;box-shadow:0 3px 10px rgba(40,30,10,.25);position:relative;cursor:pointer;text-align:center;color:#2b2925;font:inherit}
+.wl-p img{display:block;width:100%;height:auto;background:#ddd;min-height:60px}
+.wl-p .dt{display:block;font:700 1.15rem/1.1 "Caveat",cursive;margin-top:6px}
+.wl-p .nt{display:block;font:500 1.05rem/1.15 "Caveat",cursive;color:#4a443a;margin-top:2px;text-align:left}
+.wl-p::before{content:"";position:absolute;top:-9px;left:50%;width:58px;height:18px;margin-left:-29px;background:rgba(236,222,170,.85);transform:rotate(var(--tr,-3deg));box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.wl-n{background:#fff3a8;padding:14px 12px 10px;box-shadow:0 3px 8px rgba(40,30,10,.25)}
+.wl-n .nt{font-size:1.25rem;color:#3b3226}.wl-n::before{display:none}
+.wl-n::after{content:"";position:absolute;top:-6px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a7a,#c0392b);box-shadow:0 2px 2px rgba(0,0,0,.3)}
+.wl-empty{text-align:center;padding:60px 20px;color:#5a4f3d;font:700 1.4rem "Caveat",cursive}
+
 .npideas{display:grid;gap:2px;margin-top:2px}.npideas .idea{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
 .npideas .idea .main{flex:1;min-width:0;background:none;border:0;text-align:left;padding:2px 0;cursor:pointer;font:inherit;color:inherit}
 .npideas .idea .nm{font-weight:700}
@@ -644,7 +666,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
     <a class="ib kea" id="keabtn" href="../" aria-label="Open Kea, the budget app"><img src="../icon-192.png" alt="" width="26" height="26"></a>
   </div>
   <div class="progress" aria-hidden="true"><span id="bar"></span></div>
-  <div class="seg" role="tablist"><button role="tab" aria-selected="true" data-tab="days">Days</button><button role="tab" aria-selected="false" data-tab="places">Places</button></div>
+  <div class="seg" role="tablist"><button role="tab" aria-selected="true" data-tab="days">Days</button><button role="tab" aria-selected="false" data-tab="places">Places</button><button role="tab" aria-selected="false" data-tab="wall">Wall</button></div>
 </div></header>
 
 <main class="wrap">
@@ -655,6 +677,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
     <div class="chips" id="kinds"></div>
     <div id="plist"></div>
   </section>
+  <section id="wall" hidden aria-label="Our wall of photos and notes"></section>
 </main>
 
 <button class="fab" id="fab" type="button" aria-label="Add">+</button>
@@ -1459,6 +1482,18 @@ function openHap(id,d){const h=HAP.find(x=>x.id===id);if(!h)return;const away=ha
     <p style="line-height:1.5">${esc(h.note||"")}</p>
     <div class="row2" style="display:flex;gap:8px;flex-wrap:wrap">${h.url?`<a class="pill" href="${esc(safeUrl(h.url)||"#")}" target="_blank" rel="noopener">More info</a>`:""}${h.near?`<a class="pill" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((h.where||h.title)+", New Zealand")}" target="_blank" rel="noopener">Google Maps</a>`:""}${h.kind!=="holiday"&&h.kind!=="nature"?`<button type="button" class="pill go" data-happlan="${esc(h.id)}:${d}">Add to ${wd(d)} ${fmt(d)}</button>`:""}</div>`,"hap","")}
 
+
+/* ================= the wall: all our photos and notes, stuck up by stop ================= */
+function renderWall(){const el=$("#wall");if(!el||el.hidden)return;recapFonts();
+  const t=today(),ent=Object.entries(S.docs.journal||{}).map(([d,j])=>({d:j.date||d,j})).filter(x=>(x.j.photo||x.j.note)&&x.d<=t).sort((a,b)=>b.d.localeCompare(a.d));
+  if(!ent.length){el.innerHTML=`<div class="wl-empty">Nothing on the wall yet.<br>Add a photo or a note to a day and it'll get stuck up here.</div>`;return}
+  const nPh=ent.filter(x=>x.j.photo).length,groups=[];ent.forEach(x=>{const s=stopFor(x.d),k=s?.id||"";const g=groups[groups.length-1];if(g&&g.k===k)g.items.push(x);else groups.push({k,s,items:[x]})});
+  const rot=d=>{let h=0;for(const c of d)h=(h*31+c.charCodeAt(0))%997;return ((h%9)-4)*.7};
+  el.innerHTML=`<div class="wl-h"><b>Our wall</b><span>${nPh} photo${nPh===1?"":"s"} · ${ent.length} day${ent.length===1?"":"s"}</span></div>`+groups.map(g=>`<div class="wl-stop">${esc(g.s?.name||"On the road")}</div><div class="wl-grid">${g.items.map(({d,j})=>{const r=rot(d);
+      return j.photo?`<button type="button" class="wl-p" data-day="${d}" style="transform:rotate(${r}deg);--tr:${(-r*1.6).toFixed(1)}deg"><img data-photo="${d}" alt="Photo of ${wd(d)} ${fmt(d)}" loading="lazy"><span class="dt">${wd(d)} ${fmt(d)}</span>${j.note?`<span class="nt">${esc(j.note.length>90?j.note.slice(0,88)+"…":j.note)}</span>`:""}</button>`
+        :`<button type="button" class="wl-p wl-n" data-day="${d}" style="transform:rotate(${r*1.4}deg)"><span class="nt">${esc(j.note)}</span><span class="dt" style="text-align:right">— ${wd(d)} ${fmt(d)}</span></button>`}).join("")}</div>`).join("");
+  hydratePhotos(el)}
+
 /* ================= Kea (the budget app on this same site) ================= */
 const KEA_LS="vanbudget.v1",KEA_CACHE="sil-kea";
 const KCAT={fuel:["⛽","Fuel"],grocery:["🛒","Groceries"],eatout:["🍔","Eating out"],camp:["🏕️","Campsites"],stay:["🛏️","Stays"],activity:["🪂","Activities"],van:["🔧","Van"],transport:["⛴️","Transport"],utility:["🚿","Showers & laundry"],phone:["📱","Phone"],gear:["🎒","Gear"],health:["💊","Health"],gift:["🎁","Gifts"],drinks:["🍻","Drinks"],other:["✨","Other"]};
@@ -2078,7 +2113,7 @@ function renderIdeas(){
   $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(kindLabel(x))}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}${wet&&rainOK(x)?` <span class="rainok">☔ good in rain</span>`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
     +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"")}
 
-function render(){if(lmap)drawMarkers();renderHeader();renderToday();renderExtras();renderDays();renderPlaces();renderDay()}
+function render(){if(lmap)drawMarkers();renderHeader();renderToday();renderExtras();renderDays();renderPlaces();renderDay();if(state.tab==="wall")renderWall()}
 
 /* ================= sheets ================= */
 function sheet(html,type,id){const f=$("#form");f.innerHTML=html;setTimeout(()=>wireLoc(f),0);f.dataset.type=type;f.dataset.id=id||"";$("#scrim").hidden=false;$("#sheet").hidden=false;$("#sheet").scrollTop=0;f.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",closeSheet))}
@@ -2561,7 +2596,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b||(b.closest("#form")&&b.type==="submit"))return;
   const ds=b.dataset;
   if(ds.tab){state.tab=ds.tab;document.querySelectorAll(".seg button").forEach(t=>t.setAttribute("aria-selected",t===b));
-    $("#days").hidden=ds.tab!=="days";$("#places").hidden=ds.tab!=="places";
+    $("#days").hidden=ds.tab!=="days";$("#places").hidden=ds.tab!=="places";$("#wall").hidden=ds.tab!=="wall";if(ds.tab==="wall")renderWall();{const fb=$("#fab");if(fb)fb.style.display=ds.tab==="wall"?"none":""}
     try{localStorage.setItem("sil-tab",ds.tab)}catch{}window.scrollTo(0,0);if(ds.tab==="days")requestAnimationFrame(drawRoad)}
   else if(ds.close==="day")closeDay();
   else if(ds.close==="map")closeMap();
@@ -2648,7 +2683,7 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
 /* ================= start ================= */
-try{if(localStorage.getItem("sil-tab")==="places")document.querySelector('[data-tab="places"]').click()}catch{}
+try{const tb=localStorage.getItem("sil-tab");if(tb==="places"||tb==="wall")document.querySelector(`[data-tab="${tb}"]`).click()}catch{}
 refresh();setChip();
 const SPLASH_HTML=$("#splash")?.outerHTML||"";
 try{const a=JSON.parse(localStorage.getItem("sil-aurora")||"null"),o=a?.d,n0=o?.nights?.[0];

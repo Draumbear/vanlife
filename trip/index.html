@@ -511,6 +511,10 @@ textarea{min-height:72px;resize:vertical}
 .act .sub{font-size:.8rem;color:var(--muted)}
 .gobtn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--sea);background:var(--card)}
 .gobtn .svg{width:18px;height:18px}
+.npideas{display:grid;gap:2px;margin-top:2px}.npideas .idea{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.npideas .idea .main{flex:1;min-width:0;background:none;border:0;text-align:left;padding:2px 0;cursor:pointer;font:inherit;color:inherit}
+.npideas .idea .nm{font-weight:700}
+
 .locwarn .pill.go,.scancard .pill.go{background:var(--fern);color:#fff;border-color:var(--fern)}
 .scancard{display:grid;gap:6px;margin-bottom:12px}.scancard .pill{justify-self:start}.scancard .bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden}.scancard .bar i{display:block;height:100%;background:var(--fern)}
 
@@ -2054,18 +2058,20 @@ function renderDay(){
   el.scrollTop=scroll;hydratePhotos(el)}
 const rainOK=x=>x.rain===true||(x.rain!==false&&["paid","quirky","food"].includes(x.kind));
 const isWet=w=>!!w&&((+w.p||0)>=5||(w.c>=61&&w.c<=67)||(w.c>=80));
+/* ideas for a day: unplanned places, nearest to that day's stop first (rain-proof first on a wet day); a search looks through all of them */
+function ideasFor(d,q){const st=stopFor(d),region=st?.region,ref=st&&hasLL(st)?st:null,wet=isWet(wxFor(d));q=(q||"").toLowerCase().trim();
+  const dist=x=>{const p=ref&&ptOf(x);return p?Math.round(hav(ref,p)*ROAD):null};
+  const words=q.split(/\s+/).filter(Boolean),hay=x=>deacc(x.name+" "+(x.osm||"")+" "+(x.notes||"")+" "+(KINDS[x.kind]||"")+" "+(x.region||""));
+  return state.spots.filter(x=>!x.day&&!x.done&&x.kind!=="chore"&&x.kind!=="task"&&visSug(x)).map(x=>({...x,_km:dist(x)}))
+    .filter(x=>q?words.every(w=>hay(x).includes(deacc(w))):x._km!=null?x._km<=100:(!region||x.region===region))
+    .sort((a,b)=>(!q&&wet?(rainOK(b)?1:0)-(rainOK(a)?1:0):0)||(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""))}
 function renderIdeas(){
   const d=state.day,card=$("#ideas-card");if(!d||!card)return;
   if(!$("#ideas")){card.innerHTML=state.ideasOpen
     ?`<div class="mini-h"><span class="label" id="ideas-h">Ideas</span><button type="button" class="pill" data-openideas>Hide</button></div>
       <input id="q-ideas" type="search" placeholder="Search your places" value="${esc(state.ideaQ)}" aria-label="Search ideas"><div id="ideas"></div>`
     :`<button type="button" class="btn openideas" data-openideas><span>+ Add from ideas</span><span class="muted" id="ideas-h"></span></button><div id="ideas" hidden></div>`}
-  const st=stopFor(d),region=st?.region,q=state.ideaQ.toLowerCase(),ref=st&&hasLL(st)?st:null;
-  const pt=ptOf,wet=isWet(wxFor(d));
-  const dist=x=>{const p=ref&&pt(x);return p?Math.round(hav(ref,p)*ROAD):null};
-  const ideas=state.spots.filter(x=>!x.day&&!x.done&&x.kind!=="chore"&&x.kind!=="task"&&visSug(x)).map(x=>({...x,_km:dist(x)}))
-    .filter(x=>q?(x.name+" "+(x.notes||"")+" "+(KINDS[x.kind]||"")).toLowerCase().includes(q):x._km!=null?x._km<=100:(!region||x.region===region))
-    .sort((a,b)=>(wet?(rainOK(b)?1:0)-(rainOK(a)?1:0):0)||(a._km??999)-(b._km??999)||(b.fav?1:0)-(a.fav?1:0)||(a.name||"").localeCompare(b.name||""));
+  const q=state.ideaQ.toLowerCase(),wet=isWet(wxFor(d)),ideas=ideasFor(d,q);
   if(!state.ideasOpen){$("#ideas-h").textContent=`${ideas.length} nearby${wet?" · ☔":""}`;return}
   $("#ideas-h").textContent=q?`Ideas · ${ideas.length}`:wet?`Wet day · rain-proof first`:`Ideas nearby · ${ideas.length}`;
   const shown=state.ideaAll?ideas:ideas.slice(0,6);
@@ -2164,8 +2170,17 @@ const CHORES={water:["🚰","Fill water","utility"],dump:["🚽","Dump station",
 function addChore(d,k){const [ic,name,cat]=CHORES[k];add("spots",{name,kind:"chore",chore:k,cat,region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});toast(`${ic} ${name} added`)}
 function openNewPlan(d){
   sheet(head(`Add to ${wd(d)} ${fmt(d)}`)+`<div><span class="label">Van chores</span><div class="chorechips">${Object.entries(CHORES).map(([k,[i,l]])=>`<button type="button" class="pill" data-chore="${k}">${i} ${l}</button>`).join("")}</div></div>
-    <label>Or something else<input name="name" placeholder="Swimming pool, hike…" autocomplete="off" enterkeyhint="done"></label>
-    <div class="end"><div></div><div><button class="btn primary" type="submit">Add</button></div></div>`,"newplan",d);}
+    <label>From your ideas, or something new<input name="name" id="np-q" type="search" placeholder="Search ideas, or type something new…" autocomplete="off" enterkeyhint="done"></label>
+    <div id="np-ideas" class="npideas"></div>
+    <div class="end"><div></div><div><button class="btn primary" type="submit" id="np-add" hidden>Add as new</button></div></div>`,"newplan",d);
+  const q=$("#np-q");q.addEventListener("input",()=>npIdeas(d));npIdeas(d)}
+/* the add sheet lists ideas nearby; typing searches all your ideas, and anything not on the list can be added as new */
+function npIdeas(d){const box=$("#np-ideas");if(!box)return;const q=($("#np-q")?.value||"").trim(),list=ideasFor(d,q),wet=isWet(wxFor(d));
+  const shown=list.slice(0,q?12:6),exact=q&&list.some(x=>deacc(x.name)===deacc(q));
+  box.innerHTML=`<span class="label">${q?(list.length?`Your ideas matching “${esc(q)}”`:"No idea matches that"):wet?"Ideas nearby · rain-proof first":"Ideas nearby"}</span>`+
+    shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm">${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(kindLabel(x))}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}${wet&&rainOK(x)?` <span class="rainok">☔</span>`:""}</span></button><button class="plus" type="button" data-planto="${esc(x.id)}" data-pday="${d}" aria-label="Add ${esc(x.name)} to ${wd(d)}">${icon("plus")}</button></div>`).join("")+
+    (list.length>shown.length?`<div class="muted" style="font-size:.8rem;margin-top:4px">${list.length-shown.length} more · type to narrow down</div>`:"");
+  const add=$("#np-add");if(add){add.hidden=!q||exact;add.textContent=q?`Add “${q.length>22?q.slice(0,21)+"…":q}” as new`:"Add as new"}}
 /* pins we're not sure about: say why, and offer fix / it's right / delete right in the sheet */
 function locBox(it,c){if(!it.id)return "";const no=!ptOf(it),chk=it.llcheck;
   if(!no&&!chk)return `<div class="locline"><button type="button" class="linkx" data-lb="fix">📍 Wrong spot? Fix location</button><button type="button" class="linkx" data-lb="del">Delete</button></div>`;
@@ -2371,7 +2386,7 @@ $("#form").addEventListener("submit",e=>{
   if("name" in v&&!v.name){toast("Give it a name");f.querySelector("[name=name]").focus();return}
   if(type==="rate"){patch("camps",id,{rate:v.rate||"",review:v.review||""});closeSheet();toast(v.rate==="up"?"👍 Noted":v.rate==="down"?"👎 Noted":"Saved");return}
   if(type==="memnote"){const j=S.docs.journal[id]||{};put("journal",id,{...j,date:id,note:v.note||""});closeSheet();toast("Saved");return}
-  if(type==="newplan"){const d=id,name=v.name;
+  if(type==="newplan"){const d=id,name=(v.name||"").trim();if(!name){closeSheet();return}
     const nid=add("spots",{name,kind:"plan",region:stopFor(d)?.region||"",notes:"",fav:false,done:false,day:d,order:planFor(d).length});
     openSpot({id:nid,...S.docs.spots[nid]},true);return}
   if(type==="campPaid"){const base=k=>{const n=nightInfo(k);return S.docs.nights[k]||{camp:n.camp,campType:n.type,notes:""}},o=base(id);
@@ -2580,6 +2595,7 @@ document.addEventListener("click",e=>{
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
     if(x?.kind==="plan"||x?.kind==="chore"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}
     patch("spots",ds.unplan,{day:null,order:null,done:false});toast(`Removed ${x?.name||""} from this day${had?" and from Kea":""}`)}
+  else if(ds.planto){const d=ds.pday,x=S.docs.spots[ds.planto];if(x){patch("spots",ds.planto,{day:d,order:planFor(d).length});toast(`${x.name} added to ${wd(d)}`);npIdeas(d)}}
   else if(ds.plan){const d=state.day;patch("spots",ds.plan,{day:d,order:planFor(d).length});toast("Added")}
   else if(ds.open){const [t,id]=ds.open.split(":"),it=S.docs[COLL[t]][id];if(it)(t==="spot"?openSpot:t==="stop"?openStop:openCamp)({id,...it})}
   else if(ds.edit){const [t,id]=ds.edit.split(":"),it=S.docs[COLL[t]][id];if(it)openStop({id,...it})}

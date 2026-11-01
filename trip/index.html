@@ -1200,7 +1200,7 @@ async function buildRecap(d){
   // what we did, handwritten heading, icons as on the map
   const from=R.pts[0]?.k==="from"&&R.pts.length>1&&R.pts.some(p=>p.k!=="from"&&hav(p,R.pts[0])>1)?R.pts[0]:null;
   function listBlock(x,y,wd2,maxY){g.fillStyle=ACC;g.font=`700 46px ${SF}`;g.fillText("What we did",x,y+34);let ly=y+92;
-    if(from){g.fillStyle=SOFT;g.font=`600 24px ${BF}`;const L=wrapLines(g,`🚐 from ${townOf(from).replace(/^\d+ km from /,"")||from.name}${R.km?` · ≈${Math.round(R.km)} km`:""}`,wd2,2);L.forEach((l,i)=>g.fillText(l,x,ly-8+i*30));ly+=L.length*30+14}
+    if(from){g.fillStyle=SOFT;g.font=`600 24px ${BF}`;const L=wrapLines(g,`🚐 from ${from.name||townOf(from).replace(/^\d+ km from /,"")}${R.km?` · ≈${Math.round(R.km)} km`:""}`,wd2,2);L.forEach((l,i)=>g.fillText(l,x,ly-8+i*30));ly+=L.length*30+14}
     const acts=R.acts,fs=acts.length>5?26:29,lh=fs+7;let shown=0;
     if(!acts.length){g.fillStyle=INK;g.font=`700 40px ${SF}`;g.fillText(d===today()?"Still to come…":"A lazy day 😌",x,ly)}
     for(const a of acts){g.font=`700 ${fs}px ${BF}`;const L=wrapLines(g,a.name,wd2-50,2);if(ly+(L.length-1)*lh>maxY)break;

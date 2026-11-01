@@ -1884,7 +1884,7 @@ addEventListener("resize",()=>requestAnimationFrame(drawRoad));
 document.fonts?.ready?.then(()=>drawRoad());
 
 /* ---- weather (Open-Meteo, free, no key) for the stop you sleep at each night ---- */
-const WXK="sil-wx";let wx={};try{wx=JSON.parse(localStorage.getItem(WXK))||{}}catch{}
+const WXK="sil-wx2";let wx={};try{wx=JSON.parse(localStorage.getItem(WXK))||{}}catch{}
 const WMO=c=>c==null?"":c===0?"☀️":c<=2?"🌤️":c===3?"☁️":c<=48?"🌫️":c<=57?"🌦️":c<=67?"🌧️":c<=77?"🌨️":c<=82?"🌦️":c<=86?"🌨️":"⛈️";
 const wxKey=s=>(+s.lat).toFixed(2)+","+(+s.lng).toFixed(2);
 function wxFor(d){const s=stopFor(d);if(!s||!hasLL(s))return null;return wx[wxKey(s)]?.days?.[d]||null}
@@ -1892,9 +1892,14 @@ let wxBusy=false;
 async function pullWx(){if(wxBusy||!navigator.onLine)return;wxBusy=true;const t=today(),until=addDays(t,13);let changed=false;
   try{for(const s of sortStops().filter(s=>hasLL(s)&&(s.end||s.start)>=addDays(t,-7)&&s.start<=until)){
     const k=wxKey(s),c=wx[k];if(c&&Date.now()-c.at<3*3600e3)continue;
-    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=Pacific%2FAuckland&forecast_days=14&past_days=7`);
+    /* MetService runs the UK Met Office model, so that one first (it covers about a week); the blended forecast fills the days after */
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&models=ukmo_seamless,best_match&timezone=Pacific%2FAuckland&forecast_days=14&past_days=7`);
       if(!r.ok)continue;const j=await r.json(),D=j.daily,days={};
-      D.time.forEach((d,i)=>days[d]={c:D.weather_code[i],hi:D.temperature_2m_max[i],lo:D.temperature_2m_min[i],p:D.precipitation_sum[i],w:D.wind_speed_10m_max[i],sr:(D.sunrise[i]||"").slice(11),ss:(D.sunset[i]||"").slice(11)});
+      const pick=(k,i)=>{const u=D[k+"_ukmo_seamless"]?.[i];return u!=null?u:(D[k+"_best_match"]?.[i]??D[k]?.[i]??null)};
+      D.time.forEach((d,i)=>{const p=pick("precipitation_sum",i);let c=pick("weather_code",i);
+        // a trace of drizzle on an otherwise fine day shouldn't show a rain cloud
+        if(c!=null&&p!=null&&p<1&&((c>=51&&c<=57)||c===61||c===80))c=2;
+        days[d]={c,hi:pick("temperature_2m_max",i),lo:pick("temperature_2m_min",i),p,w:pick("wind_speed_10m_max",i),sr:String(pick("sunrise",i)||"").slice(11),ss:String(pick("sunset",i)||"").slice(11)}});
       wx[k]={at:Date.now(),days};changed=true}catch{}}
     Object.keys(wx).forEach(k=>{if(Date.now()-wx[k].at>14*864e5)delete wx[k]});
     if(changed){try{localStorage.setItem(WXK,JSON.stringify(wx))}catch{}render()}logWx()}finally{wxBusy=false}}

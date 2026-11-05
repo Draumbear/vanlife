@@ -601,6 +601,9 @@ textarea{min-height:72px;resize:vertical}
 .addrow{display:flex;gap:8px}
 .idea{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .idea:first-child{border-top:0}
+.swapbar{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:0 0 6px}.swapbar.on{justify-content:space-between;position:sticky;top:8px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px;box-shadow:0 4px 14px rgba(0,0,0,.12);font-size:.9rem}
+body.swapping #days [data-day]:not(.past){outline:1.5px dashed color-mix(in srgb,var(--muted) 60%,transparent);outline-offset:-2px}
+#days .swapsel,#days .swap-on{outline:2.5px solid #2fc48a!important;outline-offset:-2px;background:color-mix(in srgb,#2fc48a 12%,var(--card))}
 .rm.mv{font-size:1rem}
 .dpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin:6px 0 10px}
 .dph{grid-column:1/-1;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:8px}
@@ -2080,7 +2083,7 @@ function renderDays(){
   else{const last=st[st.length-1],fd=last?.flight||last?.end||last?.start;if(fd){const ar=addDays(fd,1);html+=`<div class="fly-panel"><div class="fcap ftop"><b>✈️ Flight home</b><span>${wd(fd)} ${fmt(fd)} · Auckland</span></div>
     <div class="skylab" id="sg-l" style="top:830px;left:calc(30% + 46px)"><b>🇸🇬 Singapore</b><span>transit</span></div>
     <div class="skylab r" id="br-l" style="top:1236px;right:calc(40% + 66px)"><b>🇧🇪 Brussels</b><span>${wd(ar)} ${fmt(ar)} · home</span></div></div>`}}
-  el.innerHTML=html;requestAnimationFrame(drawRoad)}
+  el.innerHTML=swapBar()+html;markSwap();requestAnimationFrame(drawRoad)}
 
 /* ================= places ================= */
 function allPlaces(){return [...state.spots.filter(x=>x.kind!=="chore"&&x.kind!=="task").map(x=>({...x,_c:"spot"})),...state.camps.map(x=>({...x,_c:"camp"}))]}
@@ -2492,6 +2495,31 @@ function dragEnd(){if(!drag)return;const {d,target,ghost}=drag;drag=null;ghost.r
   document.addEventListener("touchmove",e=>{if(drag)e.preventDefault()},{passive:false});
   document.addEventListener("contextmenu",e=>{if(drag||e.target.closest?.("[data-flexd]"))e.preventDefault()});
   document.addEventListener("click",e=>{if(eatClick){e.stopPropagation();e.preventDefault();eatClick=false}},true)})();
+/* ---- swapping two days' plans from the day list: tap ⇄ then two days, or long-press a day and drop it on another ---- */
+function swapBar(){const sw=state.swap;if(!sw)return `<div class="swapbar"><button type="button" class="pill" data-swapmode>⇄ Swap days</button></div>`;
+  return `<div class="swapbar on"><span>${sw.a?`Now tap the day to swap <b>${wd(sw.a)} ${fmt(sw.a)}</b> with`:"Tap the first day to swap"}</span><button type="button" class="pill" data-swapcancel>Cancel</button></div>`}
+function markSwap(){document.querySelectorAll(".swapsel").forEach(x=>x.classList.remove("swapsel"));document.body.classList.toggle("swapping",!!state.swap);
+  if(state.swap?.a)document.querySelectorAll(`[data-day="${state.swap.a}"]`).forEach(x=>x.classList.add("swapsel"))}
+function swapTap(d){const sw=state.swap;if(!sw.a){sw.a=d;renderDays();return}if(sw.a===d){sw.a=null;renderDays();return}
+  const a=sw.a;state.swap=null;document.body.classList.remove("swapping");swapDays(a,d)}
+document.addEventListener("click",e=>{if(!state.swap||state.day)return;const r=e.target.closest?.("[data-day]");if(!r||!r.closest("#days"))return;const d=r.dataset.day;if(d<today())return;
+  e.stopPropagation();e.preventDefault();swapTap(d)},true);
+let sdrag=null;
+(()=>{let timer=null,start=null;const ok=r=>r&&r.closest("#days")&&r.dataset.day>=today()&&!r.dataset.flexd;
+  const pickS=()=>{sdrag.g.style.display="none";const el=document.elementFromPoint(innerWidth/2,sdrag.y);sdrag.g.style.display="";const r=el?.closest?.("[data-day]"),tg=ok(r)&&r.dataset.day!==sdrag.d?r.dataset.day:null;
+    if(tg!==sdrag.t){document.querySelectorAll(".swap-on").forEach(x=>x.classList.remove("swap-on"));sdrag.t=tg;if(tg)document.querySelectorAll(`#days [data-day="${tg}"]`).forEach(x=>x.classList.add("swap-on"))}};
+  const begin=(row,y)=>{const d=row.dataset.day,n=planFor(d).filter(x=>!x.done).length;sdrag={d,y,t:null,g:document.createElement("div")};
+    sdrag.g.className="dghost";sdrag.g.innerHTML=`${wd(d)} ${fmt(d)} · ${n?n+" planned":"nothing planned"}<small>Drop it on another day to swap</small>`;document.body.appendChild(sdrag.g);
+    document.body.classList.add("dragging");row.classList.add("src");sdrag.g.style.top=y+"px";if(navigator.vibrate)try{navigator.vibrate(15)}catch{}
+    const loop=()=>{if(!sdrag)return;const m=70,h=innerHeight;if(sdrag.y<m)scrollBy(0,-Math.ceil((m-sdrag.y)/5));else if(sdrag.y>h-m)scrollBy(0,Math.ceil((sdrag.y-h+m)/5));pickS();requestAnimationFrame(loop)};requestAnimationFrame(loop)};
+  document.addEventListener("pointerdown",e=>{if(e.button>0||state.swap)return;const row=e.target.closest?.("[data-day]");if(!ok(row)||e.target.closest("a,.chk,.gobtn,.tw"))return;
+    start={x:e.clientX,y:e.clientY};timer=setTimeout(()=>{timer=null;begin(row,start.y)},450)});
+  document.addEventListener("pointermove",e=>{if(sdrag){sdrag.y=e.clientY;sdrag.g.style.top=e.clientY+"px";pickS();return}if(timer&&start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>8){clearTimeout(timer);timer=null}});
+  const end=()=>{if(timer){clearTimeout(timer);timer=null}if(!sdrag)return;const {d,t,g}=sdrag;sdrag=null;g.remove();document.body.classList.remove("dragging");
+    document.querySelectorAll(".swap-on,.src").forEach(x=>x.classList.remove("swap-on","src"));eatClick=true;setTimeout(()=>eatClick=false,350);if(t)swapDays(d,t)};
+  document.addEventListener("pointerup",end);document.addEventListener("pointercancel",end);
+  document.addEventListener("touchmove",e=>{if(sdrag)e.preventDefault()},{passive:false});
+  document.addEventListener("contextmenu",e=>{if(sdrag||e.target.closest?.("#days [data-day]"))e.preventDefault()})})();
 function setNight(d,camp,type,notes,flex,stayed){const s=stopFor(d),old=S.docs.nights[d]||{};stayed=stayed??!!old.stayed;
   const keep=sameCamp(old.camp,camp)?Object.fromEntries(["keaId","keaMeta","price","cat","nopay","group","paidOn","cover"].filter(k=>old[k]!=null).map(k=>[k,old[k]])):{};
   if(!sameCamp(old.camp,camp)&&old.keaId)nightUnpay(d);
@@ -2733,6 +2761,8 @@ document.addEventListener("click",e=>{
   else if(ds.moveact)openMoveAct(ds.moveact);
   else if(ds.moveto){const id=$("#form").dataset.id;if(id)moveAct(id,ds.moveto)}
   else if(ds.swapday)openSwap(ds.swapday);
+  else if("swapmode" in ds){state.swap={a:null};renderDays()}
+  else if("swapcancel" in ds){state.swap=null;renderDays()}
   else if(ds.swapwith){const a=$("#form").dataset.id;if(a)swapDays(a,ds.swapwith)}
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
     if(x?.kind==="plan"||x?.kind==="chore"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}

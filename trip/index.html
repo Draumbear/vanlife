@@ -1996,6 +1996,11 @@ function wxCard(d,links=""){const w=wxFor(d);if(!w)return "";
 const LEADS=[[3,"3 days"],[7,"1 week"],[14,"2 weeks"],[30,"1 month"],[60,"2 months"]];
 function bookItems(){const t=today(),out=[];
   state.spots.forEach(x=>{if(x.book&&!x.booked&&x.day&&x.day>=t)out.push({k:"spot:"+x.id,name:x.name,day:x.day,by:addDays(x.day,-(+x.lead||14))})});
+  // ideas not on a day yet: count from the first day we're at the stop nearest to them, so a booking isn't missed while we plan late
+  const fut=sortStops().filter(s=>s.start&&(s.end||s.start)>t);
+  state.spots.forEach(x=>{if(!x.book||x.booked||x.day||x.done||x.deleted)return;
+    const st=(hasLL(x)?fut.filter(s=>hasLL(s)&&hav(x,s)<=70).sort((a,b)=>a.start.localeCompare(b.start))[0]:null)||fut.find(s=>x.region&&s.region===x.region);if(!st)return;
+    const day=st.start>t?st.start:t;out.push({k:"spot:"+x.id,name:x.name,day,by:addDays(day,-(+x.lead||14)),idea:st.name})});
   state.stops.forEach(x=>{if(x.book&&!x.booked&&x.start&&x.start>=t)out.push({k:"stop:"+x.id,name:`⛺ ${x.camp||"Campsite"} · ${x.name}`,day:x.start,by:addDays(x.start,-(+x.lead||14))})});
   return out.sort((a,b)=>a.by.localeCompare(b.by))}
 /* booking reminders as phone notifications: on opening the app, and in the background where the phone allows it (installed app on Android) */
@@ -2012,9 +2017,9 @@ async function askNotif(){if(!("Notification" in window))return toast("This phon
   const r=await Notification.requestPermission();if(r==="granted"){toast("🔔 Booking reminders on");syncReminders();renderExtras()}else toast("Notifications are blocked — allow them in the phone settings for Loop")}
 function bookCard(){const t=today(),items=bookItems().filter(x=>x.by<=addDays(t,21));if(!items.length)return "";
   return `<div class="card"><div class="mini-h"><span class="label">To book</span>${notifOn()?`<span class="muted" style="font-size:.78rem">🔔 on</span>`:`<button type="button" class="pill" data-asknotif>🔔 Remind me</button>`}</div>
-    ${items.slice(0,5).map(x=>`<div class="bk"><button type="button" class="main" data-open="${x.k}" style="background:none;border:0;padding:0;text-align:left;min-width:0;cursor:pointer"><b class="clamp1">${esc(x.name)}</b>
-      <span class="sub ${x.by<=t?"late":""}">for ${wd(x.day)} ${fmt(x.day)} · ${x.by<t?"book now":x.by===t?"book today":`book by ${wd(x.by)} ${fmt(x.by)}`}</span></button>
-      <button type="button" class="pill" data-booked="${x.k}">Booked ✓</button></div>`).join("")}</div>`}
+    ${(state.bookAll?items:items.slice(0,5)).map(x=>`<div class="bk"><button type="button" class="main" data-open="${x.k}" style="background:none;border:0;padding:0;text-align:left;min-width:0;cursor:pointer"><b class="clamp1">${esc(x.name)}</b>
+      <span class="sub ${x.by<=t?"late":""}">${x.idea?`not planned yet · ${esc(shortStop(x.idea))} from ${wd(x.day)} ${fmt(x.day)}`:`for ${wd(x.day)} ${fmt(x.day)}`} · ${x.by<t?"book now":x.by===t?"book today":`book by ${wd(x.by)} ${fmt(x.by)}`}</span></button>
+      <span style="display:flex;gap:6px">${x.idea?`<button type="button" class="pill" data-nobook="${x.k}" title="We're not doing this">Skip</button>`:""}<button type="button" class="pill" data-booked="${x.k}">Booked ✓</button></span></div>`).join("")}${items.length>5?`<button type="button" class="tmore" data-bookall>${state.bookAll?"Show less":`Show ${items.length-5} more`}</button>`:""}</div>`}
 const bookNote=x=>x.book&&!x.booked&&x.day?`<span class="sub" style="color:var(--rust)">🎟 Book by ${wd(addDays(x.day,-(+x.lead||14)))} ${fmt(addDays(x.day,-(+x.lead||14)))}</span>`:"";
 /* ---- shared to-do list ---- */
 function todoCard(){const open=state.todos.filter(x=>!x.done).sort((a,b)=>(a.at||"").localeCompare(b.at||"")),done=state.todos.filter(x=>x.done);
@@ -2760,6 +2765,8 @@ document.addEventListener("click",e=>{
   else if(ds.day)openDay(ds.day);
   else if(ds.moveact)openMoveAct(ds.moveact);
   else if(ds.moveto){const id=$("#form").dataset.id;if(id)moveAct(id,ds.moveto)}
+  else if(ds.nobook){const [c,id]=ds.nobook.split(":");patch(c==="spot"?"spots":"stops",id,{book:false});toast("Taken off the booking list");renderExtras();syncReminders()}
+  else if("bookall" in ds){state.bookAll=!state.bookAll;renderExtras()}
   else if(ds.swapday)openSwap(ds.swapday);
   else if("swapmode" in ds){state.swap={a:null};renderDays()}
   else if("swapcancel" in ds){state.swap=null;renderDays()}

@@ -1999,7 +1999,8 @@ function bookItems(){const t=today(),out=[];
   // ideas not on a day yet: count from the first day we're at the stop nearest to them, so a booking isn't missed while we plan late
   const fut=sortStops().filter(s=>s.start&&(s.end||s.start)>t);
   state.spots.forEach(x=>{if(!x.book||x.booked||x.day||x.done||x.deleted)return;
-    const st=(hasLL(x)?fut.filter(s=>hasLL(s)&&hav(x,s)<=70).sort((a,b)=>a.start.localeCompare(b.start))[0]:null)||fut.find(s=>x.region&&s.region===x.region);if(!st)return;
+    const pool=fut.some(s=>x.region&&s.region===x.region)?fut.filter(s=>s.region===x.region):fut;
+    const st=hasLL(x)?pool.filter(s=>hasLL(s)&&hav(x,s)<=150).sort((a,b)=>hav(x,a)-hav(x,b))[0]:pool.find(s=>x.region&&s.region===x.region);if(!st)return;
     const day=st.start>t?st.start:t;out.push({k:"spot:"+x.id,name:x.name,day,by:addDays(day,-(+x.lead||14)),idea:st.name})});
   state.stops.forEach(x=>{if(x.book&&!x.booked&&x.start&&x.start>=t)out.push({k:"stop:"+x.id,name:`⛺ ${x.camp||"Campsite"} · ${x.name}`,day:x.start,by:addDays(x.start,-(+x.lead||14))})});
   return out.sort((a,b)=>a.by.localeCompare(b.by))}

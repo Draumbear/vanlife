@@ -555,6 +555,15 @@ textarea{min-height:72px;resize:vertical}
 .won .wd.now{background:var(--fern);color:#fff}
 
 /* aurora card */
+.brief,.ewc{display:block;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:22px;padding:12px 14px;margin:0 0 12px;cursor:pointer}
+.brief .bk,.ewc .bk{display:block;font-weight:800;margin-bottom:6px}
+.brief .bw{display:flex;gap:10px;align-items:center;margin-bottom:6px}.brief .bi{font-size:2rem;line-height:1}.brief .bw small{color:var(--muted)}
+.brief .bh,.ewc .ews{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:4px 0 8px;text-align:center;font-size:.8rem}.ewc .ews{grid-template-columns:repeat(10,1fr)}
+.brief .bh span,.ewc .ews span{display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:8px;padding:3px 0}.brief .bh small,.ewc .ews small{color:var(--muted);font-size:.68rem}.brief .bh i,.ewc .ews i{font-style:normal;color:#3b82c4;font-size:.68rem;min-height:.8rem}
+.ewc .ews span.best{background:color-mix(in srgb,#2fc48a 20%,transparent)}.ewc .ews span.plan{outline:1.5px dashed var(--muted)}
+.brief .bl,.ewc .bl{display:block;font-size:.86rem;margin-top:2px}.ewc .ewb{display:block;font-size:.9rem;margin-bottom:2px}.ewc .ewb small{color:var(--muted)}
+.briefsheet p{margin:4px 0}.htab{width:100%;border-collapse:collapse;font-size:.84rem;margin:10px 0}.htab th{font-size:.72rem;color:var(--muted);text-align:left;font-weight:600}.htab td,.htab th{padding:5px 4px;border-bottom:1px solid var(--line)}.htab tr.now td{background:color-mix(in srgb,var(--line) 50%,transparent)}
+.ewt tr.best td{background:color-mix(in srgb,#2fc48a 18%,transparent)}.ewt td:first-child{white-space:nowrap}
 .aur{position:relative;overflow:hidden;border-radius:22px;padding:14px 16px;margin:0 0 12px;color:#e9f6ef;background:radial-gradient(120% 90% at 85% 120%,rgba(64,220,150,.35),transparent 60%),radial-gradient(90% 70% at 20% 130%,rgba(150,90,230,.25),transparent 60%),linear-gradient(180deg,#0b1430,#13244a);border:0;width:100%;text-align:left;font:inherit;display:block;cursor:pointer}
 .aur .k{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.75;font-weight:700}
 .aur .v{font:800 1.1rem var(--display);margin:2px 0 8px;display:flex;align-items:center;gap:8px}
@@ -1459,6 +1468,40 @@ function auroraCard(){const o=aur?.d;if(!o||!o.nights?.length)return "";const t0
     <span class="v"><span class="dot l${v.lvl}"></span>${nm(t0.date)}: ${esc(v.t)}</span>
     ${t0.best?`<span class="awin">Best ${t0.best.from}–${t0.best.to} · ~${t0.best.cloud}% cloud · dark from ${t0.darkFrom}${t0.moon?.illum>40?` · moon ${t0.moon.illum}%`:""}</span>`:""}
     <span class="anights">${o.nights.map(n=>{const x=aurVerdict(n);return `<span class="an"><b><span class="dot l${x.lvl}" style="width:8px;height:8px"></span>${nm(n.date)}</b>Kp ${kpTxt(n.kpMax)}<br>☁️ ${n.cloud??"–"}% cloud</span>`}).join("")}</span></button>`}
+/* ---- morning briefing + hike-weather watch (same as the 7 am and 7:30 notifications) ---- */
+const BRK="sil-brief",EWK="sil-earnslaw";
+let brief=(()=>{try{return JSON.parse(localStorage.getItem(BRK))||null}catch{return null}})(),ew=(()=>{try{return JSON.parse(localStorage.getItem(EWK))||null}catch{return null}})(),briefBusy=false,ewBusy=false;
+const fnUrl=n=>{const c=keaCred()||cred;return c?.url?c.url.replace(/\/+$/,"")+"/functions/v1/"+n:null};
+const ewSpots=()=>state.spots.filter(x=>!x.deleted&&/earnslaw/i.test(x.name||""));
+const ewActive=()=>{const a=ewSpots();return a.length&&!a.some(x=>x.done)};
+async function pullBrief(force){const u=fnUrl("morning-brief");if(briefBusy||!u||!navigator.onLine)return;if(!force&&brief&&brief.d?.today===today()&&Date.now()-brief.at<30*60e3)return;briefBusy=true;
+  try{const r=await fetch(u);if(r.ok){const d=await r.json();if(d&&d.today){brief={at:Date.now(),d};try{localStorage.setItem(BRK,JSON.stringify(brief))}catch{}renderExtras();if($("#form")?.dataset.type==="brief")openBrief()}}}catch{}finally{briefBusy=false}}
+async function pullEarnslaw(force){const u=fnUrl("earnslaw-wx");if(ewBusy||!u||!navigator.onLine||!ewActive())return;if(!force&&ew&&Date.now()-ew.at<60*60e3&&ew.d?.today===today())return;ewBusy=true;
+  try{const r=await fetch(u);if(r.ok){const d=await r.json();if(d&&d.days){ew={at:Date.now(),d};try{localStorage.setItem(EWK,JSON.stringify(ew))}catch{}renderExtras();if($("#form")?.dataset.type==="earnslaw")openEarnslaw()}}}catch{}finally{ewBusy=false}}
+const ago=t=>{const m=Math.round((Date.now()-t)/60e3);return m<2?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"};
+function briefCard(){const d=brief?.d;if(!d||d.today!==today()||!d.lines?.length)return "";const [w,...rest]=d.wx?d.lines:["",...d.lines];
+  return `<button type="button" class="brief" data-brief aria-label="Today's briefing"><span class="bk">☀️ ${esc(d.title)}</span>
+    ${d.wx?`<span class="bw"><span class="bi">${d.wx.icon}</span><span><b>${d.wx.tmin}–${d.wx.tmax}°</b> ${esc(d.wx.word)}${d.wx.rain>=1?` · ${Math.round(d.wx.rain)} mm ${esc(d.wx.rainFrom||"")}`:""}<br><small>${d.wx.gust>=50?`gusts ${d.wx.gust} km/h · `:""}${d.wx.sunrise?`☀ ${d.wx.sunrise}–${d.wx.sunset}`:""}${d.wx.uv>=8?` · UV ${d.wx.uv}`:""}</small></span></span>
+    <span class="bh">${(d.hours||[]).filter(h=>h.h%2===0&&h.h>=new Date().getHours()-1).slice(0,7).map(h=>`<span><small>${h.h}h</small>${h.icon}<b>${h.t??"–"}°</b>${h.rain>=0.3?`<i>${h.rain}</i>`:"<i></i>"}</span>`).join("")}</span>`:""}
+    ${rest.map(l=>`<span class="bl">${esc(l)}</span>`).join("")}</button>`}
+function openBrief(){const d=brief?.d;if(!d){pullBrief(true);return toast("Getting today's briefing…")}
+  sheet(head("☀️ "+esc(d.title))+`<div class="briefsheet">${d.lines.map(l=>`<p>${esc(l)}</p>`).join("")}
+    ${d.hours?.length?`<table class="htab"><tr><th></th><th></th><th>°C</th><th>Rain</th><th>Gusts</th><th>Cloud</th></tr>${d.hours.map(h=>`<tr class="${h.h===new Date().getHours()?"now":""}"><td>${h.h}:00</td><td>${h.icon}</td><td><b>${h.t??"–"}</b></td><td>${h.rain>0?h.rain+" mm":"–"}${h.pop!=null&&h.pop>=30?` <small>${h.pop}%</small>`:""}</td><td>${h.gust??"–"}</td><td>${h.cloud!=null?Math.round(h.cloud)+"%":"–"}</td></tr>`).join("")}</table>`:""}
+    <p class="muted" style="font-size:.8rem">For ${esc(d.where?.name||"where you sleep tonight")} · UK Met Office model, with the wetter of it and the general model for rain · updated ${ago(brief.at)}. The same briefing arrives as a notification at 7 am.</p>
+    <button type="button" class="pill" data-briefrefresh>Refresh</button></div>`,"brief","")}
+function earnslawCard(){if(!ewActive())return "";const d=ew?.d;if(!d?.days)return "";const lab=x=>x.label;
+  const strip=d.days.filter(x=>x.d>=today()).slice(0,10);
+  return `<button type="button" class="ewc" data-earnslaw aria-label="Earnslaw Burn forecast"><span class="bk">🏔️ Earnslaw Burn forecast</span>
+    ${d.best?`<span class="ewb">Best window <b>${esc(wd(d.best.from))} ${+d.best.from.slice(8)} → ${esc(wd(d.best.to))} ${+d.best.to.slice(8)}</b>${d.moved?` <small>(was ${esc(wd(d.moved))} ${+d.moved.slice(8)})</small>`:""}</span>`:""}
+    <span class="ews">${strip.map(x=>`<span class="${x.d===d.best?.from||x.d===d.best?.to?"best":""}${x.d===d.planned?" plan":""}"><small>${esc(x.label.slice(0,2))}${+x.d.slice(8)}</small>${x.icon}<i>${x.mm==="dry"?"dry":esc(x.mm.replace(" mm",""))}</i></span>`).join("")}</span>
+    ${d.planned?`<span class="bl">${esc(d.summary?.[0]||"")}</span>`:""}</button>`}
+function openEarnslaw(){const d=ew?.d;if(!d){pullEarnslaw(true);return toast("Getting the forecast…")}
+  const f=v=>v==null?"–":v<0.5?"0":v<10?(Math.round(v*10)/10).toString():Math.round(v);
+  sheet(head("🏔️ Earnslaw Burn")+`<div class="briefsheet">${(d.summary||[]).map(l=>`<p>${esc(l)}</p>`).join("")}
+    <table class="htab ewt"><tr><th></th><th></th><th>ECMWF</th><th>GFS</th><th>UK Met</th><th>Cloud</th><th>Gusts</th><th>Low</th></tr>
+    ${d.days.filter(x=>x.d>=today()).map(x=>`<tr class="${x.d===d.best?.from||x.d===d.best?.to?"best":""}${x.d===d.planned?" plan":""}"><td>${esc(x.label)}${x.d===d.planned?" 📍":""}</td><td>${x.icon}</td><td>${f(x.by?.ecmwf)}</td><td>${f(x.by?.gfs)}</td><td>${f(x.by?.ukmo)}</td><td>${x.c!=null?Math.round(x.c)+"%":"–"}</td><td>${x.g!=null?Math.round(x.g):"–"}</td><td>${x.tmin!=null?Math.round(x.tmin)+"°":"–"}${x.riverHigh?" 🌊":""}</td></tr>`).join("")}</table>
+    <p class="muted" style="font-size:.8rem">Rain in mm for the mountains above the valley (around 2,000 m, so the lows are colder than at camp). Green rows = best two days to walk up and down, 📍 = your plan, 🌊 = heavy rain the two days before, so river crossings may be high. The UK model only goes about a week ahead. Updated ${ago(ew.at)}; the daily notification comes at 7:30 until the track is ticked off.</p>
+    <button type="button" class="pill" data-earnslawrefresh>Refresh</button></div>`,"earnslaw","")}
 const moonTxt=m=>!m?"":m.illum<3?"New moon, no moonlight 👌":`${m.waxing?"🌒":"🌘"} Moon ${m.illum}%`+(m.sets?` · sets ~${m.sets}`:m.rises?` · rises ~${m.rises}`:"");
 const cloudCol=c=>c==null?"var(--line)":c<=25?"#2fc48a":c<=50?"#9bd07a":c<=75?"#c9b458":"#8a90a0";
 function aurHours(x){const need=x.need;return `<div class="ahours">${x.hours.map(h=>{const ok=(h.kp??0)>=need.cam-0.34;
@@ -1972,7 +2015,7 @@ function todoCard(){const open=state.todos.filter(x=>!x.done).sort((a,b)=>(a.at|
     <form class="addrow" id="addtodo"><input id="f-todo" placeholder="${open.length?"Add":"Water, dump station, laundry…"}" autocomplete="off" aria-label="Add a to-do"><button class="btn" type="submit">Add</button></form></div>`}
 function renderExtras(){const el=$("#extras");if(!el)return;if(state.dview==="past"){el.innerHTML="";return}
   const keep=$("#f-todo")?.value||"",focus=document.activeElement?.id==="f-todo";
-  el.innerHTML=auroraCard()+whatsOnCard()+bookCard()+sellCard()}
+  el.innerHTML=briefCard()+earnslawCard()+auroraCard()+whatsOnCard()+bookCard()+sellCard()}
 /* ---- trip so far, at the top of Past ---- */
 /* past days with plans still unticked: one tap to confirm or drop them */
 function nightsReview(){const t=today(),r=tripRange();if(!r)return "";const open=[];let d=r.first,g=0;
@@ -2657,6 +2700,10 @@ document.addEventListener("click",e=>{
   else if("sellall" in ds){state.sellAll=!state.sellAll;renderExtras()}
   else if(ds.chore){addChore($("#form").dataset.id||state.day,ds.chore);closeSheet()}
   else if("aurora" in ds)openAurora();
+  else if("brief" in ds)openBrief();
+  else if("earnslaw" in ds)openEarnslaw();
+  else if("briefrefresh" in ds){pullBrief(true);toast("Refreshing…")}
+  else if("earnslawrefresh" in ds){pullEarnslaw(true);toast("Refreshing…")}
   else if(ds.staylonger){const fx=Object.keys(S.docs.nights).filter(d=>d>today()&&S.docs.nights[d]?.flex).sort()[0];if(!fx)toast("No flexible nights left to move");else moveNight(fx,ds.staylonger)}
   else if(ds.scan){if(ds.scan==="go")runScan();else{scanState.run=false;renderPlaces()}}
   else if(ds.hap){const [id,d]=ds.hap.split(":");openHap(id,d)}
@@ -2718,7 +2765,7 @@ document.addEventListener("submit",e=>{if(e.target.id!=="addact")return;e.preven
   openSpot({id,...S.docs.spots[id]},true)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#sheet").hidden)closeSheet();else if(!$("#mapview").hidden)closeMap();else if(state.day)closeDay()});
 window.addEventListener("online",()=>{sync(false);pullKea()});window.addEventListener("offline",()=>setChip());
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx();pullTides();pullRoadAlerts();pullAurora()}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){loadKea();render();sync(false);pullKea();pullWx();pullTides();pullRoadAlerts();pullAurora();pullBrief();pullEarnslaw()}});
 setInterval(()=>{if(document.visibilityState==="visible")sync(false)},45000);
 
 /* ================= start ================= */
@@ -2743,7 +2790,9 @@ setTimeout(syncReminders,3000);document.addEventListener("visibilitychange",()=>
   if(!Object.keys(S.docs.stops).length){try{const p=await fetchPlan();COLLS.forEach(c=>S.docs[c]=p[c]||{});persist();refresh()}catch{toast("Couldn't load the plan — connect once and reopen")}}
   if(syncOn())sync(false);
   setTimeout(settleAllFlex,6000);
-  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();pullHappenings();syncPhotos();
+  pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();pullBrief();pullEarnslaw();pullHappenings();syncPhotos();
+  if(/[?&]brief=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openBrief(),2600)}
+  if(/[?&]earnslaw=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openEarnslaw(),2600)}
   if(/[?&]aurora=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openAurora(),2600)}
 })();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

@@ -2151,6 +2151,14 @@ function renderDay(){
      <button class="ib" type="button" data-day="${addDays(d,-1)}" aria-label="Previous day">${icon("back")}</button>
      <button class="ib" type="button" data-day="${addDays(d,1)}" aria-label="Next day">${icon("next")}</button></div></div>
    <div class="wrap vbody">
+    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><span style="display:flex;gap:8px;align-items:center">${dayRouteUrl(d)?`<a class="pill routepill" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener">🗺️ Route in Google Maps</a>`:""}<button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></span></div>
+      <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
+        ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
+        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${statusNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
+        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div>${rainRow(x,d)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
+      ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
+      </div>
+    <div class="card" id="ideas-card"></div>
     ${(()=>{const L=s?`<span class="wxlinks">${A(safeUrl(s.weather)||MS_INDEX,"MetService")}${hasLL(s)?A(windyUrl(s),"Windy"):""}</span>`:"";const w=d>=t?wxCard(d,L):"";return w||(L?`<div class="card wxline">${L}</div>`:"")})()}
     <div class="card"><span class="label">Sleeping</span>
       <div class="sleep">${d<=t?`<button class="chk ${n.stayed?"on":""}" type="button" data-stay="${d}" aria-pressed="${n.stayed}" aria-label="We slept here">✓</button>`:""}<span class="nm">${n.camp?esc(n.camp):"No campsite yet"} <span class="chip c-${esc(n.type)}">${esc(SHORT[n.type])}</span>${d<=t?`<small class="stayq">${n.stayed?"We slept here":"Slept here? Tick it"}</small>`:""}</span>
@@ -2162,14 +2170,6 @@ function renderDay(){
     ${d<=t?spendCard(d):""}
     ${n.flex&&d>t?`<div class="flexbox"><div><b>Flexible night.</b> <span class="muted">Give it to another stop; the stops in between shift a day.</span></div>
       <select id="mv-to" aria-label="Move this night to"><option value="">Move this night to…</option>${sortStops().filter(x=>x.id!==s?.id&&(x.end||x.start)>t).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} (${stopDays(x).length})</option>`).join("")}</select></div>`:""}
-    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><span style="display:flex;gap:8px;align-items:center">${dayRouteUrl(d)?`<a class="pill routepill" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener">🗺️ Route in Google Maps</a>`:""}<button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></span></div>
-      <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
-        ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
-        <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${statusNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
-        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div>${rainRow(x,d)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
-      ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
-      </div>
-    <div class="card" id="ideas-card"></div>
    </div>`;
   renderIdeas();
   el.scrollTop=scroll;hydratePhotos(el)}

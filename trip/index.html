@@ -601,6 +601,11 @@ textarea{min-height:72px;resize:vertical}
 .addrow{display:flex;gap:8px}
 .idea{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .idea:first-child{border-top:0}
+.rm.mv{font-size:1rem}
+.dpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin:6px 0 10px}
+.dph{grid-column:1/-1;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.dpc{display:flex;flex-direction:column;gap:1px;text-align:left;font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.dpc small{color:var(--muted);font-size:.74rem}.dpc.cur{opacity:.45;cursor:default;border-style:dashed}
 .rm{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--muted);background:none;font-size:1.15rem;line-height:1;cursor:pointer;flex:none}
 .plus{width:36px;height:36px;border-radius:50%;border:1px solid var(--fern);color:var(--fern);background:none;font-size:1.2rem;line-height:1;cursor:pointer}
 .mapwrap{background:var(--water);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
@@ -2151,11 +2156,11 @@ function renderDay(){
      <button class="ib" type="button" data-day="${addDays(d,-1)}" aria-label="Previous day">${icon("back")}</button>
      <button class="ib" type="button" data-day="${addDays(d,1)}" aria-label="Next day">${icon("next")}</button></div></div>
    <div class="wrap vbody">
-    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><span style="display:flex;gap:8px;align-items:center">${dayRouteUrl(d)?`<a class="pill routepill" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener">🗺️ Route in Google Maps</a>`:""}<button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></span></div>
+    <div class="card"><div class="mini-h" style="align-items:center"><span class="label">Plan</span><span style="display:flex;gap:8px;align-items:center">${dayRouteUrl(d)?`<a class="pill routepill" href="${esc(dayRouteUrl(d))}" target="_blank" rel="noopener">🗺️ Route in Google Maps</a>`:""}${plan.length&&d>=t?`<button class="pill" type="button" data-swapday="${d}" title="Swap this day's plan with another day">⇄ Swap day</button>`:""}<button class="addplus" type="button" data-newplan aria-label="Add to this day">${icon("plus")}</button></span></div>
       <div class="actlist">${plan.map((x,i)=>`<div class="act ${x.done?"done":""}" data-aid="${esc(x.id)}">
         ${plan.length>1?`<span class="drag" aria-label="Drag to reorder" title="Drag to reorder">⠿</span>`:""}<button class="chk ${x.done?"on":""}" type="button" data-tog="spots:done:${esc(x.id)}" aria-pressed="${!!x.done}" aria-label="Done">✓</button>
         <button class="main" type="button" data-open="spot:${esc(x.id)}"><span class="nm ${x.suggested?"sg":""}">${x.chore&&CHORES[x.chore]?CHORES[x.chore][0]+" ":""}${esc(x.name)}${+x.price>0?` <span class="money">${kcat(x.cat||"activity")[0]} ${x.pp?nzd(x.price/2)+" each":nzd(x.price)}${x.keaId||x.paid?" ✓":""}</span>`:""}</span>${bookNote(x)}${tideNote(x)}${statusNote(x)}${x.notes?`<span class="sub clamp1">${esc(x.notes)}</span>`:""}</button>
-        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div>${rainRow(x,d)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
+        <div style="display:flex;gap:6px;align-items:center">${goBtns(x,x.kind)}<button class="rm mv" type="button" data-moveact="${esc(x.id)}" aria-label="Move ${esc(x.name)} to another day" title="Move to another day">⇄</button><button class="rm" type="button" data-unplan="${esc(x.id)}" aria-label="Remove ${esc(x.name)} from this day">×</button></div>${rainRow(x,d)}</div>`).join("")||`<div class="muted" style="font-size:.9rem">Nothing yet.</div>`}</div>
       ${(()=>{const c=plan.reduce((t,x)=>t+(+x.price||0),0);return c?`<div class="muted" style="font-size:.82rem;margin-top:6px">Costs today: ${nzd(c)}${plan.some(x=>x.keaId)?` · ${nzd(plan.filter(x=>x.keaId).reduce((t,x)=>t+(+x.price||0),0))} paid`:" · planned in Kea"}</div>`:""})()}
       </div>
     <div class="card" id="ideas-card"></div>
@@ -2173,6 +2178,18 @@ function renderDay(){
    </div>`;
   renderIdeas();
   el.scrollTop=scroll;hydratePhotos(el)}
+/* ---- moving plans between days without re-adding them ---- */
+function dayPicker(cur,attr,note){const t=today(),days=upcomingNights().filter(x=>x>=t).slice(0,28);let last=null;
+  return `<div class="dpick">${days.map(x=>{const st=stopFor(x),hd=st?.id!==last?(last=st?.id,`<div class="dph">${esc(st?.name||"No stop")}</div>`):"",w=wxFor(x),n=planFor(x).filter(y=>!y.done).length;
+    return hd+`<button type="button" class="dpc ${x===cur?"cur":""}" ${x===cur?"disabled":`data-${attr}="${x}"`}><b>${wd(x)} ${+x.slice(8)}${x===t?" <small>today</small>":x===addDays(t,1)?" <small>tmrw</small>":""}</b><small>${w?wxShort(w)+(w.p>=1?` · ${Math.round(w.p)} mm`:""):""}</small><small>${n?n+" planned":"free"}${nightInfo(x).flex?" · flexible":""}</small></button>`}).join("")}</div>${note?`<p class="muted" style="font-size:.8rem">${note}</p>`:""}`}
+function openMoveAct(id){const x=S.docs.spots[id];if(!x)return;state.moving=id;
+  sheet(head("Move "+esc(x.name))+dayPicker(x.day,"moveto","Everything else about it stays the same."),"move",id)}
+function moveAct(id,to){const x=S.docs.spots[id];if(!x)return;const from=x.day;patch("spots",id,{day:to,order:planFor(to).length,done:false});closeSheet();
+  toast(`Moved to ${to===today()?"today":wd(to)+" "+fmt(to)}`);if(state.day)renderDay();render()}
+function openSwap(d){sheet(head(`Swap ${wd(d)} ${fmt(d)} with…`)+dayPicker(d,"swapwith",`The plans of the two days trade places. Campsites stay where they are.`),"swap",d)}
+function swapDays(a,b){const A=planFor(a).filter(x=>!x.done),B=planFor(b).filter(x=>!x.done);
+  A.forEach((x,i)=>patch("spots",x.id,{day:b,order:i}));B.forEach((x,i)=>patch("spots",x.id,{day:a,order:i}));closeSheet();
+  toast(`Swapped ${wd(a)} ${fmt(a)} and ${wd(b)} ${fmt(b)}`);if(state.day)renderDay();render()}
 const rainOK=x=>x.rain===true||(x.rain!==false&&["paid","quirky","food"].includes(x.kind));
 const isWet=w=>!!w&&((+w.p||0)>=5||(w.c>=61&&w.c<=67)||(w.c>=80));
 /* ideas for a day: unplanned places, nearest to that day's stop first (rain-proof first on a wet day); a search looks through all of them */
@@ -2713,6 +2730,10 @@ document.addEventListener("click",e=>{
   else if("aurorarefresh" in ds){pullAurora(true);toast("Refreshing…")}
   else if("todaymore" in ds){state.todayOpen=!state.todayOpen;renderToday()}
   else if(ds.day)openDay(ds.day);
+  else if(ds.moveact)openMoveAct(ds.moveact);
+  else if(ds.moveto){const id=$("#form").dataset.id;if(id)moveAct(id,ds.moveto)}
+  else if(ds.swapday)openSwap(ds.swapday);
+  else if(ds.swapwith){const a=$("#form").dataset.id;if(a)swapDays(a,ds.swapwith)}
   else if(ds.unplan){const x=S.docs.spots[ds.unplan],had=keaUnpay(ds.unplan,true);
     if(x?.kind==="plan"||x?.kind==="chore"){del("spots",ds.unplan);toast(`Removed ${x.name||""}${had?" and from Kea":""}`);return}
     patch("spots",ds.unplan,{day:null,order:null,done:false});toast(`Removed ${x?.name||""} from this day${had?" and from Kea":""}`)}

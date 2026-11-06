@@ -555,6 +555,8 @@ textarea{min-height:72px;resize:vertical}
 .won .wd.now{background:var(--fern);color:#fff}
 
 /* aurora card */
+.ewc .tstrip{display:flex;gap:2px;overflow-x:auto;margin:6px 0 4px;scrollbar-width:none}.ewc .tstrip span{flex:0 0 40px;display:flex;flex-direction:column;align-items:center;font-size:.76rem;border-radius:8px;padding:3px 0}.ewc .tstrip span.up{background:color-mix(in srgb,#2fc48a 10%,transparent)}.ewc .tstrip small{color:var(--muted);font-size:.64rem;white-space:nowrap}.ewc .tstrip i{font-style:normal;color:#3b82c4;font-size:.66rem;min-height:.8rem}
+.ewc .ewtrip{display:block;margin:4px 0}.htab tr.dn td{opacity:.85}
 .brief,.ewc{display:block;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:22px;padding:12px 14px;margin:0 0 12px;cursor:pointer}
 .brief .bk,.ewc .bk{display:block;font-weight:800;margin-bottom:6px}
 .brief .bw{display:flex;gap:10px;align-items:center;margin-bottom:6px}.brief .bi{font-size:2rem;line-height:1}.brief .bw small{color:var(--muted)}
@@ -1500,12 +1502,16 @@ function openBrief(){const d=brief?.d;if(!d){pullBrief(true);return toast("Getti
 function earnslawCard(){if(!ewActive())return "";const d=ew?.d;if(!d?.days)return "";const lab=x=>x.label;
   const strip=d.days.filter(x=>x.d>=today()).slice(0,10);
   return `<button type="button" class="ewc" data-earnslaw aria-label="Earnslaw Burn forecast"><span class="bk">🏔️ Earnslaw Burn forecast</span>
-    ${d.best?`<span class="ewb">Best window <b>${esc(wd(d.best.from))} ${+d.best.from.slice(8)} → ${esc(wd(d.best.to))} ${+d.best.to.slice(8)}</b>${d.moved?` <small>(was ${esc(wd(d.moved))} ${+d.moved.slice(8)})</small>`:""}</span>`:""}
+    ${d.best&&!d.trip?`<span class="ewb">Best window <b>${esc(wd(d.best.from))} ${+d.best.from.slice(8)} → ${esc(wd(d.best.to))} ${+d.best.to.slice(8)}</b>${d.moved?` <small>(was ${esc(wd(d.moved))} ${+d.moved.slice(8)})</small>`:""}</span>`:""}
     <span class="ews">${strip.map(x=>`<span class="${x.d===d.best?.from||x.d===d.best?.to?"best":""}${x.d===d.planned?" plan":""}"><small>${esc(x.label.slice(0,2))}${+x.d.slice(8)}</small>${x.icon}<i>${x.mm==="dry"?"dry":esc(x.mm.replace(" mm",""))}</i></span>`).join("")}</span>
-    ${d.planned?`<span class="bl">${esc(d.summary?.[0]||"")}</span>`:""}</button>`}
+    ${d.trip?`<span class="ewtrip">${(d.summary||[]).map(l=>`<span class="bl">${esc(l)}</span>`).join("")}</span>${tripStrip(d.trip)}`:d.planned?`<span class="bl">${esc(d.summary?.[0]||"")}</span>`:""}</button>`}
+const tblk=b=>{const r=b.rhi??0,c=b.cloud??100;return r>=2?"🌧️":r>=0.5?"🌦️":c<=30?"☀️":c<=70?"⛅":"☁️"};
+function tripStrip(t){return `<span class="tstrip">${t.blocks.map(b=>{const h=+b.t.slice(11,13),day=b.t.slice(0,10);return `<span class="${day===t.up?"up":"dn"}"><small>${h===6||h===0&&day===t.down?esc(wd(day).slice(0,2))+" ":""}${h}h</small>${tblk(b)}<b>${b.temp??"–"}°</b><i>${(b.rhi??0)>=0.2?b.rhi:""}</i></span>`}).join("")}</span>`}
 function openEarnslaw(){const d=ew?.d;if(!d){pullEarnslaw(true);return toast("Getting the forecast…")}
   const f=v=>v==null?"–":v<0.5?"0":v<10?(Math.round(v*10)/10).toString():Math.round(v);
-  sheet(head("🏔️ Earnslaw Burn")+`<div class="briefsheet">${(d.summary||[]).map(l=>`<p>${esc(l)}</p>`).join("")}
+  const tripTab=d.trip?`<p style="margin-top:10px"><b>Your trip, every 3 hours</b> <span class="muted" style="font-size:.8rem">· at about 1,000 m, where you'd camp</span></p>
+    <table class="htab"><tr><th></th><th></th><th>Rain</th><th>Cloud</th><th>Gusts</th><th>°C</th><th>Freezing lvl</th></tr>${d.trip.blocks.map(b=>`<tr class="${b.t.slice(0,10)===d.trip.up?"":"dn"}"><td>${esc(wd(b.t.slice(0,10)).slice(0,3))} ${b.t.slice(11,16)}</td><td>${tblk(b)}</td><td>${(b.rhi??0)<0.1?"–":b.rlo===b.rhi?b.rhi+" mm":`${b.rlo}–${b.rhi} mm`}</td><td>${b.cloud??"–"}%</td><td>${b.gust??"–"}</td><td>${b.temp??"–"}</td><td>${b.frz!=null?b.frz+" m":"–"}</td></tr>`).join("")}</table>`:"";
+  sheet(head("🏔️ Earnslaw Burn")+`<div class="briefsheet">${(d.summary||[]).map(l=>`<p>${esc(l)}</p>`).join("")}${tripTab}
     <table class="htab ewt"><tr><th></th><th></th><th>ECMWF</th><th>GFS</th><th>UK Met</th><th>Cloud</th><th>Gusts</th><th>Low</th></tr>
     ${d.days.filter(x=>x.d>=today()).map(x=>`<tr class="${x.d===d.best?.from||x.d===d.best?.to?"best":""}${x.d===d.planned?" plan":""}"><td>${esc(x.label)}${x.d===d.planned?" 📍":""}</td><td>${x.icon}</td><td>${f(x.by?.ecmwf)}</td><td>${f(x.by?.gfs)}</td><td>${f(x.by?.ukmo)}</td><td>${x.c!=null?Math.round(x.c)+"%":"–"}</td><td>${x.g!=null?Math.round(x.g):"–"}</td><td>${x.tmin!=null?Math.round(x.tmin)+"°":"–"}${x.riverHigh?" 🌊":""}</td></tr>`).join("")}</table>
     <p class="muted" style="font-size:.8rem">Rain in mm for the mountains above the valley (around 2,000 m, so the lows are colder than at camp). Green rows = best two days to walk up and down, 📍 = your plan, 🌊 = heavy rain the two days before, so river crossings may be high. The UK model only goes about a week ahead. Updated ${ago(ew.at)}; the daily notification comes at 7:30 until the track is ticked off.</p>

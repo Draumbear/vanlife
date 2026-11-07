@@ -1,6 +1,6 @@
 /* Van Budget NZ — offline shell.
    Bump CACHE when you change index.html so phones pick up the new version. */
-const CACHE = 'kea-v43';
+const CACHE = 'kea-v44';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './trip/icon-192.png', './kea-icon.svg'];
 
 self.addEventListener('install', e => {
@@ -45,6 +45,8 @@ self.addEventListener('notificationclick', e => {
   if (!url.startsWith(self.registration.scope)) return e.waitUntil(self.clients.openWindow(url)); // e.g. the Rob Roy ford post
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
     const toLoop = url.includes('/trip/'), w = ws.find(c => c.url.startsWith(self.registration.scope) && c.url.includes('/trip/') === toLoop);
-    return w ? w.navigate(url).then(c => c && c.focus()) : self.clients.openWindow(url);
+    if (!w) return self.clients.openWindow(url);
+    if (toLoop) { w.postMessage({ openUrl: url }); return w.focus(); }     // Loop's window belongs to Loop's own worker
+    return w.navigate(url).then(c => (c || w).focus()).catch(() => w.focus());
   }));
 });

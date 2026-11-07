@@ -2655,6 +2655,15 @@ async function geoCheck(){const out=$("#geo-out");if(geoRun)return;geoRun={stop:
   const ap=$("#geo-apply");if(ap)ap.onclick=()=>{let n=0;out.querySelectorAll("[data-geofix]").forEach(cb=>{if(!cb.checked)return;const f=F[+cb.dataset.geofix],o=S.docs[f.c][f.x.id];if(!o)return;
       S.docs[f.c][f.x.id]={...o,lat:+f.ll.lat.toFixed(5),lng:+f.ll.lng.toFixed(5),by:keaMe()};S.pending[f.c+"/"+f.x.id]=1;n++});
     persist();refresh();scheduleSync();toast(`Updated ${n} positions`);out.innerHTML=`<span class="muted">Updated ${n} positions.</span>`}}
+/* ---- Loop's own push subscription: notifications from Loop (briefing, aurora, Earnslaw…) then show as Loop and open in the installed Loop app ---- */
+const VAPID="BO5DMoGlFQFQfqsBbf9OPiav6DKux2gKERWQJcvlTZKtpjLTUdXvVou3SiooIj_feAYbcqF79eCdMstztcUnWFo";
+const b64u=x=>{const p="=".repeat((4-x.length%4)%4),b=atob((x+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from([...b].map(c=>c.charCodeAt(0)))};
+async function loopPush(){try{if(!("serviceWorker" in navigator)||!("PushManager" in window)||Notification.permission!=="granted")return;const c=keaCred()||cred;if(!c?.url)return;
+  const reg=await navigator.serviceWorker.getRegistration("./");if(!reg?.pushManager)return;
+  const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
+  const k="sil-loop-push",was=localStorage.getItem(k);if(was===sub.endpoint)return;
+  await api("push_subs_all?on_conflict=endpoint",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify([{endpoint:sub.endpoint,sub:sub.toJSON(),who:keaMe(),kinds:["loop"],updated_at:new Date().toISOString()}])},c);
+  try{localStorage.setItem(k,sub.endpoint)}catch{}}catch(e){console.warn("loop push",e)}}
 /* a quick health check of everything that depends on the phone itself */
 async function phoneCheck(){
   sheet(head("Phone check")+`<div id="pc" class="pclist"><p class="muted">Checking…</p></div>
@@ -2668,6 +2677,8 @@ async function phoneCheck(){
   const np=("Notification" in window)?Notification.permission:"unsupported";
   add(np==="granted"?true:np==="denied"?false:null,"Notifications",np==="granted"?"Booking reminders can pop up":np==="denied"?"Blocked — allow them in the phone's settings":"Tap 🔔 Remind me on the To book card to allow them");
   let kea=null;try{const r=await navigator.serviceWorker.getRegistration("../");kea=r&&await r.pushManager?.getSubscription()}catch{}
+  let lp=null;try{const r=await navigator.serviceWorker.getRegistration("./");lp=r&&await r.pushManager?.getSubscription()}catch{}
+  add(lp?true:null,"Loop notifications open in Loop",lp?"Briefing, aurora and hike forecasts come from the Loop app":"Allow notifications (🔔 Remind me) and they'll open in Loop");
   add(kea?true:null,"Kea's 8 pm reminder",kea?"Switched on for this phone":"Not on for this phone — turn it on in Kea");
   let tiles=0;try{tiles=(await (await caches.open("tiles-v1")).keys()).length}catch{}
   const off=(()=>{try{return JSON.parse(localStorage.getItem("sil-offline")||"null")}catch{return null}})();
@@ -2792,7 +2803,7 @@ document.addEventListener("click",e=>{
     else openRecap(d)}
   else if(ds.triprecap)openTripRecap(ds.triprecap);
   else if("book" in ds)makeBook();
-  else if("asknotif" in ds)askNotif();
+  else if("asknotif" in ds)askNotif().then(()=>loopPush());
   else if(ds.rate){lmap?.closePopup();openRate(ds.rate)}
   else if(ds.mvplan){const [id,to]=ds.mvplan.split(":"),x=S.docs.spots[id];if(!x)return;patch("spots",id,{day:to,order:planFor(to).length});keaSyncSpot(id);toast(`Moved ${x.name} to ${wd(to)} ${fmt(to)}`)}
   else if(ds.favsheet){const [c,id]=ds.favsheet.split(":"),it=S.docs[c][id];if(!it)return;const on=!it.fav;patch(c,id,{fav:on});b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);b.textContent="♥ "+(on?"Favourite":"Add to favourites")}
@@ -2856,11 +2867,13 @@ setTimeout(syncReminders,3000);document.addEventListener("visibilitychange",()=>
   if(syncOn())sync(false);
   setTimeout(settleAllFlex,6000);
   pullKea();pullWx();pullRoads();pullTides();pullRoadAlerts();pullAurora();pullBrief();pullEarnslaw();pullHappenings();syncPhotos();
+  navigator.serviceWorker?.addEventListener("message",e=>{const u=e.data&&e.data.openUrl;if(!u)return;const q=new URL(u,location.href).searchParams;
+    if(q.get("brief"))openBrief();else if(q.get("earnslaw"))openEarnslaw();else if(q.get("aurora"))openAurora()});
   if(/[?&]brief=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openBrief(),2600)}
   if(/[?&]earnslaw=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openEarnslaw(),2600)}
   if(/[?&]aurora=1/.test(location.search)){history.replaceState(null,"",location.pathname);setTimeout(()=>openAurora(),2600)}
 })();
-if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").then(()=>setTimeout(loopPush,4000)).catch(()=>{}));
 </script>
 </body>
 </html>

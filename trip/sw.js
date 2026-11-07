@@ -1,6 +1,6 @@
 /* Aotearoa Loop — offline shell.
    Bump CACHE when you change index.html so the phone picks up the new version. */
-const CACHE = 'loop-v113';
+const CACHE = 'loop-v114';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './plan.json', './happenings.json', '../icon-192.png', './contour.svg'];
 const FONTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com'];
 const TILES = 'tile.openstreetmap.org', TILE_CACHE = 'tiles-v1';
@@ -55,7 +55,19 @@ self.addEventListener('periodicsync', e => {
     await c.put('sent.json', new Response(JSON.stringify(sent), { headers: { 'Content-Type': 'application/json' } }));
   })());
 });
+// Pushes from Supabase (briefing, aurora, Earnslaw…). Their urls/icons are written relative to the site root (e.g. "trip/?aurora=1").
+const ROOT = new URL('../', self.registration.scope).href;
+self.addEventListener('push', e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (err) {}
+  const abs = u => new URL(u, ROOT).href;
+  e.waitUntil(self.registration.showNotification(d.title || 'Loop', { body: d.body || '', tag: d.tag || 'loop', icon: abs(d.icon || 'trip/icon-192.png'), badge: abs('trip/badge-van.png'), data: { url: abs(d.url || 'trip/') } }));
+});
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(self.clients.matchAll({ type: 'window' }).then(ws => ws.length ? ws[0].focus() : self.clients.openWindow('./')));
+  const url = (e.notification.data && e.notification.data.url) || self.registration.scope;
+  if (!url.startsWith(self.registration.scope)) return e.waitUntil(self.clients.openWindow(url)); // e.g. the Rob Roy ford post
+  e.waitUntil(self.clients.matchAll({ type: 'window' }).then(ws => {
+    const w = ws.find(c => c.url.startsWith(self.registration.scope));
+    return w ? w.navigate(url).then(c => (c || w).focus()).catch(() => w.focus()) : self.clients.openWindow(url);
+  }));
 });

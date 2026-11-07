@@ -2253,7 +2253,7 @@ async function nudgeOn(){
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUB) });
-    const r = await fetch(sbURL('push_subs?on_conflict=endpoint'), { method: 'POST', headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+    const r = await fetch(sbURL('push_subs_all?on_conflict=endpoint'), { method: 'POST', headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify([{ endpoint: sub.endpoint, sub: sub.toJSON(), who: S.settings.me || 'p1', updated_at: new Date().toISOString() }]) });
     if (!r.ok) throw new Error(await r.text());
     toast('🔔 Reminder on — every evening at 8'); try { localStorage.setItem('kea.nudge', 'on'); } catch(e){}
@@ -2261,7 +2261,7 @@ async function nudgeOn(){
   renderNudge();
 }
 async function nudgeOff(){
-  try { const sub = await nudgeSub(); if (sub){ await fetch(sbURL('push_subs?endpoint=eq.' + encodeURIComponent(sub.endpoint)), { method: 'DELETE', headers: sbHeaders() }).catch(()=>{}); await sub.unsubscribe(); } } catch(e){}
+  try { const sub = await nudgeSub(); if (sub){ await fetch(sbURL('push_subs_all?endpoint=eq.' + encodeURIComponent(sub.endpoint)), { method: 'DELETE', headers: sbHeaders() }).catch(()=>{}); await sub.unsubscribe(); } } catch(e){}
   try { localStorage.setItem('kea.nudge', 'off'); } catch(e){} toast('Reminder off'); renderNudge();
 }
 async function renderNudge(){

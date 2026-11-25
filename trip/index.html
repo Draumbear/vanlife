@@ -643,6 +643,46 @@ body.swapping #days [data-day]:not(.past){outline:1.5px dashed color-mix(in srgb
 .nights{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--paper);border-radius:14px;padding:8px}
 .nights b{display:block;font-size:1.05rem}.nights .muted{font-size:.78rem}.nights .ib{font-size:1.3rem;font-weight:700}
 .end{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+/* Yahtzee */
+#yzview .hint{color:var(--muted);font-size:.86rem;margin:4px 0}
+.yz-h{font:800 1rem var(--display);margin:0}.yz-h small{display:block;font:500 .76rem var(--body);color:var(--muted)}
+.yz-chips{flex-wrap:wrap;padding:2px 0}
+.yz-guest{display:flex;gap:8px}.yz-guest input{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper);color:var(--ink);font:500 1rem var(--body)}
+.yz-live{text-align:left;cursor:pointer;color:var(--ink);font:inherit;border-color:var(--fern);background:var(--fern-soft)}
+.yz-lh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.yz-lh span{color:var(--muted);font-size:.84rem}
+.yz-lr{display:flex;gap:14px;flex-wrap:wrap}.yz-lr b{font:800 1.15rem var(--display)}.yz-lt{color:var(--fern);font-weight:700;font-size:.88rem}
+.yz-h2h{display:flex;align-items:center;gap:8px;font-weight:700}.yz-h2h b{font:800 1.3rem var(--display)}
+.yz-bar{flex:1;height:10px;border-radius:99px;background:var(--tussock);overflow:hidden}.yz-bar i{display:block;height:100%;background:var(--fern)}
+.yz-streak{margin:0;font-weight:700;font-size:.9rem}
+.yz-lb{width:100%;border-collapse:collapse;font-size:.88rem}.yz-lb th{color:var(--muted);font-weight:600;font-size:.74rem;text-align:right;padding:4px}.yz-lb td{text-align:right;padding:6px 4px;border-top:1px solid var(--line)}.yz-lb td:first-child,.yz-lb th:first-child{text-align:left;font-weight:700}
+.yz-hrow{display:flex;justify-content:space-between;gap:10px;width:100%;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;padding:8px 0;cursor:pointer}
+.yz-hd{font-weight:700;min-width:0}.yz-hd small{display:block;color:var(--muted);font-weight:500;font-size:.78rem}
+.yz-hs{display:grid;justify-items:end;font-size:.9rem;color:var(--muted)}.yz-hs .w{color:var(--ink);font-weight:800}
+.yz-turn{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:1.05rem}.yz-turn>span:last-child{color:var(--muted);font-size:.82rem}
+.yz-win{text-align:center;font:600 1.15rem var(--display);border-color:var(--tussock);background:var(--tussock-soft)}.yz-win small{font:500 .86rem var(--body);color:var(--muted)}
+.yz-roll{justify-items:center}
+.yz-dice{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.die{width:52px;height:52px;border-radius:12px;background:#fdfdf8;border:2px solid #cfd4c8;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:7px;cursor:pointer;box-shadow:0 2px 0 #b9bfb2;transition:transform .15s}
+.die i{width:9px;height:9px;border-radius:50%;place-self:center}.die i.on{background:#1d2621}
+.die.blank{opacity:.4}.die.h{border-color:var(--tussock);box-shadow:0 0 0 3px var(--tussock);transform:translateY(-5px)}
+.die.roll{animation:yzroll .4s ease-out}@keyframes yzroll{0%{transform:rotate(-200deg) scale(.6)}70%{transform:rotate(12deg) scale(1.05)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.die.roll{animation:none}}
+.yz-rb{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.yz-tip{margin:0;color:var(--muted);font-size:.84rem;text-align:center}
+.yz-sheet{padding:4px 6px}
+.yz-t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.yz-t th,.yz-t td{border-bottom:1px solid var(--line);text-align:center;padding:0}
+.yz-t th:first-child,.yz-t td:first-child{text-align:left;padding:7px 6px;font-weight:700;font-size:.92rem;width:42%}
+.yz-t td:first-child small{display:block;color:var(--muted);font-weight:500;font-size:.72rem}
+.yz-t thead th{padding:8px 4px;font:800 .92rem var(--display)}
+.yz-t .cur{background:color-mix(in srgb,var(--fern) 9%,transparent)}.yz-t thead th.cur{color:var(--fern)}
+.yz-c{width:100%;min-height:44px;border:0;background:none;color:var(--ink);font:800 1.1rem var(--body);cursor:pointer}
+.yz-c.e{color:var(--line);font-weight:900}.yz-c.g{color:var(--fern);font-style:italic;font-weight:600;opacity:.75}.yz-c.z{color:var(--muted);font-weight:600}
+.yz-t tr.sum td{background:var(--paper);padding:6px 4px}.yz-t tr.sum td small{display:block;font-size:.72rem;color:var(--muted)}
+.yz-t .ok{color:var(--fern)}.yz-t .bad{color:var(--rust)!important}
+.yz-t tr.grand td{font:800 1.3rem var(--display);padding:10px 4px;border-bottom:0}
+.yz-yb{display:flex;align-items:center;justify-content:center;gap:6px}.yz-yb button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;cursor:pointer}.yz-yb button:disabled{opacity:.35}
+.yz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}.yz-big{width:100%;margin-bottom:4px}
+
 .end>div{display:flex;gap:8px}
 label.check{display:flex;gap:10px;align-items:center;font-size:.95rem}label.check input{width:22px;height:22px}
 pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px;font:500 .7rem/1.4 var(--mono);overflow-x:auto;white-space:pre;margin:0;max-height:180px;max-width:100%}
@@ -686,6 +726,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r=".9"/><circle cx="15" cy="9" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="9" cy="15" r=".9"/><circle cx="15" cy="15" r=".9"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
   <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
@@ -697,6 +738,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
   <div class="top">
     <div class="ttl"><h1>Aotearoa Loop</h1><div class="dayline" id="dayline"></div></div>
     <button class="dot" id="sync" type="button" aria-label="Sync status"><i></i></button>
+    <button class="ib" id="yzbtn" type="button" aria-label="Yahtzee"><svg class="svg"><use href="#i-dice"/></svg></button>
     <button class="ib" id="mapbtn" type="button" aria-label="Map"><svg class="svg"><use href="#i-map"/></svg></button>
     <button class="ib" id="menu" type="button" aria-label="Settings"><svg class="svg"><use href="#i-more"/></svg></button>
     <a class="ib kea" id="keabtn" href="../" aria-label="Open Kea, the budget app"><img src="../icon-192.png" alt="" width="26" height="26"></a>
@@ -718,6 +760,7 @@ pre.sql{background:var(--paper);border:1px solid var(--line);border-radius:10px;
 
 <button class="fab" id="fab" type="button" aria-label="Add">+</button>
 <div class="view" id="dayview" role="dialog" aria-modal="true" aria-label="Day" hidden></div>
+<div class="view" id="yzview" role="dialog" aria-modal="true" aria-label="Yahtzee" hidden></div>
 <div class="view" id="mapview" role="dialog" aria-modal="true" aria-label="Map" hidden></div>
 <div class="scrim" id="scrim" hidden></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden><form class="sheet-in" id="form" novalidate></form></div>
@@ -731,9 +774,9 @@ const KINDS_PL={place:"Sights",hike:"Hikes",multi:"Overnight hikes",bike:"MTB & 
 const CAMPTYPES={doc:"DOC · pass",docpaid:"DOC · paid",free:"Free (self-contained)",paid:"Paid",booked:"Booked",unknown:"To sort"};
 const SHORT={doc:"DOC",docpaid:"DOC $",free:"Free",paid:"Paid",booked:"Booked",unknown:"?"};
 const KM_COST=0.38, ROAD=1.3;
-const COLLS=["stops","spots","camps","nights","todos","journal"];
+const COLLS=["stops","spots","camps","nights","todos","journal","yz"];
 const COLL={stop:"stops",spot:"spots",camp:"camps"};
-const state={tab:"days",stops:[],spots:[],camps:[],nights:[],todos:[],journal:[],sellAll:false,sellOpen:(()=>{try{return localStorage.getItem("sil-sellopen")==="1"}catch{return false}})(),ideasOpen:false,kind:"all",region:null,q:"",showPast:false,dview:"ahead",day:null,ideaQ:"",ideaAll:false,src:"both"};
+const state={tab:"days",stops:[],spots:[],camps:[],nights:[],todos:[],journal:[],yz:[],sellAll:false,sellOpen:(()=>{try{return localStorage.getItem("sil-sellopen")==="1"}catch{return false}})(),ideasOpen:false,kind:"all",region:null,q:"",showPast:false,dview:"ahead",day:null,ideaQ:"",ideaAll:false,src:"both"};
 try{const v=localStorage.getItem("sil-sug");state.src=v==="0"?"ours":v==="claude"?"claude":"both"}catch{}
 const visSug=x=>state.src==="both"||(state.src==="ours"?(!x.suggested||!!x.day):!!x.suggested);
 const $=s=>document.querySelector(s);
@@ -885,7 +928,7 @@ async function sync(manual){
       const probe=await api("trip_docs?select=id&limit=1");
       if(probe.length){
         try{localStorage.setItem(PREV,JSON.stringify(S.docs))}catch{}
-        const all=await pullAll("");const docs={stops:{},spots:{},camps:{},nights:{},todos:{},journal:{}};
+        const all=await pullAll("");const docs=Object.fromEntries(COLLS.map(c=>[c,{}]));
         all.forEach(r=>{if(!r.deleted&&docs[r.coll])docs[r.coll][r.id]=r.data});
         S.docs=docs;S.pending={};S.lastPull=maxTs(all);S.synced=true;persist();refresh();
         toast("Shared plan loaded");return;
@@ -905,8 +948,8 @@ async function sync(manual){
     const rows=await pullAll(S.lastPull);let changed=false;
     const me=keaMe(),theirs=[];
     rows.forEach(r=>{const k=r.coll+"/"+r.id;if(S.pending[k]||!S.docs[r.coll])return;
-      if(r.deleted){if(r.id in S.docs[r.coll]){const o=S.docs[r.coll][r.id],by=r.data?.by;delete S.docs[r.coll][r.id];changed=true;if(by&&by!==me)theirs.push({by,c:r.coll,d:o,del:true})}}
-      else if(JSON.stringify(S.docs[r.coll][r.id])!==JSON.stringify(r.data)){const was=S.docs[r.coll][r.id];S.docs[r.coll][r.id]=r.data;changed=true;if(r.data.by&&r.data.by!==me)theirs.push({by:r.data.by,c:r.coll,d:r.data,was})}});
+      if(r.deleted){if(r.id in S.docs[r.coll]){const o=S.docs[r.coll][r.id],by=r.data?.by;delete S.docs[r.coll][r.id];changed=true;if(by&&by!==me&&r.coll!=="yz")theirs.push({by,c:r.coll,d:o,del:true})}}
+      else if(JSON.stringify(S.docs[r.coll][r.id])!==JSON.stringify(r.data)){const was=S.docs[r.coll][r.id];S.docs[r.coll][r.id]=r.data;changed=true;if(r.data.by&&r.data.by!==me&&r.coll!=="yz")theirs.push({by:r.data.by,c:r.coll,d:r.data,was})}});
     const m=maxTs(rows);if(m)S.lastPull=m;persist();if(changed)refresh();
     if(theirs.length&&S.lastPull&&!manual)tellChanges(theirs);
     syncPhotos();
@@ -2235,7 +2278,7 @@ function renderIdeas(){
   $("#ideas").innerHTML=(shown.map(x=>`<div class="idea"><button class="main" type="button" data-open="spot:${esc(x.id)}" style="background:none;border:0;text-align:left;padding:4px 0;cursor:pointer;min-width:0"><span class="nm ${x.suggested?"sg":""}" style="font-weight:700">${x.suggested?"✦ ":""}${x.fav?"♥ ":""}${esc(x.name)}</span> <span class="muted" style="font-size:.78rem">${esc(kindLabel(x))}${x._km!=null?` · ${x._km<5?"right here":x._km+" km away"}`:""}${wet&&rainOK(x)?` <span class="rainok">☔ good in rain</span>`:""}</span></button><button class="plus" type="button" data-plan="${esc(x.id)}" aria-label="Add ${esc(x.name)} to this day">+</button></div>`).join("")||`<div class="muted" style="font-size:.9rem">No open ideas${q?"":" here"}.</div>`)
     +(ideas.length>shown.length?`<button class="pill" type="button" data-ideaall style="margin-top:8px">Show all ${ideas.length}</button>`:"")}
 
-function render(){if(lmap)drawMarkers();renderHeader();renderToday();renderExtras();renderDays();renderPlaces();renderDay();if(state.tab==="wall")renderWall()}
+function render(){if(lmap)drawMarkers();renderHeader();renderToday();renderExtras();renderDays();renderPlaces();renderDay();renderYz();if(state.tab==="wall")renderWall()}
 
 /* ================= sheets ================= */
 function sheet(html,type,id){const f=$("#form");f.innerHTML=html;setTimeout(()=>wireLoc(f),0);f.dataset.type=type;f.dataset.id=id||"";$("#scrim").hidden=false;$("#sheet").hidden=false;$("#sheet").scrollTop=0;f.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",closeSheet))}
@@ -2746,6 +2789,139 @@ function openSettings(){
     try{const d=JSON.parse(await file.text());if(!d||typeof d.stops!=="object")throw 0;replaceAll(d);closeSheet();toast("Restored")}catch{toast("That's not a plan file")}};
   armed($("#s-undo"),"Tap again to undo",()=>{try{replaceAll(JSON.parse(localStorage.getItem(PREV)));localStorage.removeItem(PREV);closeSheet();toast("Undone")}catch{toast("Nothing to undo")}})}
 
+/* ================= Yahtzee: score sheet + dice + who's winning the trip ================= */
+const YZC=[["ones","Ones","u",1],["twos","Twos","u",2],["threes","Threes","u",3],["fours","Fours","u",4],["fives","Fives","u",5],["sixes","Sixes","u",6],
+  ["tk","3 of a kind","l"],["fk","4 of a kind","l"],["fh","Full house","l",25],["ss","Sm. straight","l",30],["ls","Lg. straight","l",40],["yz","Yahtzee","l",50],["ch","Chance","l"]];
+const YZHINT={tk:"Total of all dice",fk:"Total of all dice",fh:"3 + 2 of a kind",ss:"4 in a row",ls:"5 in a row",yz:"5 of a kind",ch:"Total of all dice"};
+const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+const YZ={open:false,g:null,dice:[0,0,0,0,0],held:[0,0,0,0,0],rolls:0,anim:false,sel:{p1:1,p2:1},guests:[],delArm:false};
+const yzGames=()=>state.yz.filter(x=>x.t==="game").sort((a,b)=>(b.at||0)-(a.at||0));
+const yzSc=(g,p)=>S.docs.yz[g+"~"+p]?.s||{};
+function yzTot(s){let up=0,lo=0,par=0;
+  for(const [k,,t,f] of YZC){if(s[k]==null)continue;if(t==="u"){up+=s[k];par+=f*3}else lo+=s[k]}
+  const bonus=up>=63?35:0,yb=(s.yb||0)*100;
+  return {up,par,bonus,lo,yb,total:up+bonus+lo+yb,filled:YZC.filter(([k])=>s[k]!=null).length}}
+function yzFromDice(k,d=YZ.dice){if(d.some(x=>!x))return null;const c=[0,0,0,0,0,0,0];d.forEach(x=>c[x]++);
+  const sum=d.reduce((a,b)=>a+b,0),mx=Math.max(...c),has=new Set(d);
+  const run=n=>{for(let s=1;s<=7-n;s++){let ok=true;for(let i=s;i<s+n;i++)if(!has.has(i))ok=false;if(ok)return true}return false};
+  const f=YZC.find(x=>x[0]===k);if(f[2]==="u")return f[3]*c[f[3]];
+  return {tk:mx>=3?sum:0,fk:mx>=4?sum:0,fh:(c.includes(3)&&c.includes(2))||mx===5?25:0,ss:run(4)?30:0,ls:run(5)?40:0,yz:mx===5?50:0,ch:sum}[k]}
+const yzIsYahtzee=(d=YZ.dice)=>d.every(x=>x&&x===d[0]);
+function yzTurn(g){const ps=g.players||[];let best=null,min=99;ps.forEach(p=>{const f=yzTot(yzSc(g.id,p.id)).filled;if(f<min){min=f;best=p}});return min>=13?null:best}
+function yzResult(g){const rows=(g.players||[]).map(p=>({...p,...yzTot(yzSc(g.id,p.id))}));const top=Math.max(...rows.map(r=>r.total));
+  const done=rows.length&&rows.every(r=>r.filled>=13);const winners=done?rows.filter(r=>r.total===top):[];return {rows,top,done,winners}}
+const yzDie=(v,i,held,anim)=>`<button type="button" class="die${held?" h":""}${v?"":" blank"}${anim&&!held?" roll":""}" data-yz="hold" data-i="${i}" aria-label="${v?"Die showing "+v:"Not rolled"}${held?", held":""}">${Array.from({length:9},(_,j)=>`<i${v&&PIPS[v].includes(j)?' class="on"':""}></i>`).join("")}</button>`;
+
+function openYz(gid){YZ.open=true;if(gid!==undefined)YZ.g=gid;document.body.style.overflow="hidden";renderYz();$("#yzview").scrollTop=0;sync(false)}
+function closeYz(){YZ.open=false;document.body.style.overflow="";renderYz()}
+function yzStats(){const by={},games=yzGames().filter(g=>yzResult(g).done);
+  games.forEach(g=>{const r=yzResult(g),solo=r.winners.length===1;r.rows.forEach(p=>{const k=(p.name||"?").toLowerCase(),o=by[k]??={name:p.name,games:0,wins:0,sum:0,best:0,yz:0,bonus:0};
+    o.games++;o.sum+=p.total;o.best=Math.max(o.best,p.total);const s=yzSc(g.id,p.id);o.yz+=(s.yz===50?1:0)+(s.yb||0);if(p.up>=63)o.bonus++;if(solo&&r.winners[0].id===p.id)o.wins++})});
+  let streak=null;for(const g of games){const r=yzResult(g);if(r.winners.length!==1)break;const n=r.winners[0].name;if(!streak)streak={name:n,n:1};else if(streak.name===n)streak.n++;else break}
+  return {list:Object.values(by).sort((a,b)=>b.wins-a.wins||b.sum/b.games-a.sum/a.games),games,streak}}
+
+function renderYz(){const el=$("#yzview");if(!el)return;if(!YZ.open){el.hidden=true;el.innerHTML="";return}
+  el.hidden=false;const sc=el.scrollTop,g=YZ.g&&state.yz.find(x=>x.id===YZ.g&&x.t==="game");
+  el.innerHTML=g?yzGameHtml(g):yzHomeHtml();el.scrollTop=sc;YZ.anim=false;
+  if(g){const r=yzResult(g);if(r.done&&!g.done)setTimeout(()=>{const cur=S.docs.yz[g.id];if(cur&&!cur.done)patch("yz",g.id,{done:true,end:Date.now()})},0)}}
+
+function yzHomeHtml(){const all=yzGames(),live=all.filter(g=>!yzResult(g).done),st=yzStats();
+  const known=new Map([["p1",PEOPLE.p1],["p2",PEOPLE.p2]]);
+  all.forEach(g=>(g.players||[]).forEach(p=>{if(!known.has(p.id))known.set(p.id,p.name)}));YZ.guests.forEach(n=>known.set("g:"+n.toLowerCase(),n));
+  const chips=[...known].map(([id,n])=>`<button type="button" class="pill" aria-pressed="${!!YZ.sel[id]}" data-yz="sel" data-p="${esc(id)}" data-n="${esc(n)}">${esc(n)}</button>`).join("");
+  const nSel=[...known].filter(([id])=>YZ.sel[id]).length;
+  const liveHtml=live.map(g=>{const r=yzResult(g),t=yzTurn(g);return `<button type="button" class="card yz-live" data-yz="game" data-g="${g.id}">
+      <div class="yz-lh"><b>Game in progress</b><span>${fmt(g.date)}${g.stop?" · "+esc(g.stop):""}</span></div>
+      <div class="yz-lr">${r.rows.map(p=>`<span>${esc(p.name)} <b>${p.total}</b></span>`).join("")}</div>
+      <div class="yz-lt">${t?`${esc(t.name)}'s turn · `:""}Continue ›</div></button>`}).join("");
+  const lb=st.list.length?`<div class="card"><h3 class="yz-h">Trip leaderboard<small>${st.games.length} game${st.games.length===1?"":"s"} finished</small></h3>
+      ${st.list.length>=2?(()=>{const a=st.list[0],b=st.list[1],tot=a.wins+b.wins||1;return `<div class="yz-h2h"><span>${esc(a.name)} <b>${a.wins}</b></span><div class="yz-bar"><i style="width:${a.wins/tot*100}%"></i></div><span><b>${b.wins}</b> ${esc(b.name)}</span></div>`})():""}
+      ${st.streak&&st.streak.n>1?`<p class="yz-streak">🔥 ${esc(st.streak.name)} has won ${st.streak.n} in a row</p>`:""}
+      <div class="hx"><table class="yz-lb"><thead><tr><th></th><th>Wins</th><th>Avg</th><th>Best</th><th>Bonus</th><th>Yahtzees</th></tr></thead><tbody>
+      ${st.list.map((p,i)=>`<tr><td>${i===0&&p.wins?"👑 ":""}${esc(p.name)}</td><td><b>${p.wins}</b>/${p.games}</td><td>${Math.round(p.sum/p.games)}</td><td>${p.best}</td><td>${p.bonus}</td><td>${p.yz}</td></tr>`).join("")}
+      </tbody></table></div></div>`:"";
+  const hist=all.filter(g=>yzResult(g).done);
+  const histHtml=hist.length?`<div class="card"><h3 class="yz-h">Games on the road</h3>${hist.map(g=>{const r=yzResult(g),w=r.winners.length===1?r.winners[0].id:null;
+      return `<button type="button" class="yz-hrow" data-yz="game" data-g="${g.id}"><span class="yz-hd">${wd(g.date)} ${fmt(g.date)}<small>${esc(g.stop||"")}</small></span>
+        <span class="yz-hs">${r.rows.map(p=>`<span class="${p.id===w?"w":""}">${p.id===w?"👑 ":""}${esc(p.name)} ${p.total}</span>`).join("")}</span></button>`}).join("")}</div>`:"";
+  return `<div class="vhead"><div class="wrap"><button class="ib" type="button" data-yz="close" aria-label="Back">${icon("back")}</button>
+      <h2>Yahtzee<small>${all.length?`${all.length} game${all.length===1?"":"s"} on the road`:"Score sheet & dice for the van"}</small></h2><span style="width:40px"></span></div></div>
+    <div class="wrap vbody">${liveHtml}
+      <div class="card"><h3 class="yz-h">New game</h3><div class="chips yz-chips">${chips}</div>
+        <div class="yz-guest"><input id="yz-guest" type="text" placeholder="Add a player" aria-label="Add a player" maxlength="20"><button type="button" class="btn" data-yz="guest">Add</button></div>
+        <button type="button" class="btn primary" data-yz="new" ${nSel?"":"disabled"}>Start game${nSel?` · ${nSel} player${nSel===1?"":"s"}`:""}</button></div>
+      ${lb}${histHtml}
+      ${!all.length?`<p class="empty">No games yet — start one and the sheet fills in as you play. Both phones see the same sheet.</p>`:""}
+    </div>`}
+
+function yzGameHtml(g){const r=yzResult(g),t=yzTurn(g),ps=g.players||[],rolled=!YZ.dice.some(x=>!x);
+  const cell=(p,k)=>{const s=yzSc(g.id,p.id),v=s[k];if(v!=null)return `<button type="button" class="yz-c${v===0?" z":""}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}">${v===0?"✕":v}</button>`;
+    const sug=rolled&&t&&t.id===p.id?yzFromDice(k):null;
+    return `<button type="button" class="yz-c ${sug!=null?"g":"e"}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}" aria-label="Score ${esc(p.name)}">${sug!=null?sug:"·"}</button>`};
+  const row=([k,l,tp,f])=>`<tr><td>${l}${tp==="l"?`<small>${f?f+" pts":YZHINT[k]}</small>`:""}</td>${ps.map(p=>`<td class="${t&&t.id===p.id?"cur":""}">${cell(p,k)}</td>`).join("")}</tr>`;
+  const tots=ps.map(p=>yzTot(yzSc(g.id,p.id)));
+  const upRow=`<tr class="sum"><td>Upper<small>63+ = 35 bonus</small></td>${tots.map((x,i)=>{const d=x.up-x.par;return `<td class="${t&&t.id===ps[i].id?"cur":""}"><b>${x.up}</b><small class="${d>=0?"ok":"bad"}">${x.par?(d>=0?"+":"")+d+" pace":"&nbsp;"}</small></td>`}).join("")}</tr>
+    <tr class="sum"><td>Bonus</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.bonus?`<b class="ok">35</b>`:`<small>${63-x.up} to go</small>`}</td>`).join("")}</tr>`;
+  const ybRow=`<tr><td>Yahtzee bonus<small>100 each</small></td>${ps.map(p=>{const n=yzSc(g.id,p.id).yb||0;return `<td class="${t&&t.id===p.id?"cur":""}"><div class="yz-yb"><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="-1" aria-label="Remove Yahtzee bonus" ${n?"":"disabled"}>−</button><b>${n?n*100:0}</b><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="1" aria-label="Add Yahtzee bonus">+</button></div></td>`}).join("")}</tr>`;
+  const lead=Math.max(...tots.map(x=>x.total));
+  const banner=r.done?`<div class="card yz-win">${r.winners.length===1?`👑 <b>${esc(r.winners[0].name)}</b> wins with ${r.top}`:`🤝 Tie at ${r.top}`}<small>${r.rows.map(p=>`${esc(p.name)} ${p.total}`).join(" · ")}</small></div>`
+    :`<div class="yz-turn"><span class="yz-who">${t?`<b>${esc(t.name)}</b>'s turn`:""}</span><span>${tots.reduce((a,x)=>a+x.filled,0)}/${13*ps.length} boxes</span></div>`;
+  const roller=r.done?"":`<div class="card yz-roll"><div class="yz-dice">${YZ.dice.map((v,i)=>yzDie(v,i,YZ.held[i],YZ.anim)).join("")}</div>
+      <div class="yz-rb"><button type="button" class="btn primary" data-yz="roll" ${YZ.rolls>=3?"disabled":""}>${YZ.rolls?`Roll again (${3-YZ.rolls} left)`:"Roll dice"}</button>${YZ.rolls?`<button type="button" class="btn" data-yz="clear">Clear</button>`:""}</div>
+      <p class="yz-tip">${YZ.rolls?`Tap dice to keep them · then tap a box to score${yzIsYahtzee()?" · <b>YAHTZEE! 🎉</b>":""}`:"Playing with real dice? Just tap a box to fill it in."}</p></div>`;
+  return `<div class="vhead"><div class="wrap"><button class="ib" type="button" data-yz="home" aria-label="Back">${icon("back")}</button>
+      <h2>${wd(g.date)} ${fmt(g.date)}<small>${esc(g.stop||"Yahtzee")}</small></h2><span style="width:40px"></span></div></div>
+    <div class="wrap vbody">${banner}${roller}
+      <div class="card yz-sheet"><div class="hx"><table class="yz-t"><thead><tr><th></th>${ps.map((p,i)=>`<th class="${t&&t.id===p.id?"cur":""}">${tots[i].total===lead&&lead>0?"👑 ":""}${esc(p.name)}</th>`).join("")}</tr></thead><tbody>
+        ${YZC.slice(0,6).map(row).join("")}${upRow}${YZC.slice(6).map(row).join("")}${ybRow}
+        <tr class="sum grand"><td>Total</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.total}</td>`).join("")}</tr>
+      </tbody></table></div></div>
+      <div class="end"><button type="button" class="btn danger" data-yz="del">${YZ.delArm?"Tap again to delete":"Delete game"}</button><span></span></div>
+    </div>`}
+
+function yzPick(pid,k){const g=state.yz.find(x=>x.id===YZ.g);if(!g)return;const p=(g.players||[]).find(x=>x.id===pid),f=YZC.find(x=>x[0]===k),cur=yzSc(g.id,pid)[k];
+  const fromD=yzFromDice(k),t=yzTurn(g),useDice=fromD!=null&&t&&t.id===pid;
+  let opts;if(f[2]==="u")opts=[0,1,2,3,4,5].map(n=>[n*f[3],n?`${n}× ${f[3]}`:"✕ 0"]);
+  else if(f[3])opts=[[f[3],`${f[3]}`],[0,"✕ 0"]];
+  else opts=[[0,"✕ 0"],...Array.from({length:26},(_,i)=>[i+5,String(i+5)])];
+  const jok=useDice&&yzIsYahtzee()&&yzSc(g.id,pid).yz===50&&k!=="yz";
+  sheet(`${head(`${esc(p?.name||"")} · ${f[1]}`)}
+    ${useDice?`<button type="button" class="btn primary yz-big" data-yzset="${fromD}" data-dice="1">Score ${fromD} from the dice${jok?" + 100 bonus":""}</button>`:""}
+    <p class="hint">${f[2]==="u"?`How many ${f[1].toLowerCase()}?`:f[3]?YZHINT[k]+` = ${f[3]} points`:YZHINT[k]}</p>
+    <div class="yz-grid">${opts.map(([v,l])=>`<button type="button" class="btn${v===cur?" primary":""}" data-yzset="${v}">${l}</button>`).join("")}</div>
+    ${cur!=null?`<div class="end"><button type="button" class="btn danger" data-yzset="clr">Clear box</button><span></span></div>`:""}`,"yz");
+  $("#form").dataset.p=pid;$("#form").dataset.k=k}
+function yzSet(pid,k,v,dice){const id=YZ.g+"~"+pid,o=S.docs.yz[id]||{t:"sc",g:YZ.g,p:pid,s:{}},s={...o.s};
+  if(dice&&yzIsYahtzee()&&s.yz===50&&k!=="yz")s.yb=(s.yb||0)+1;
+  if(v==null)delete s[k];else s[k]=v;put("yz",id,{...o,s});
+  if(dice||v!=null){YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0}renderYz()}
+
+document.addEventListener("click",e=>{
+  const ys=e.target.closest?.("[data-yzset]");
+  if(ys&&ys.closest("#form")?.dataset.type==="yz"){const f=$("#form"),v=ys.dataset.yzset;closeSheet();yzSet(f.dataset.p,f.dataset.k,v==="clr"?null:+v,!!ys.dataset.dice);return}
+  const b=e.target.closest?.("[data-yz]");if(!b)return;const a=b.dataset.yz,d=b.dataset;
+  if(a==="close")closeYz();
+  else if(a==="home"){YZ.g=null;YZ.delArm=false;renderYz();$("#yzview").scrollTop=0}
+  else if(a==="game"){YZ.g=d.g;YZ.delArm=false;YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0;renderYz();$("#yzview").scrollTop=0}
+  else if(a==="sel"){YZ.sel[d.p]=YZ.sel[d.p]?0:1;renderYz()}
+  else if(a==="guest"){const i=$("#yz-guest"),n=(i?.value||"").trim();if(!n)return i?.focus();const id="g:"+n.toLowerCase();
+    if(Object.values(PEOPLE).some(x=>x.toLowerCase()===n.toLowerCase()))return toast("Already on the list");
+    if(!YZ.guests.some(x=>x.toLowerCase()===n.toLowerCase()))YZ.guests.push(n);YZ.sel[id]=1;renderYz()}
+  else if(a==="new"){const ps=[...$("#yzview").querySelectorAll('[data-yz="sel"][aria-pressed="true"]')].map(x=>({id:x.dataset.p,name:x.dataset.n}));if(!ps.length)return;
+    const s=currentStop(),id=add("yz",{t:"game",date:today(),at:Date.now(),stop:s?.name||"",players:ps,done:false});
+    YZ.g=id;YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0;renderYz();$("#yzview").scrollTop=0}
+  else if(a==="cell")yzPick(d.p,d.k);
+  else if(a==="roll"){if(YZ.rolls>=3)return;YZ.dice=YZ.dice.map((v,i)=>YZ.held[i]&&v?v:1+Math.floor(Math.random()*6));YZ.rolls++;YZ.anim=true;try{navigator.vibrate?.(30)}catch{}renderYz()}
+  else if(a==="hold"){const i=+d.i;if(!YZ.dice[i])return;YZ.held[i]=YZ.held[i]?0:1;renderYz()}
+  else if(a==="clear"){YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0;renderYz()}
+  else if(a==="yb"){const id=YZ.g+"~"+d.p,o=S.docs.yz[id]||{t:"sc",g:YZ.g,p:d.p,s:{}},n=Math.max(0,(o.s.yb||0)+ +d.d);put("yz",id,{...o,s:{...o.s,yb:n}})}
+  else if(a==="del"){if(!YZ.delArm){YZ.delArm=true;renderYz();return}const gid=YZ.g;
+    Object.keys(S.docs.yz).filter(k=>k===gid||k.startsWith(gid+"~")).forEach(k=>del("yz",k));YZ.g=null;YZ.delArm=false;renderYz();toast("Game deleted")}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="yz-guest"){e.preventDefault();$('[data-yz="guest"]')?.click()}});
+/* faster sync while the sheet is open, so both phones can keep score live */
+setInterval(()=>{if(YZ.open&&document.visibilityState==="visible")sync(false)},6000);
+
 /* ================= events ================= */
 document.addEventListener("change",e=>{if(e.target.id==="placerecap"&&e.target.value){const v=e.target.value;e.target.value="";openTripRecap("place:"+v)}});
 document.addEventListener("click",e=>{
@@ -2831,7 +3007,8 @@ document.addEventListener("click",e=>{
 });
 $("#fab").onclick=()=>state.tab==="days"?openStop():state.kind==="camp"?openCamp():openSpot();
 $("#menu").onclick=openSettings;
-$("#mapbtn").onclick=openMap;
+$("#mapbtn").onclick=openMap;$("#yzbtn").onclick=()=>openYz();
+if(new URLSearchParams(location.search).get("yz"))setTimeout(()=>openYz(),300);
 $("#sync").onclick=()=>{if(syncOn()&&!lastErr){sync(true)}else openSettings()};
 $("#scrim").onclick=closeSheet;
 $("#q").oninput=e=>{state.q=e.target.value;renderPlaces()};

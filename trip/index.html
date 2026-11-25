@@ -683,6 +683,32 @@ body.swapping #days [data-day]:not(.past){outline:1.5px dashed color-mix(in srgb
 .yz-t .ok{color:var(--fern)}.yz-t .bad{color:var(--rust)!important}
 .yz-t tr.grand td{font:800 1.3rem var(--display);padding:10px 4px;border-bottom:0}
 .yz-yb{display:flex;align-items:center;justify-content:center;gap:6px}.yz-yb button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;cursor:pointer}.yz-yb button:disabled{opacity:.35}
+/* Yatzy theme: our dice — Tanguy blue, Zita yellow */
+#yzview,#form[data-type="yz"]{--yzb:#1f3f9a;--yzb-d:#152c70;--yzy:#e2ad2a;--yzy-d:#a97a10;--yzy-ink:#3a2a05;--fern:var(--yzb);--fern-soft:#e4eaf9;--on-fern:#fff;--tussock:var(--yzy);--tussock-soft:#fbefcc}
+#yzview{background:#fbf5e3}
+#yzview .card{border-color:#ece0bd}
+#yzview .vhead{background:var(--yzb);border-bottom:4px solid var(--yzy);color:#fff}
+#yzview .vhead h2 small{color:#f6dc8e}
+#yzview .vhead .ib{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);color:#fff}
+:root[data-theme="dark"] #yzview,:root[data-theme="dark"] #form[data-type="yz"]{--yzb:#7d9cf0;--yzb-d:#9db4f5;--yzy:#e8b73e;--yzy-d:#e8b73e;--fern-soft:#1b2444;--on-fern:#0b1330;--tussock-soft:#3a2d0e}
+:root[data-theme="dark"] #yzview{background:#14161f}:root[data-theme="dark"] #yzview .card{border-color:#2a2f40}:root[data-theme="dark"] #yzview .vhead{background:#18295f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #yzview,:root:not([data-theme="light"]) #form[data-type="yz"]{--yzb:#7d9cf0;--yzb-d:#9db4f5;--yzy:#e8b73e;--yzy-d:#e8b73e;--fern-soft:#1b2444;--on-fern:#0b1330;--tussock-soft:#3a2d0e}
+  :root:not([data-theme="light"]) #yzview{background:#14161f}:root:not([data-theme="light"]) #yzview .card{border-color:#2a2f40}:root:not([data-theme="light"]) #yzview .vhead{background:#18295f}}
+#yzview .pb{--pc:var(--yzb);--pcd:var(--yzb-d)}#yzview .py{--pc:var(--yzy);--pcd:var(--yzy-d)}#yzview .pg{--pc:var(--muted);--pcd:var(--muted)}
+#yzview b.pb,#yzview b.py,#yzview .yz-lr span.pb,#yzview .yz-lr span.py,#yzview .yz-lb td.pb,#yzview .yz-lb td.py,#yzview .yz-h2h span.pb,#yzview .yz-h2h span.py,#yzview .yz-hs .w{color:var(--pcd)}
+#yzview .yz-bar{background:var(--pc)}#yzview .yz-bar i{background:var(--pc)}
+#yzview .pill.pb[aria-pressed="true"],#yzview .pill.py[aria-pressed="true"]{background:var(--pc);border-color:var(--pcd);color:#fff}#yzview .pill.py[aria-pressed="true"]{color:var(--yzy-ink)}
+#yzview .yz-t thead th.pb,#yzview .yz-t thead th.py{color:var(--pcd)}
+#yzview .yz-pip{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--pc);margin-right:5px;vertical-align:1px}
+#yzview .yz-t .cur{background:color-mix(in srgb,var(--pc) 14%,transparent)}#yzview .yz-t .py.cur{background:color-mix(in srgb,var(--pc) 22%,transparent)}
+#yzview .yz-t thead th.cur{box-shadow:inset 0 -3px 0 var(--pc)}
+#yzview td.pb .yz-c.g,#yzview td.py .yz-c.g{color:var(--pcd);opacity:.85}
+#yzview .yz-live{border-color:var(--yzb);background:var(--fern-soft)}
+#yzview .yz-win.pb,#yzview .yz-win.py{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 18%,var(--card))}
+#yzview .yz-roll.pb .die,#yzview .yz-roll.py .die{background:var(--pc);border-color:var(--pcd);box-shadow:0 2px 0 var(--pcd)}
+#yzview .yz-roll.pb .die i.on,#yzview .yz-roll.py .die i.on{background:#fff}
+#yzview .yz-roll .die.h{box-shadow:0 0 0 3px var(--ink);transform:translateY(-5px)}
+#yzview .yz-roll.pb .btn.primary,#yzview .yz-roll.py .btn.primary{background:var(--pc);border-color:var(--pcd)}#yzview .yz-roll.py .btn.primary{color:var(--yzy-ink)}
 .yz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}.yz-big{width:100%;margin-bottom:4px}
 
 .end>div{display:flex;gap:8px}
@@ -2806,6 +2832,7 @@ const yzV=g=>YZV[g?.rules]||YZV.yahtzee;
 const yzLS=(k,d)=>{try{return localStorage.getItem(k)??d}catch{return d}},yzSave=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
 const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
 const YZ={rules:yzLS("sil-yzrules","yatzy"),showDice:yzLS("sil-yzdice","1")==="1",open:false,g:null,dice:[0,0,0,0,0],held:[0,0,0,0,0],rolls:0,anim:false,sel:{p1:1,p2:1},guests:[],delArm:false};
+const yzPc=x=>{const id=x?.id,n=String(x?.name??x??"").toLowerCase();return id==="p1"||n===PEOPLE.p1.toLowerCase()?"pb":id==="p2"||n===PEOPLE.p2.toLowerCase()?"py":"pg"};
 const yzGames=()=>state.yz.filter(x=>x.t==="game").sort((a,b)=>(b.at||0)-(a.at||0));
 const yzSc=(g,p)=>S.docs.yz[g+"~"+p]?.s||{};
 function yzTot(s,v){let up=0,lo=0,par=0;
@@ -2842,24 +2869,24 @@ function renderYz(){const el=$("#yzview");if(!el)return;if(!YZ.open){el.hidden=t
 function yzHomeHtml(){const all=yzGames(),live=all.filter(g=>!yzResult(g).done),st=yzStats();
   const known=new Map([["p1",PEOPLE.p1],["p2",PEOPLE.p2]]);
   all.forEach(g=>(g.players||[]).forEach(p=>{if(!known.has(p.id))known.set(p.id,p.name)}));YZ.guests.forEach(n=>known.set("g:"+n.toLowerCase(),n));
-  const chips=[...known].map(([id,n])=>`<button type="button" class="pill" aria-pressed="${!!YZ.sel[id]}" data-yz="sel" data-p="${esc(id)}" data-n="${esc(n)}">${esc(n)}</button>`).join("");
+  const chips=[...known].map(([id,n])=>`<button type="button" class="pill ${yzPc({id,name:n})}" aria-pressed="${!!YZ.sel[id]}" data-yz="sel" data-p="${esc(id)}" data-n="${esc(n)}">${esc(n)}</button>`).join("");
   const nSel=[...known].filter(([id])=>YZ.sel[id]).length;
   const liveHtml=live.map(g=>{const r=yzResult(g),t=yzTurn(g);return `<button type="button" class="card yz-live" data-yz="game" data-g="${g.id}">
       <div class="yz-lh"><b>Game in progress</b><span>${fmt(g.date)}${g.stop?" · "+esc(g.stop):""}</span></div>
-      <div class="yz-lr">${r.rows.map(p=>`<span>${esc(p.name)} <b>${p.total}</b></span>`).join("")}</div>
-      <div class="yz-lt">${t?`${esc(t.name)}'s turn · `:""}Continue ›</div></button>`}).join("");
+      <div class="yz-lr">${r.rows.map(p=>`<span class="${yzPc(p)}">${esc(p.name)} <b>${p.total}</b></span>`).join("")}</div>
+      <div class="yz-lt">${t?`<b class="${yzPc(t)}">${esc(t.name)}</b>'s turn · `:""}Continue ›</div></button>`}).join("");
   const lb=st.list.length?`<div class="card"><h3 class="yz-h">Trip leaderboard<small>${st.games.length} game${st.games.length===1?"":"s"} finished</small></h3>
-      ${st.list.length>=2?(()=>{const a=st.list[0],b=st.list[1],tot=a.wins+b.wins||1;return `<div class="yz-h2h"><span>${esc(a.name)} <b>${a.wins}</b></span><div class="yz-bar"><i style="width:${a.wins/tot*100}%"></i></div><span><b>${b.wins}</b> ${esc(b.name)}</span></div>`})():""}
+      ${st.list.length>=2?(()=>{const a=st.list[0],b=st.list[1],tot=a.wins+b.wins||1;return `<div class="yz-h2h"><span class="${yzPc(a.name)}">${esc(a.name)} <b>${a.wins}</b></span><div class="yz-bar ${yzPc(b.name)}"><i class="${yzPc(a.name)}" style="width:${a.wins/tot*100}%"></i></div><span class="${yzPc(b.name)}"><b>${b.wins}</b> ${esc(b.name)}</span></div>`})():""}
       ${st.streak&&st.streak.n>1?`<p class="yz-streak">🔥 ${esc(st.streak.name)} has won ${st.streak.n} in a row</p>`:""}
-      <div class="hx"><table class="yz-lb"><thead><tr><th></th><th>Wins</th><th>Avg</th><th>Best</th><th>Bonus</th><th>Yahtzees</th></tr></thead><tbody>
-      ${st.list.map((p,i)=>`<tr><td>${i===0&&p.wins?"👑 ":""}${esc(p.name)}</td><td><b>${p.wins}</b>/${p.games}</td><td>${Math.round(p.sum/p.games)}</td><td>${p.best}</td><td>${p.bonus}</td><td>${p.yz}</td></tr>`).join("")}
+      <div class="hx"><table class="yz-lb"><thead><tr><th></th><th>Wins</th><th>Avg</th><th>Best</th><th>Bonus</th><th>Yatzys</th></tr></thead><tbody>
+      ${st.list.map((p,i)=>`<tr><td class="${yzPc(p.name)}">${i===0&&p.wins?"👑 ":""}${esc(p.name)}</td><td><b>${p.wins}</b>/${p.games}</td><td>${Math.round(p.sum/p.games)}</td><td>${p.best}</td><td>${p.bonus}</td><td>${p.yz}</td></tr>`).join("")}
       </tbody></table></div></div>`:"";
   const hist=all.filter(g=>yzResult(g).done);
   const histHtml=hist.length?`<div class="card"><h3 class="yz-h">Games on the road</h3>${hist.map(g=>{const r=yzResult(g),w=r.winners.length===1?r.winners[0].id:null;
       return `<button type="button" class="yz-hrow" data-yz="game" data-g="${g.id}"><span class="yz-hd">${wd(g.date)} ${fmt(g.date)}<small>${esc(g.stop||"")}</small></span>
-        <span class="yz-hs">${r.rows.map(p=>`<span class="${p.id===w?"w":""}">${p.id===w?"👑 ":""}${esc(p.name)} ${p.total}</span>`).join("")}</span></button>`}).join("")}</div>`:"";
+        <span class="yz-hs">${r.rows.map(p=>`<span class="${yzPc(p)}${p.id===w?" w":""}">${p.id===w?"👑 ":""}${esc(p.name)} ${p.total}</span>`).join("")}</span></button>`}).join("")}</div>`:"";
   return `<div class="vhead"><div class="wrap"><button class="ib" type="button" data-yz="close" aria-label="Back">${icon("back")}</button>
-      <h2>Yahtzee<small>${all.length?`${all.length} game${all.length===1?"":"s"} on the road`:"Score sheet & dice for the van"}</small></h2><span style="width:40px"></span></div></div>
+      <h2>Yatzy<small>${all.length?`${all.length} game${all.length===1?"":"s"} on the road`:"Score sheet & dice for the van"}</small></h2><span style="width:40px"></span></div></div>
     <div class="wrap vbody">${liveHtml}
       <div class="card"><h3 class="yz-h">New game</h3><div class="chips yz-chips">${chips}</div>
         <div class="yz-guest"><input id="yz-guest" type="text" placeholder="Add a player" aria-label="Add a player" maxlength="20"><button type="button" class="btn" data-yz="guest">Add</button></div>
@@ -2873,24 +2900,24 @@ function yzGameHtml(g){const r=yzResult(g),t=yzTurn(g),ps=g.players||[],v=yzV(g)
   const cell=(p,k)=>{const s=yzSc(g.id,p.id),val=s[k];if(val!=null)return `<button type="button" class="yz-c${val===0?" z":""}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}">${val===0?"✕":val}</button>`;
     const sug=rolled&&t&&t.id===p.id?yzFromDice(k,v):null;
     return `<button type="button" class="yz-c ${sug!=null?"g":"e"}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}" aria-label="Score ${esc(p.name)}">${sug!=null?sug:"·"}</button>`};
-  const row=([k,l,tp,f])=>`<tr><td>${l}${tp==="l"?`<small>${f?f+" pts":v.hint[k]}</small>`:""}</td>${ps.map(p=>`<td class="${t&&t.id===p.id?"cur":""}">${cell(p,k)}</td>`).join("")}</tr>`;
+  const row=([k,l,tp,f])=>`<tr><td>${l}${tp==="l"?`<small>${f?f+" pts":v.hint[k]}</small>`:""}</td>${ps.map(p=>`<td class="${yzPc(p)}${t&&t.id===p.id?" cur":""}">${cell(p,k)}</td>`).join("")}</tr>`;
   const tots=ps.map(p=>yzTot(yzSc(g.id,p.id),yzV(g)));
-  const upRow=`<tr class="sum"><td>Upper<small>63+ = ${v.bonus} bonus</small></td>${tots.map((x,i)=>{const d=x.up-x.par;return `<td class="${t&&t.id===ps[i].id?"cur":""}"><b>${x.up}</b><small class="${d>=0?"ok":"bad"}">${x.par?(d>=0?"+":"")+d+" pace":"&nbsp;"}</small></td>`}).join("")}</tr>
-    <tr class="sum"><td>Bonus</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.bonus?`<b class="ok">${x.bonus}</b>`:`<small>${63-x.up} to go</small>`}</td>`).join("")}</tr>`;
-  const ybRow=!v.yb?"":`<tr><td>Yahtzee bonus<small>100 each</small></td>${ps.map(p=>{const n=yzSc(g.id,p.id).yb||0;return `<td class="${t&&t.id===p.id?"cur":""}"><div class="yz-yb"><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="-1" aria-label="Remove Yahtzee bonus" ${n?"":"disabled"}>−</button><b>${n?n*100:0}</b><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="1" aria-label="Add Yahtzee bonus">+</button></div></td>`}).join("")}</tr>`;
+  const upRow=`<tr class="sum"><td>Upper<small>63+ = ${v.bonus} bonus</small></td>${tots.map((x,i)=>{const d=x.up-x.par;return `<td class="${yzPc(ps[i])}${t&&t.id===ps[i].id?" cur":""}"><b>${x.up}</b><small class="${d>=0?"ok":"bad"}">${x.par?(d>=0?"+":"")+d+" pace":"&nbsp;"}</small></td>`}).join("")}</tr>
+    <tr class="sum"><td>Bonus</td>${tots.map((x,i)=>`<td class="${yzPc(ps[i])}${t&&t.id===ps[i].id?" cur":""}">${x.bonus?`<b class="ok">${x.bonus}</b>`:`<small>${63-x.up} to go</small>`}</td>`).join("")}</tr>`;
+  const ybRow=!v.yb?"":`<tr><td>Yahtzee bonus<small>100 each</small></td>${ps.map(p=>{const n=yzSc(g.id,p.id).yb||0;return `<td class="${yzPc(p)}${t&&t.id===p.id?" cur":""}"><div class="yz-yb"><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="-1" aria-label="Remove Yahtzee bonus" ${n?"":"disabled"}>−</button><b>${n?n*100:0}</b><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="1" aria-label="Add Yahtzee bonus">+</button></div></td>`}).join("")}</tr>`;
   const lead=Math.max(...tots.map(x=>x.total));
-  const banner=r.done?`<div class="card yz-win">${r.winners.length===1?`👑 <b>${esc(r.winners[0].name)}</b> wins with ${r.top}`:`🤝 Tie at ${r.top}`}<small>${r.rows.map(p=>`${esc(p.name)} ${p.total}`).join(" · ")}</small></div>`
-    :`<div class="yz-turn"><span class="yz-who">${t?`<b>${esc(t.name)}</b>'s turn`:""}</span><span>${tots.reduce((a,x)=>a+x.filled,0)}/${v.cats.length*ps.length} boxes</span></div>
+  const banner=r.done?`<div class="card yz-win ${r.winners.length===1?yzPc(r.winners[0]):""}">${r.winners.length===1?`👑 <b>${esc(r.winners[0].name)}</b> wins with ${r.top}`:`🤝 Tie at ${r.top}`}<small>${r.rows.map(p=>`${esc(p.name)} ${p.total}`).join(" · ")}</small></div>`
+    :`<div class="yz-turn"><span class="yz-who">${t?`<b class="${yzPc(t)}">${esc(t.name)}</b>'s turn`:""}</span><span>${tots.reduce((a,x)=>a+x.filled,0)}/${v.cats.length*ps.length} boxes</span></div>
       <div class="yz-opts"><button type="button" class="pill" data-yz="dicetog">${YZ.showDice?"Hide dice roller":"🎲 Show dice roller"}</button>${tots.every(x=>!x.filled)?Object.entries(YZV).filter(([k])=>YZV[k]!==v).map(([k,o])=>`<button type="button" class="pill" data-yz="setrules" data-r="${k}">Switch to ${o.name} rules</button>`).join(""):""}</div>`;
-  const roller=r.done||!YZ.showDice?"":`<div class="card yz-roll"><div class="yz-dice">${YZ.dice.map((v,i)=>yzDie(v,i,YZ.held[i],YZ.anim)).join("")}</div>
+  const roller=r.done||!YZ.showDice?"":`<div class="card yz-roll ${t?yzPc(t):""}"><div class="yz-dice">${YZ.dice.map((v,i)=>yzDie(v,i,YZ.held[i],YZ.anim)).join("")}</div>
       <div class="yz-rb"><button type="button" class="btn primary" data-yz="roll" ${YZ.rolls>=3?"disabled":""}>${YZ.rolls?`Roll again (${3-YZ.rolls} left)`:"Roll dice"}</button>${YZ.rolls?`<button type="button" class="btn" data-yz="clear">Clear</button>`:""}</div>
       <p class="yz-tip">${YZ.rolls?`Tap dice to keep them · then tap a box to score${yzIsYahtzee()?` · <b>${v.name.toUpperCase()}! 🎉</b>`:""}`:"Playing with real dice? Just tap a box, or hide the roller."}</p></div>`;
   return `<div class="vhead"><div class="wrap"><button class="ib" type="button" data-yz="home" aria-label="Back">${icon("back")}</button>
       <h2>${wd(g.date)} ${fmt(g.date)}<small>${esc(g.stop?g.stop+" · ":"")}${v.name}</small></h2><span style="width:40px"></span></div></div>
     <div class="wrap vbody">${banner}${roller}
-      <div class="card yz-sheet"><div class="hx"><table class="yz-t"><thead><tr><th></th>${ps.map((p,i)=>`<th class="${t&&t.id===p.id?"cur":""}">${tots[i].total===lead&&lead>0?"👑 ":""}${esc(p.name)}</th>`).join("")}</tr></thead><tbody>
+      <div class="card yz-sheet"><div class="hx"><table class="yz-t"><thead><tr><th></th>${ps.map((p,i)=>`<th class="${yzPc(p)}${t&&t.id===p.id?" cur":""}"><span class="yz-pip"></span>${tots[i].total===lead&&lead>0?"👑 ":""}${esc(p.name)}</th>`).join("")}</tr></thead><tbody>
         ${v.cats.slice(0,6).map(row).join("")}${upRow}${v.cats.slice(6).map(row).join("")}${ybRow}
-        <tr class="sum grand"><td>Total</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.total}</td>`).join("")}</tr>
+        <tr class="sum grand"><td>Total</td>${tots.map((x,i)=>`<td class="${yzPc(ps[i])}${t&&t.id===ps[i].id?" cur":""}">${x.total}</td>`).join("")}</tr>
       </tbody></table></div></div>
       <div class="end"><button type="button" class="btn danger" data-yz="del">${YZ.delArm?"Tap again to delete":"Delete game"}</button><span></span></div>
     </div>`}

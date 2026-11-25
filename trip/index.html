@@ -647,6 +647,8 @@ body.swapping #days [data-day]:not(.past){outline:1.5px dashed color-mix(in srgb
 #yzview .hint{color:var(--muted);font-size:.86rem;margin:4px 0}
 .yz-h{font:800 1rem var(--display);margin:0}.yz-h small{display:block;font:500 .76rem var(--body);color:var(--muted)}
 .yz-chips{flex-wrap:wrap;padding:2px 0}
+.yz-rules{display:grid;grid-template-columns:1fr 1fr;gap:8px}.yz-rules button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer}.yz-rules button b{display:block;font:800 .95rem var(--display)}.yz-rules button small{color:var(--muted);font-size:.74rem}.yz-rules button[aria-pressed="true"]{border-color:var(--fern);background:var(--fern-soft);box-shadow:0 0 0 1px var(--fern)}
+.yz-opts{display:flex;gap:6px;flex-wrap:wrap}
 .yz-guest{display:flex;gap:8px}.yz-guest input{flex:1;min-width:0;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--paper);color:var(--ink);font:500 1rem var(--body)}
 .yz-live{text-align:left;cursor:pointer;color:var(--ink);font:inherit;border-color:var(--fern);background:var(--fern-soft)}
 .yz-lh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.yz-lh span{color:var(--muted);font-size:.84rem}
@@ -2790,34 +2792,46 @@ function openSettings(){
   armed($("#s-undo"),"Tap again to undo",()=>{try{replaceAll(JSON.parse(localStorage.getItem(PREV)));localStorage.removeItem(PREV);closeSheet();toast("Undone")}catch{toast("Nothing to undo")}})}
 
 /* ================= Yahtzee: score sheet + dice + who's winning the trip ================= */
-const YZC=[["ones","Ones","u",1],["twos","Twos","u",2],["threes","Threes","u",3],["fours","Fours","u",4],["fives","Fives","u",5],["sixes","Sixes","u",6],
-  ["tk","3 of a kind","l"],["fk","4 of a kind","l"],["fh","Full house","l",25],["ss","Sm. straight","l",30],["ls","Lg. straight","l",40],["yz","Yahtzee","l",50],["ch","Chance","l"]];
-const YZHINT={tk:"Total of all dice",fk:"Total of all dice",fh:"3 + 2 of a kind",ss:"4 in a row",ls:"5 in a row",yz:"5 of a kind",ch:"Total of all dice"};
+const YZUP=[["ones","Ones","u",1],["twos","Twos","u",2],["threes","Threes","u",3],["fours","Fours","u",4],["fives","Fives","u",5],["sixes","Sixes","u",6]];
+const YZV={
+  yatzy:{name:"Yatzy",sub:"pairs · 50 bonus",bonus:50,yb:false,
+    cats:[...YZUP,["op","1 pair","l"],["tp","2 pairs","l"],["tk","3 of a kind","l"],["fk","4 of a kind","l"],["ss","Sm. straight","l",15],["ls","Lg. straight","l",20],["fh","Full house","l"],["ch","Chance","l"],["yz","Yatzy","l",50]],
+    hint:{op:"Sum of the pair",tp:"Sum of both pairs",tk:"Sum of the three",fk:"Sum of the four",ss:"1-2-3-4-5",ls:"2-3-4-5-6",fh:"Sum of all dice",ch:"Sum of all dice",yz:"5 of a kind"},
+    opts:{op:[0,2,4,6,8,10,12],tp:[0,6,8,10,12,14,16,18,20,22],tk:[0,3,6,9,12,15,18],fk:[0,4,8,12,16,20,24],fh:[0,...Array.from({length:22},(_,i)=>i+7)],ch:[0,...Array.from({length:26},(_,i)=>i+5)]}},
+  yahtzee:{name:"Yahtzee",sub:"US rules · 35 bonus",bonus:35,yb:true,
+    cats:[...YZUP,["tk","3 of a kind","l"],["fk","4 of a kind","l"],["fh","Full house","l",25],["ss","Sm. straight","l",30],["ls","Lg. straight","l",40],["yz","Yahtzee","l",50],["ch","Chance","l"]],
+    hint:{tk:"Total of all dice",fk:"Total of all dice",fh:"3 + 2 of a kind",ss:"4 in a row",ls:"5 in a row",yz:"5 of a kind",ch:"Total of all dice"},
+    opts:{tk:[0,...Array.from({length:26},(_,i)=>i+5)],fk:[0,...Array.from({length:26},(_,i)=>i+5)],ch:[0,...Array.from({length:26},(_,i)=>i+5)]}}};
+const yzV=g=>YZV[g?.rules]||YZV.yahtzee;
+const yzLS=(k,d)=>{try{return localStorage.getItem(k)??d}catch{return d}},yzSave=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
 const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
-const YZ={open:false,g:null,dice:[0,0,0,0,0],held:[0,0,0,0,0],rolls:0,anim:false,sel:{p1:1,p2:1},guests:[],delArm:false};
+const YZ={rules:yzLS("sil-yzrules","yatzy"),showDice:yzLS("sil-yzdice","1")==="1",open:false,g:null,dice:[0,0,0,0,0],held:[0,0,0,0,0],rolls:0,anim:false,sel:{p1:1,p2:1},guests:[],delArm:false};
 const yzGames=()=>state.yz.filter(x=>x.t==="game").sort((a,b)=>(b.at||0)-(a.at||0));
 const yzSc=(g,p)=>S.docs.yz[g+"~"+p]?.s||{};
-function yzTot(s){let up=0,lo=0,par=0;
-  for(const [k,,t,f] of YZC){if(s[k]==null)continue;if(t==="u"){up+=s[k];par+=f*3}else lo+=s[k]}
-  const bonus=up>=63?35:0,yb=(s.yb||0)*100;
-  return {up,par,bonus,lo,yb,total:up+bonus+lo+yb,filled:YZC.filter(([k])=>s[k]!=null).length}}
-function yzFromDice(k,d=YZ.dice){if(d.some(x=>!x))return null;const c=[0,0,0,0,0,0,0];d.forEach(x=>c[x]++);
+function yzTot(s,v){let up=0,lo=0,par=0;
+  for(const [k,,t,f] of v.cats){if(s[k]==null)continue;if(t==="u"){up+=s[k];par+=f*3}else lo+=s[k]}
+  const bonus=up>=63?v.bonus:0,yb=v.yb?(s.yb||0)*100:0;
+  return {up,par,bonus,lo,yb,total:up+bonus+lo+yb,filled:v.cats.filter(([k])=>s[k]!=null).length}}
+function yzFromDice(k,v,d=YZ.dice){if(d.some(x=>!x))return null;const c=[0,0,0,0,0,0,0];d.forEach(x=>c[x]++);
   const sum=d.reduce((a,b)=>a+b,0),mx=Math.max(...c),has=new Set(d);
+  const f=v.cats.find(x=>x[0]===k);if(!f)return null;if(f[2]==="u")return f[3]*c[f[3]];
+  if(v===YZV.yatzy){const pr=[6,5,4,3,2,1].filter(n=>c[n]>=2),of=n=>{const x=[6,5,4,3,2,1].find(m=>c[m]>=n);return x?x*n:0};
+    return {op:pr.length?pr[0]*2:0,tp:pr.length>=2?(pr[0]+pr[1])*2:0,tk:of(3),fk:of(4),ss:[1,2,3,4,5].every(n=>has.has(n))?15:0,ls:[2,3,4,5,6].every(n=>has.has(n))?20:0,
+      fh:c.includes(3)&&c.includes(2)?sum:0,ch:sum,yz:mx===5?50:0}[k]}
   const run=n=>{for(let s=1;s<=7-n;s++){let ok=true;for(let i=s;i<s+n;i++)if(!has.has(i))ok=false;if(ok)return true}return false};
-  const f=YZC.find(x=>x[0]===k);if(f[2]==="u")return f[3]*c[f[3]];
   return {tk:mx>=3?sum:0,fk:mx>=4?sum:0,fh:(c.includes(3)&&c.includes(2))||mx===5?25:0,ss:run(4)?30:0,ls:run(5)?40:0,yz:mx===5?50:0,ch:sum}[k]}
 const yzIsYahtzee=(d=YZ.dice)=>d.every(x=>x&&x===d[0]);
-function yzTurn(g){const ps=g.players||[];let best=null,min=99;ps.forEach(p=>{const f=yzTot(yzSc(g.id,p.id)).filled;if(f<min){min=f;best=p}});return min>=13?null:best}
-function yzResult(g){const rows=(g.players||[]).map(p=>({...p,...yzTot(yzSc(g.id,p.id))}));const top=Math.max(...rows.map(r=>r.total));
-  const done=rows.length&&rows.every(r=>r.filled>=13);const winners=done?rows.filter(r=>r.total===top):[];return {rows,top,done,winners}}
+function yzTurn(g){const ps=g.players||[];let best=null,min=99;ps.forEach(p=>{const f=yzTot(yzSc(g.id,p.id),yzV(g)).filled;if(f<min){min=f;best=p}});return min>=yzV(g).cats.length?null:best}
+function yzResult(g){const rows=(g.players||[]).map(p=>({...p,...yzTot(yzSc(g.id,p.id),yzV(g))}));const top=Math.max(...rows.map(r=>r.total));
+  const done=rows.length&&rows.every(r=>r.filled>=yzV(g).cats.length);const winners=done?rows.filter(r=>r.total===top):[];return {rows,top,done,winners}}
 const yzDie=(v,i,held,anim)=>`<button type="button" class="die${held?" h":""}${v?"":" blank"}${anim&&!held?" roll":""}" data-yz="hold" data-i="${i}" aria-label="${v?"Die showing "+v:"Not rolled"}${held?", held":""}">${Array.from({length:9},(_,j)=>`<i${v&&PIPS[v].includes(j)?' class="on"':""}></i>`).join("")}</button>`;
 
 function openYz(gid){YZ.open=true;if(gid!==undefined)YZ.g=gid;document.body.style.overflow="hidden";renderYz();$("#yzview").scrollTop=0;sync(false)}
 function closeYz(){YZ.open=false;document.body.style.overflow="";renderYz()}
 function yzStats(){const by={},games=yzGames().filter(g=>yzResult(g).done);
   games.forEach(g=>{const r=yzResult(g),solo=r.winners.length===1;r.rows.forEach(p=>{const k=(p.name||"?").toLowerCase(),o=by[k]??={name:p.name,games:0,wins:0,sum:0,best:0,yz:0,bonus:0};
-    o.games++;o.sum+=p.total;o.best=Math.max(o.best,p.total);const s=yzSc(g.id,p.id);o.yz+=(s.yz===50?1:0)+(s.yb||0);if(p.up>=63)o.bonus++;if(solo&&r.winners[0].id===p.id)o.wins++})});
-  let streak=null;for(const g of games){const r=yzResult(g);if(r.winners.length!==1)break;const n=r.winners[0].name;if(!streak)streak={name:n,n:1};else if(streak.name===n)streak.n++;else break}
+    o.games++;o.sum+=p.total;o.best=Math.max(o.best,p.total);const s=yzSc(g.id,p.id);o.yz+=(s.yz===50?1:0)+(s.yb||0);if(p.up>=63)o.bonus++;if(solo&&r.rows.length>1&&r.winners[0].id===p.id)o.wins++})});
+  let streak=null;for(const g of games){const r=yzResult(g);if(r.rows.length<2)continue;if(r.winners.length!==1)break;const n=r.winners[0].name;if(!streak)streak={name:n,n:1};else if(streak.name===n)streak.n++;else break}
   return {list:Object.values(by).sort((a,b)=>b.wins-a.wins||b.sum/b.games-a.sum/a.games),games,streak}}
 
 function renderYz(){const el=$("#yzview");if(!el)return;if(!YZ.open){el.hidden=true;el.innerHTML="";return}
@@ -2849,50 +2863,52 @@ function yzHomeHtml(){const all=yzGames(),live=all.filter(g=>!yzResult(g).done),
     <div class="wrap vbody">${liveHtml}
       <div class="card"><h3 class="yz-h">New game</h3><div class="chips yz-chips">${chips}</div>
         <div class="yz-guest"><input id="yz-guest" type="text" placeholder="Add a player" aria-label="Add a player" maxlength="20"><button type="button" class="btn" data-yz="guest">Add</button></div>
+        <div class="yz-rules" role="group" aria-label="Rules">${Object.entries(YZV).map(([k,v])=>`<button type="button" aria-pressed="${YZ.rules===k}" data-yz="rules" data-r="${k}"><b>${v.name}</b><small>${v.sub}</small></button>`).join("")}</div>
         <button type="button" class="btn primary" data-yz="new" ${nSel?"":"disabled"}>Start game${nSel?` · ${nSel} player${nSel===1?"":"s"}`:""}</button></div>
       ${lb}${histHtml}
       ${!all.length?`<p class="empty">No games yet — start one and the sheet fills in as you play. Both phones see the same sheet.</p>`:""}
     </div>`}
 
-function yzGameHtml(g){const r=yzResult(g),t=yzTurn(g),ps=g.players||[],rolled=!YZ.dice.some(x=>!x);
-  const cell=(p,k)=>{const s=yzSc(g.id,p.id),v=s[k];if(v!=null)return `<button type="button" class="yz-c${v===0?" z":""}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}">${v===0?"✕":v}</button>`;
-    const sug=rolled&&t&&t.id===p.id?yzFromDice(k):null;
+function yzGameHtml(g){const r=yzResult(g),t=yzTurn(g),ps=g.players||[],v=yzV(g),rolled=YZ.showDice&&!YZ.dice.some(x=>!x);
+  const cell=(p,k)=>{const s=yzSc(g.id,p.id),val=s[k];if(val!=null)return `<button type="button" class="yz-c${val===0?" z":""}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}">${val===0?"✕":val}</button>`;
+    const sug=rolled&&t&&t.id===p.id?yzFromDice(k,v):null;
     return `<button type="button" class="yz-c ${sug!=null?"g":"e"}" data-yz="cell" data-p="${esc(p.id)}" data-k="${k}" aria-label="Score ${esc(p.name)}">${sug!=null?sug:"·"}</button>`};
-  const row=([k,l,tp,f])=>`<tr><td>${l}${tp==="l"?`<small>${f?f+" pts":YZHINT[k]}</small>`:""}</td>${ps.map(p=>`<td class="${t&&t.id===p.id?"cur":""}">${cell(p,k)}</td>`).join("")}</tr>`;
-  const tots=ps.map(p=>yzTot(yzSc(g.id,p.id)));
-  const upRow=`<tr class="sum"><td>Upper<small>63+ = 35 bonus</small></td>${tots.map((x,i)=>{const d=x.up-x.par;return `<td class="${t&&t.id===ps[i].id?"cur":""}"><b>${x.up}</b><small class="${d>=0?"ok":"bad"}">${x.par?(d>=0?"+":"")+d+" pace":"&nbsp;"}</small></td>`}).join("")}</tr>
-    <tr class="sum"><td>Bonus</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.bonus?`<b class="ok">35</b>`:`<small>${63-x.up} to go</small>`}</td>`).join("")}</tr>`;
-  const ybRow=`<tr><td>Yahtzee bonus<small>100 each</small></td>${ps.map(p=>{const n=yzSc(g.id,p.id).yb||0;return `<td class="${t&&t.id===p.id?"cur":""}"><div class="yz-yb"><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="-1" aria-label="Remove Yahtzee bonus" ${n?"":"disabled"}>−</button><b>${n?n*100:0}</b><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="1" aria-label="Add Yahtzee bonus">+</button></div></td>`}).join("")}</tr>`;
+  const row=([k,l,tp,f])=>`<tr><td>${l}${tp==="l"?`<small>${f?f+" pts":v.hint[k]}</small>`:""}</td>${ps.map(p=>`<td class="${t&&t.id===p.id?"cur":""}">${cell(p,k)}</td>`).join("")}</tr>`;
+  const tots=ps.map(p=>yzTot(yzSc(g.id,p.id),yzV(g)));
+  const upRow=`<tr class="sum"><td>Upper<small>63+ = ${v.bonus} bonus</small></td>${tots.map((x,i)=>{const d=x.up-x.par;return `<td class="${t&&t.id===ps[i].id?"cur":""}"><b>${x.up}</b><small class="${d>=0?"ok":"bad"}">${x.par?(d>=0?"+":"")+d+" pace":"&nbsp;"}</small></td>`}).join("")}</tr>
+    <tr class="sum"><td>Bonus</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.bonus?`<b class="ok">${x.bonus}</b>`:`<small>${63-x.up} to go</small>`}</td>`).join("")}</tr>`;
+  const ybRow=!v.yb?"":`<tr><td>Yahtzee bonus<small>100 each</small></td>${ps.map(p=>{const n=yzSc(g.id,p.id).yb||0;return `<td class="${t&&t.id===p.id?"cur":""}"><div class="yz-yb"><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="-1" aria-label="Remove Yahtzee bonus" ${n?"":"disabled"}>−</button><b>${n?n*100:0}</b><button type="button" data-yz="yb" data-p="${esc(p.id)}" data-d="1" aria-label="Add Yahtzee bonus">+</button></div></td>`}).join("")}</tr>`;
   const lead=Math.max(...tots.map(x=>x.total));
   const banner=r.done?`<div class="card yz-win">${r.winners.length===1?`👑 <b>${esc(r.winners[0].name)}</b> wins with ${r.top}`:`🤝 Tie at ${r.top}`}<small>${r.rows.map(p=>`${esc(p.name)} ${p.total}`).join(" · ")}</small></div>`
-    :`<div class="yz-turn"><span class="yz-who">${t?`<b>${esc(t.name)}</b>'s turn`:""}</span><span>${tots.reduce((a,x)=>a+x.filled,0)}/${13*ps.length} boxes</span></div>`;
-  const roller=r.done?"":`<div class="card yz-roll"><div class="yz-dice">${YZ.dice.map((v,i)=>yzDie(v,i,YZ.held[i],YZ.anim)).join("")}</div>
+    :`<div class="yz-turn"><span class="yz-who">${t?`<b>${esc(t.name)}</b>'s turn`:""}</span><span>${tots.reduce((a,x)=>a+x.filled,0)}/${v.cats.length*ps.length} boxes</span></div>
+      <div class="yz-opts"><button type="button" class="pill" data-yz="dicetog">${YZ.showDice?"Hide dice roller":"🎲 Show dice roller"}</button>${tots.every(x=>!x.filled)?Object.entries(YZV).filter(([k])=>YZV[k]!==v).map(([k,o])=>`<button type="button" class="pill" data-yz="setrules" data-r="${k}">Switch to ${o.name} rules</button>`).join(""):""}</div>`;
+  const roller=r.done||!YZ.showDice?"":`<div class="card yz-roll"><div class="yz-dice">${YZ.dice.map((v,i)=>yzDie(v,i,YZ.held[i],YZ.anim)).join("")}</div>
       <div class="yz-rb"><button type="button" class="btn primary" data-yz="roll" ${YZ.rolls>=3?"disabled":""}>${YZ.rolls?`Roll again (${3-YZ.rolls} left)`:"Roll dice"}</button>${YZ.rolls?`<button type="button" class="btn" data-yz="clear">Clear</button>`:""}</div>
-      <p class="yz-tip">${YZ.rolls?`Tap dice to keep them · then tap a box to score${yzIsYahtzee()?" · <b>YAHTZEE! 🎉</b>":""}`:"Playing with real dice? Just tap a box to fill it in."}</p></div>`;
+      <p class="yz-tip">${YZ.rolls?`Tap dice to keep them · then tap a box to score${yzIsYahtzee()?` · <b>${v.name.toUpperCase()}! 🎉</b>`:""}`:"Playing with real dice? Just tap a box, or hide the roller."}</p></div>`;
   return `<div class="vhead"><div class="wrap"><button class="ib" type="button" data-yz="home" aria-label="Back">${icon("back")}</button>
-      <h2>${wd(g.date)} ${fmt(g.date)}<small>${esc(g.stop||"Yahtzee")}</small></h2><span style="width:40px"></span></div></div>
+      <h2>${wd(g.date)} ${fmt(g.date)}<small>${esc(g.stop?g.stop+" · ":"")}${v.name}</small></h2><span style="width:40px"></span></div></div>
     <div class="wrap vbody">${banner}${roller}
       <div class="card yz-sheet"><div class="hx"><table class="yz-t"><thead><tr><th></th>${ps.map((p,i)=>`<th class="${t&&t.id===p.id?"cur":""}">${tots[i].total===lead&&lead>0?"👑 ":""}${esc(p.name)}</th>`).join("")}</tr></thead><tbody>
-        ${YZC.slice(0,6).map(row).join("")}${upRow}${YZC.slice(6).map(row).join("")}${ybRow}
+        ${v.cats.slice(0,6).map(row).join("")}${upRow}${v.cats.slice(6).map(row).join("")}${ybRow}
         <tr class="sum grand"><td>Total</td>${tots.map((x,i)=>`<td class="${t&&t.id===ps[i].id?"cur":""}">${x.total}</td>`).join("")}</tr>
       </tbody></table></div></div>
       <div class="end"><button type="button" class="btn danger" data-yz="del">${YZ.delArm?"Tap again to delete":"Delete game"}</button><span></span></div>
     </div>`}
 
-function yzPick(pid,k){const g=state.yz.find(x=>x.id===YZ.g);if(!g)return;const p=(g.players||[]).find(x=>x.id===pid),f=YZC.find(x=>x[0]===k),cur=yzSc(g.id,pid)[k];
-  const fromD=yzFromDice(k),t=yzTurn(g),useDice=fromD!=null&&t&&t.id===pid;
+function yzPick(pid,k){const g=state.yz.find(x=>x.id===YZ.g);if(!g)return;const v=yzV(g),p=(g.players||[]).find(x=>x.id===pid),f=v.cats.find(x=>x[0]===k),cur=yzSc(g.id,pid)[k];
+  const t=yzTurn(g),fromD=YZ.showDice?yzFromDice(k,v):null,useDice=fromD!=null&&t&&t.id===pid;
   let opts;if(f[2]==="u")opts=[0,1,2,3,4,5].map(n=>[n*f[3],n?`${n}× ${f[3]}`:"✕ 0"]);
   else if(f[3])opts=[[f[3],`${f[3]}`],[0,"✕ 0"]];
-  else opts=[[0,"✕ 0"],...Array.from({length:26},(_,i)=>[i+5,String(i+5)])];
-  const jok=useDice&&yzIsYahtzee()&&yzSc(g.id,pid).yz===50&&k!=="yz";
+  else opts=(v.opts[k]||[0]).map(x=>[x,x?String(x):"✕ 0"]);
+  const jok=v.yb&&useDice&&yzIsYahtzee()&&yzSc(g.id,pid).yz===50&&k!=="yz";
   sheet(`${head(`${esc(p?.name||"")} · ${f[1]}`)}
     ${useDice?`<button type="button" class="btn primary yz-big" data-yzset="${fromD}" data-dice="1">Score ${fromD} from the dice${jok?" + 100 bonus":""}</button>`:""}
-    <p class="hint">${f[2]==="u"?`How many ${f[1].toLowerCase()}?`:f[3]?YZHINT[k]+` = ${f[3]} points`:YZHINT[k]}</p>
-    <div class="yz-grid">${opts.map(([v,l])=>`<button type="button" class="btn${v===cur?" primary":""}" data-yzset="${v}">${l}</button>`).join("")}</div>
+    <p class="hint">${f[2]==="u"?`How many ${f[1].toLowerCase()}?`:f[3]?v.hint[k]+` = ${f[3]} points`:v.hint[k]}</p>
+    <div class="yz-grid">${opts.map(([val,l])=>`<button type="button" class="btn${val===cur?" primary":""}" data-yzset="${val}">${l}</button>`).join("")}</div>
     ${cur!=null?`<div class="end"><button type="button" class="btn danger" data-yzset="clr">Clear box</button><span></span></div>`:""}`,"yz");
   $("#form").dataset.p=pid;$("#form").dataset.k=k}
 function yzSet(pid,k,v,dice){const id=YZ.g+"~"+pid,o=S.docs.yz[id]||{t:"sc",g:YZ.g,p:pid,s:{}},s={...o.s};
-  if(dice&&yzIsYahtzee()&&s.yz===50&&k!=="yz")s.yb=(s.yb||0)+1;
+  if(dice&&yzV(state.yz.find(x=>x.id===YZ.g)).yb&&yzIsYahtzee()&&s.yz===50&&k!=="yz")s.yb=(s.yb||0)+1;
   if(v==null)delete s[k];else s[k]=v;put("yz",id,{...o,s});
   if(dice||v!=null){YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0}renderYz()}
 
@@ -2908,9 +2924,12 @@ document.addEventListener("click",e=>{
     if(Object.values(PEOPLE).some(x=>x.toLowerCase()===n.toLowerCase()))return toast("Already on the list");
     if(!YZ.guests.some(x=>x.toLowerCase()===n.toLowerCase()))YZ.guests.push(n);YZ.sel[id]=1;renderYz()}
   else if(a==="new"){const ps=[...$("#yzview").querySelectorAll('[data-yz="sel"][aria-pressed="true"]')].map(x=>({id:x.dataset.p,name:x.dataset.n}));if(!ps.length)return;
-    const s=currentStop(),id=add("yz",{t:"game",date:today(),at:Date.now(),stop:s?.name||"",players:ps,done:false});
+    const s=currentStop(),id=add("yz",{t:"game",date:today(),at:Date.now(),stop:s?.name||"",players:ps,rules:YZ.rules,done:false});
     YZ.g=id;YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0;renderYz();$("#yzview").scrollTop=0}
   else if(a==="cell")yzPick(d.p,d.k);
+  else if(a==="rules"){YZ.rules=d.r;yzSave("sil-yzrules",d.r);renderYz()}
+  else if(a==="setrules"){YZ.rules=d.r;yzSave("sil-yzrules",d.r);patch("yz",YZ.g,{rules:d.r})}
+  else if(a==="dicetog"){YZ.showDice=!YZ.showDice;yzSave("sil-yzdice",YZ.showDice?"1":"0");if(!YZ.showDice){YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0}renderYz()}
   else if(a==="roll"){if(YZ.rolls>=3)return;YZ.dice=YZ.dice.map((v,i)=>YZ.held[i]&&v?v:1+Math.floor(Math.random()*6));YZ.rolls++;YZ.anim=true;try{navigator.vibrate?.(30)}catch{}renderYz()}
   else if(a==="hold"){const i=+d.i;if(!YZ.dice[i])return;YZ.held[i]=YZ.held[i]?0:1;renderYz()}
   else if(a==="clear"){YZ.dice=[0,0,0,0,0];YZ.held=[0,0,0,0,0];YZ.rolls=0;renderYz()}

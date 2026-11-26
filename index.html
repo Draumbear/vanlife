@@ -304,6 +304,21 @@ body.adding #v-add.hide{visibility:visible}
 
 /* ---- expense analysis ---- */
 .seg4{grid-template-columns:repeat(4,1fr)}
+.seg5{grid-template-columns:repeat(5,1fr)}.seg5 button{padding:9px 2px;font-size:.78rem}
+.lmode{grid-template-columns:1fr 1fr}.lmode button{font-size:.88rem}
+.lfilt{padding-bottom:12px}
+.lfilt .frow{margin-bottom:8px}
+.lfilt select{width:100%;padding:9px 12px;border-radius:999px;font:700 .86rem var(--sans)}
+.lsum{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;margin:2px 4px 12px;font-size:.86rem;color:var(--dim)}
+.lsum b{color:var(--tx);font:800 1.15rem var(--display)}
+.lsum .pa{color:var(--pa);font-weight:700}.lsum .pb{color:var(--pb);font-weight:700}
+.dayh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;margin:16px 0 0;padding:6px 0 4px;border-bottom:1px solid var(--line);text-align:left;color:var(--tx)}
+.dayh:first-child{margin-top:2px}
+.dayh .dd{font:800 .9rem var(--sans)}.dayh .dd small{font-weight:600;color:var(--dim);margin-left:6px;font-size:.74rem}
+.dayh .dt{font:800 .95rem var(--display);text-align:right}.dayh .dt small{display:block;font:600 .7rem var(--sans);color:var(--dim)}
+.dayh .dt .pa{color:var(--pa)}.dayh .dt .pb{color:var(--pb)}
+.dayempty{margin:16px 0 0;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;color:var(--dim);font-size:.82rem;display:flex;justify-content:space-between;gap:8px}
+.dayempty b{color:var(--tx);font-size:.84rem;white-space:nowrap}.dayempty{width:100%;align-items:center;text-align:left}.dayempty span{text-align:right}
 .pnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px}
 .pnav b{font:800 1rem var(--display,var(--sans));text-align:center;flex:1}
 .pnav .ib{width:40px;height:40px;font-size:1.4rem;line-height:1}
@@ -438,7 +453,12 @@ body.adding #v-add.hide{visibility:visible}
 
   <!-- ============ LIST ============ -->
   <section id="v-list" class="hide">
-    <div class="seg seg4">
+    <div class="seg lmode" id="l-mode">
+      <button data-lmode="check" class="sel">✓ Check expenses</button>
+      <button data-lmode="report">📊 Overview</button>
+    </div>
+    <div class="seg seg5" id="l-per">
+      <button data-per="day">Day</button>
       <button data-per="week" class="sel">Week</button>
       <button data-per="month">Month</button>
       <button data-per="all">Trip</button>
@@ -446,6 +466,7 @@ body.adding #v-add.hide{visibility:visible}
     </div>
     <div class="pnav" id="l-nav"><button class="ib" data-step="-1" aria-label="Previous">‹</button><b id="l-plab"></b><button class="ib" data-step="1" aria-label="Next">›</button></div>
     <div class="pcust hide" id="l-custom"><input type="date" id="l-from" aria-label="From"><span>–</span><input type="date" id="l-to" aria-label="To"></div>
+    <div id="l-report" class="hide">
     <div class="card ins" id="l-ins"></div>
     <div class="card" id="l-wkcard">
       <h2 class="row"><span>Week by week</span><span class="dim" style="font:600 12px var(--sans)">per day · tap a week</span></h2>
@@ -467,11 +488,18 @@ body.adding #v-add.hide{visibility:visible}
       <summary><h2>By account</h2></summary>
       <div id="l-accts"></div>
     </details>
-    <div class="search"><input id="l-q" type="search" placeholder="Search notes, categories, accounts…" autocomplete="off"></div>
+    </div>
+    <div id="l-check">
+    <div class="card lfilt">
+      <div id="l-filt"></div>
+      <div class="search" style="margin:4px 0 0"><input id="l-q" type="search" placeholder="Search notes…" autocomplete="off"></div>
+    </div>
+    <div class="lsum" id="l-sum"></div>
     <div class="card">
       <h2 class="row"><span id="l-items-h">Expenses</span>
-        <button class="lnk hide" id="l-clear">Show all</button></h2>
+        <button class="lnk hide" id="l-clear">Clear filters</button></h2>
       <div id="l-items"></div>
+    </div>
     </div>
   </section>
 
@@ -1271,7 +1299,8 @@ function itemHTML(e, inDay){
    biggest five keep their own colour and the rest fold into one grey slice. */
 const DONUT_TOP = 5, DONUT_REST = '__rest__', REST_COL = '#56645a';
 // Tapping a category (slice or row) narrows the list to it: a category id, or DONUT_REST.
-let period = 'week', selCat = null, pOff = 0, cFrom = '', cTo = '', wkCat = '';
+let period = 'week', selCat = null, pOff = 0, cFrom = '', cTo = '', wkCat = '', fPay = '', fAcct = '';
+let lMode = (() => { try { return localStorage.getItem('kea-lmode') || 'check'; } catch { return 'check'; } })();
 
 /* ---- analysis helpers: which dates a period covers, and how many days of it we've actually lived ---- */
 const addD = (iso, n) => { const d = dparse(iso); d.setDate(d.getDate() + n); return dISO(d); };
@@ -1281,6 +1310,8 @@ function livedDays(a, b){ const t = todayISO(), f = firstDay(), last = S.setting
   const from = a > f ? a : f, to = b < last ? b : last; return Math.max(0, dayDiff(from, to) + 1); }
 function periodRange(per, off){
   const t = todayISO();
+  if (per === 'day'){ const d = addD(t, off);
+    return {from: d, to: d, label: off === 0 ? 'Today' : off === -1 ? 'Yesterday' : fmtDay(d), what: off === 0 ? 'today' : 'that day', prevWhat: 'the day before'}; }
   if (per === 'week'){ const ws = addD(weekStart(t), off * 7), we = addD(ws, 6);
     return {from: ws, to: we, label: off === 0 ? 'This week' : off === -1 ? 'Last week' : fmtShort(ws) + ' – ' + fmtShort(we), what: off === 0 ? 'this week' : 'that week', prevWhat: 'the week before'}; }
   if (per === 'month'){ const d = dparse(monthStart(t)); d.setMonth(d.getMonth() + off); const ms = dISO(d), me = monthEnd(ms);
@@ -1291,7 +1322,7 @@ function periodRange(per, off){
 }
 function prevRange(r){
   if (period === 'all') return null;
-  if (period === 'week' || period === 'month') return periodRange(period, pOff - 1);
+  if (period === 'day' || period === 'week' || period === 'month') return periodRange(period, pOff - 1);
   const n = dayDiff(r.from, r.to) + 1; return {from: addD(r.from, -n), to: addD(r.from, -1)};
 }
 const byCat = rows => { const o = {}; rows.forEach(e => o[e.category] = (o[e.category] || 0) + vamt(e)); return o; };
@@ -1318,10 +1349,10 @@ function renderList(){
 
   const rows = between(from, to);
   const total = vsum(rows);
-  renderInsights(R, rows, total);
-  renderWeeks(R);
-  renderCatTrends();
-
+  document.querySelectorAll('#l-mode button').forEach(b => b.classList.toggle('sel', b.dataset.lmode === lMode));
+  document.querySelectorAll('#l-per button').forEach(b => b.classList.toggle('sel', b.dataset.per === period));
+  document.getElementById('l-report').classList.toggle('hide', lMode !== 'report');
+  document.getElementById('l-check').classList.toggle('hide', lMode !== 'check');
   const by = {};
   rows.forEach(e => by[e.category] = (by[e.category] || 0) + vamt(e));
   const ordered = Object.entries(by).filter(([, v]) => v > 0).sort((a,b) => b[1]-a[1]);
@@ -1330,6 +1361,11 @@ function renderList(){
   const inRest = id => folded && !top.has(id);
   if (selCat === DONUT_REST ? !folded : selCat && !by[selCat]) selCat = null;
   const isSel = id => id === selCat || (selCat === DONUT_REST && inRest(id));
+  if (lMode === 'report'){
+  renderInsights(R, rows, total);
+  renderWeeks(R);
+  renderCatTrends();
+
 
   renderPie(ordered, total, label, folded);
   // change per category against the period before, per day so a short week compares fairly
@@ -1358,21 +1394,55 @@ function renderList(){
       '<div class="catbar"><i style="width:' + p + '%;background:var(--accent)"></i></div></div>';
   }).join('');
 
-  // grouped list
+  }
+  renderCheck(R, rows, by, isSel);
+}
+
+/* ---- "Check expenses": simple filters + every day of the period, so gaps stand out ---- */
+function renderCheck(R, rows, by, isSel){
+  const t = todayISO(), label = R.what;
+  const accts = [...new Set(rows.map(e => e.account || ''))].sort((a, b) => !a ? 1 : !b ? -1 : a.localeCompare(b));
+  if (fAcct && !accts.includes(fAcct === '-' ? '' : fAcct)) fAcct = '';
+  const cats = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  const pill = (attr, val, cur, txt, cls) => '<button class="pill' + (cls ? ' ' + cls : '') + (cur === val ? ' sel' : '') + '" ' + attr + '="' + esc(val) + '">' + txt + '</button>';
+  document.getElementById('l-filt').innerHTML =
+    '<div class="frow"><span class="lab">Paid by</span><div class="pills">' +
+      pill('data-fpay', '', fPay, 'Both') + pill('data-fpay', 'p1', fPay, esc(PEOPLE.p1), 'pa') + pill('data-fpay', 'p2', fPay, esc(PEOPLE.p2), 'pb') + '</div></div>' +
+    (accts.length > 1 ? '<div class="frow"><span class="lab">Account</span><div class="pills">' + pill('data-facct', '', fAcct, 'All') +
+      accts.map(a => pill('data-facct', a || '-', fAcct, a ? esc(a) : 'None')).join('') + '</div></div>' : '') +
+    '<div class="frow"><span class="lab">Category</span><select id="l-fcat" aria-label="Category"><option value="">All categories</option>' +
+      cats.map(id => { const c = catOf(id); return '<option value="' + id + '"' + (selCat === id ? ' selected' : '') + '>' + c.icon + ' ' + esc(c.name) + '</option>'; }).join('') +
+      (selCat === DONUT_REST ? '<option value="' + DONUT_REST + '" selected>Everything else</option>' : '') + '</select></div>';
+
   const q = (document.getElementById('l-q')?.value || '').trim().toLowerCase();
-  const shown = (selCat ? rows.filter(e => isSel(e.category)) : rows).filter(e => !q ||
-    ((e.note || '') + ' ' + catOf(e.category).name + ' ' + (e.account || '') + ' ' + who(e.payer)).toLowerCase().includes(q));
+  const shown = rows.filter(e => (!selCat || isSel(e.category)) && (!fPay || e.payer === fPay) &&
+    (!fAcct || (e.account || '') === (fAcct === '-' ? '' : fAcct)) &&
+    (!q || ((e.note || '') + ' ' + catOf(e.category).name + ' ' + (e.account || '') + ' ' + who(e.payer) + ' ' + e.amount).toLowerCase().includes(q)));
+  const filtered = !!(selCat || fPay || fAcct || q);
   const sc = selCat && selCat !== DONUT_REST ? catOf(selCat) : null;
-  document.getElementById('l-items-h').textContent =
-    sc ? sc.icon + ' ' + sc.name : selCat ? 'Everything else' : 'Expenses';
-  document.getElementById('l-clear').classList.toggle('hide', !selCat);
+  document.getElementById('l-items-h').textContent = sc ? sc.icon + ' ' + sc.name : selCat ? 'Everything else' : filtered ? 'Filtered expenses' : 'Day by day';
+  document.getElementById('l-clear').classList.toggle('hide', !filtered);
+
+  const tot = sum(shown), p1 = sum(shown.filter(e => e.payer === 'p1')), p2 = sum(shown.filter(e => e.payer === 'p2'));
+  document.getElementById('l-sum').innerHTML = '<b>' + nz2(tot) + '</b><span>' + shown.length + ' expense' + (shown.length === 1 ? '' : 's') + '</span>' +
+    (!fPay && shown.length ? '<span><span class="pa">' + esc(PEOPLE.p1) + ' ' + nz2(p1) + '</span> · <span class="pb">' + esc(PEOPLE.p2) + ' ' + nz2(p2) + '</span></span>' : '');
+
   const groups = {};
   shown.forEach(e => (groups[e.spent_on] = groups[e.spent_on] || []).push(e));
-  const days = Object.keys(groups).sort().reverse();
-  document.getElementById('l-items').innerHTML = days.length ? days.map(d =>
-    '<div class="day"><span>' + fmtDay(d) + '</span><span>' + nz2(sum(groups[d])) + '</span></div>' +
-    groups[d].sort((a,b) => b.updated_at.localeCompare(a.updated_at)).map(e => itemHTML(e, true)).join('')
-  ).join('') : '<div class="empty">Nothing ' + label + '.</div>';
+  // every day in the period (up to today), newest first; empty days show up as gaps to check
+  let days = Object.keys(groups);
+  const start = R.from < '1000' ? (firstDay ? firstDay() : null) : R.from, end = R.to > t ? t : R.to;
+  if (!filtered && start && start <= end && dayDiff(start, end) < 400) for (let d = start; d <= end; d = addD(d, 1)) if (!groups[d]) days.push(d);
+  days = [...new Set(days)].sort().reverse();
+  const single = period === 'day';
+  document.getElementById('l-items').innerHTML = days.length ? days.map(d => {
+    const g = groups[d];
+    if (!g) return '<button class="dayempty" data-gday="' + d + '"><b>' + fmtDay(d) + '</b><span>Nothing logged — forgot something?</span></button>';
+    const a = sum(g.filter(e => e.payer === 'p1')), b = sum(g.filter(e => e.payer === 'p2'));
+    return '<button class="dayh" data-gday="' + d + '"' + (single ? ' disabled' : '') + '><span class="dd">' + fmtDay(d) + '<small>' + g.length + '×</small></span>' +
+      '<span class="dt">' + nz2(sum(g)) + (!fPay && a && b ? '<small><span class="pa">' + esc(PEOPLE.p1[0]) + ' ' + nz(a) + '</span> · <span class="pb">' + esc(PEOPLE.p2[0]) + ' ' + nz(b) + '</span></small>' : '') + '</span></button>' +
+      g.sort((x, y) => y.updated_at.localeCompare(x.updated_at)).map(e => itemHTML(e, true)).join('');
+  }).join('') : '<div class="empty">Nothing ' + esc(label) + (filtered ? ' with these filters' : '') + '.</div>';
 }
 
 
@@ -2074,21 +2144,23 @@ document.getElementById('l-wkcard').addEventListener('click', e => {
   const c = e.target.closest('[data-wkcat]'); if (c){ wkCat = c.dataset.wkcat; return renderList(); }
   const w = e.target.closest('[data-wk]'); if (!w) return;
   period = 'week'; pOff = Math.round(dayDiff(weekStart(todayISO()), w.dataset.wk) / 7);
-  document.querySelectorAll('#v-list .seg button').forEach(x => x.classList.toggle('sel', x.dataset.per === 'week'));
+  
   renderList(); document.getElementById('l-ins').scrollIntoView({behavior: 'smooth', block: 'start'});
 });
-document.querySelectorAll('#v-list .seg button').forEach(b =>
-  b.addEventListener('click', () => {
-    period = b.dataset.per; pOff = 0;
-    document.querySelectorAll('#v-list .seg button').forEach(x => x.classList.toggle('sel', x === b));
-    renderList();
-  }));
+document.querySelectorAll('#l-per button').forEach(b =>
+  b.addEventListener('click', () => { period = b.dataset.per; pOff = 0; renderList(); }));
+document.querySelectorAll('#l-mode button').forEach(b =>
+  b.addEventListener('click', () => { lMode = b.dataset.lmode; try { localStorage.setItem('kea-lmode', lMode); } catch {} renderList(); }));
+document.getElementById('v-list').addEventListener('change', e => { if (e.target.id === 'l-fcat'){ selCat = e.target.value || null; renderList(); } });
 // tap a slice or a category row to list just those expenses; tap it again for all
 document.getElementById('v-list').addEventListener('click', e => {
-  if (e.target.closest('#l-clear')){ selCat = null; return renderList(); }
+  if (e.target.closest('#l-clear')){ selCat = null; fPay = ''; fAcct = ''; const q = document.getElementById('l-q'); if (q) q.value = ''; return renderList(); }
+  const fp = e.target.closest('[data-fpay]'); if (fp){ fPay = fp.dataset.fpay; return renderList(); }
+  const fa = e.target.closest('[data-facct]'); if (fa){ fAcct = fa.dataset.facct; return renderList(); }
+  const gd = e.target.closest('[data-gday]'); if (gd && period !== 'day'){ period = 'day'; pOff = dayDiff(todayISO(), gd.dataset.gday); renderList(); window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   const b = e.target.closest('[data-cat]'); if (!b) return;
-  selCat = selCat === b.dataset.cat ? null : b.dataset.cat;
-  renderList();
+  // tapping a category in the overview opens the checked list for it
+  selCat = b.dataset.cat; lMode = 'check'; renderList(); window.scrollTo({top: 0, behavior: 'smooth'});
 });
 document.getElementById('see-all').addEventListener('click', () => show('list'));
 

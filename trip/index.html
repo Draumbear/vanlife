@@ -436,6 +436,14 @@ body{overflow-wrap:anywhere}.htab,.pill,.chip,.label,.tstrip,.ews,.bh,.dpc b{ove
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .reg{font:800 .95rem var(--display);margin:18px 0 0}
 .itemr{display:flex;align-items:center;gap:4px;padding-right:6px}
+.fcrline{display:grid;gap:2px;width:100%;text-align:left;border:1px solid var(--line);background:var(--fern-soft);color:var(--ink);border-radius:12px;padding:9px 12px;font:inherit;cursor:pointer}
+.fcrline small{color:var(--muted);font-size:.78rem}
+details.fcr{border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--card)}
+details.fcr summary{cursor:pointer;display:grid;gap:1px;list-style:none}details.fcr summary::-webkit-details-marker{display:none}
+details.fcr summary small{color:var(--muted);font-size:.78rem}
+details.fcr[open] summary{margin-bottom:6px}
+details.fcr ul{margin:0 0 8px;padding-left:18px;display:grid;gap:5px;font-size:.88rem}
+details.fcr.past{background:none}details.fcr.past details.fcr{margin-top:8px}
 .locpick{display:grid;gap:8px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--fern-soft)}
 .locpick .locstat{font-size:.88rem}.locpick .locbtns{display:flex;flex-wrap:wrap;gap:6px}
 .linkx{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:.82rem;cursor:pointer;padding:0 4px}
@@ -2523,6 +2531,7 @@ function openNight(d){const n=nightInfo(d),multi=n.stop&&stopDays(n.stop).length
     <label>Campsite<input name="camp" list="camp-names" value="${esc(n.camp)}" placeholder="Pick or type"></label>
     ${campChips(n.stop)}
     ${campList(n.stop)}
+    ${fcrLine(n.stop)}
     <div class="two"><label>Type<select name="campType">${typeOpts(CAMPTYPES,n.type)}</select></label><label>Note<input name="notes" value="${esc(n.notes)}" placeholder="Booking ref…"></label></div>
     <div id="n-loc" ${n.camp&&(!m0||hasLL(m0))?"hidden":""}><p class="muted" id="n-loc-h" style="margin:0 0 6px;font-size:.84rem">${m0?"📍 This campsite isn't on the map yet — add where it is:":"📍 New campsite? Add where it is so it shows on the map:"}</p>${locField(m0||{})}</div>
     ${multi?`<label class="check"><input type="checkbox" name="all"> All nights at ${esc(n.stop.name)}</label>`:""}
@@ -2796,6 +2805,7 @@ function openSettings(){
     :lastErr?`<span class="bad">Can't reach the database right now. It retries by itself.</span>`
     :`<span class="ok">✓ Shared${p?` · ${p} waiting`:""}</span>`;
   sheet(head("Settings")+`
+    <button type="button" class="fcrline" data-fcr=""><span>🚐 <b>Where can we sleep?</b></span><small>Freedom camping rules per region ›</small></button>
     <span class="label">Sharing</span>${status}
     <div id="s-sql" ${need?"":"hidden"} style="display:grid;gap:8px">
       <span style="font-size:.9rem">Copy this, paste it in <b>Supabase → SQL Editor</b> and press <b>Run</b>. Then tap Test.</span>
@@ -2983,6 +2993,125 @@ document.addEventListener("click",e=>{
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="yz-guest"){e.preventDefault();$('[data-yz="guest"]')?.click()}});
 /* faster sync while the sheet is open, so both phones can keep score live */
 setInterval(()=>{if(YZ.open&&document.visibilityState==="visible")sync(false)},6000);
+
+/* ================= where can we sleep: freedom camping rules per council, for a certified self-contained van ================= */
+const FCR_GEN=[
+  "From <b>7 June 2026</b> only the new <b>green warrant</b> counts as self-contained (toilet fixed to the floor, 3 days of water & waste). Old blue warrants and portable toilets no longer qualify. Keep the warrant card on show.",
+  "A <b>“No camping”</b> sign means no overnight camping within 200 m of it. “Self-contained vehicles only” = you're fine with the green warrant.",
+  "<b>DOC land:</b> generally allowed unless prohibited or restricted, but <b>not</b> in DOC scenic or recreation reserves (unless it's a DOC campsite). Standard DOC campsites are covered by our DOC campsite pass.",
+  "<b>Reserves</b> (parks, domains) are usually off-limits unless signposted as a camping site. Fines are around <b>$400</b>.",
+  "No fires, use dump stations for grey and black water, take rubbish with you."];
+const FCR=[
+ {id:"sdc",name:"Southland District",pts:[[-45.41,167.72],[-45.53,167.67],[-46.13,167.69],[-46.36,168.02],[-46.66,169.1],[-46.62,169.13],[-46.55,168.0]],
+  sum:"Designated free sites (Fortrose, Colac Bay/Oraka, Curio Bay, Waikawa…)",
+  items:["Camp at the council's <b>designated freedom camping sites</b>: e.g. Fortrose, Colac Bay/Oraka, Curio Bay, Waikawa, Riversdale, Wyndham, Balfour. Check each site's sign for the night limit.",
+    "Use the SDC interactive map to see every site.","DOC campsites in Fiordland and the Catlins are covered by the DOC pass."],
+  url:"https://southlanddc.govt.nz/services/freedom-camping/freedom-camping-locations/"},
+ {id:"icc",name:"Invercargill & Bluff",pts:[[-46.41,168.35],[-46.6,168.33],[-46.45,168.3]],
+  sum:"No designated freedom camping found: holiday parks only",
+  items:["We couldn't find any designated freedom camping in Invercargill City or Bluff, and the reserves policy says <b>no camping on reserves</b>.",
+    "Cheapest nearby: free Southland District sites at <b>Fortrose</b> (east) or <b>Colac Bay</b> (west), or Beach Road Holiday Park, Otatara."],
+  url:"https://icc.govt.nz/wp-content/uploads/2018/08/Policy-and-Amendment.pdf"},
+ {id:"cdc",name:"Clutha (north Catlins, Balclutha)",pts:[[-46.45,169.66],[-46.24,169.74],[-46.56,169.47],[-46.39,169.78],[-46.0,170.17],[-45.92,169.62]],
+  sum:"4 council sites: Owaka (SC, 2 nights), Toko Mouth, Lawrence, Black Gully",
+  items:["Council freedom camping sites: <b>Owaka</b> (Inn St, self-contained only, max 2 nights, 8 spots, dump station + water), <b>Toko Mouth Domain</b>, <b>Lawrence</b> (SH8, opposite the police station), <b>Black Gully Domain</b> (Heriot).",
+    "No camping in town centres or where there's a “No camping” sign. No fires, charcoal BBQs or generators.",
+    "DOC campsites in the Catlins (Purakaunui Bay, Tawanui, Papatowai) are covered by the DOC pass."],
+  url:"https://cluthadc.govt.nz/recreation/camping-in-clutha/where-to-camp-in-clutha"},
+ {id:"dcc",name:"Dunedin",pts:[[-45.87,170.5],[-45.85,170.65],[-45.6,170.68],[-45.72,170.59],[-45.94,170.36],[-45.78,170.72]],
+  sum:"SC: free on most council car parks, 2 nights each. Not on the Otago Peninsula",
+  items:["<b>Self-contained:</b> freedom camping is allowed on most <b>council parking land (gravel or sealed)</b> across Dunedin, max <b>2 nights in a row</b> per spot.",
+    "<b>Not on the Otago Peninsula</b>: there you can only stay in a licensed holiday park.",
+    "Council sites (also for non-self-contained, 2 days max, space limited): <b>Warrington Domain</b>, <b>Ocean View Reserve (Brighton)</b>, <b>Thomas Burns St car park</b> (open Nov–Apr).",
+    "Prohibited: Peter Johnstone Park. There are no DOC campsites in Dunedin City."],
+  url:"https://www.dunedin.govt.nz/resources/documents/services2/parks-and-reserves/freedom-camping/where-can-i-camp-in-dunedin/Where-Can-I-Camp-in-Dunedin-April-2024.pdf"},
+ {id:"wdc",name:"Waitaki (Oamaru, Moeraki, Omarama)",pts:[[-45.1,170.97],[-45.36,170.86],[-44.49,169.97],[-44.73,170.47],[-45.2,170.9]],
+  sum:"SC: many permitted areas, max 3 nights per area in 4 weeks",
+  items:["<b>Self-contained only.</b> Camping in a permitted area, max <b>3 nights in any 4 weeks</b>.",
+    "Prohibited areas are shaded blue on the council's freedom camping map, including much of the coast between <b>Oamaru and Kakanui</b>.",
+    "DOC land is generally fine (not at urupā or protected wildlife sites). Roadside outside houses or on private land needs permission. Non-self-contained = $200 fine."],
+  url:"https://www.waitaki.govt.nz/Facilities/Parks-and-Recreation/Freedom-camping/Freedom-camping-in-Waitaki"},
+ {id:"mdc",name:"Mackenzie (Twizel, Pukaki, Tekapo)",pts:[[-44.26,170.1],[-44.0,170.48],[-44.18,170.15],[-44.1,170.83],[-44.36,170.0]],
+  sum:"SC allowed on council land except Twizel/Tekapo centres; 3 nights max",
+  items:["<b>Self-contained only</b>, and <b>no tents anywhere</b> in the district. Allowed on council land unless prohibited or restricted.",
+    "<b>Prohibited:</b> Twizel town centre & open spaces, Tekapo township, Fairlie town centre.",
+    "<b>Restricted</b> (wider Twizel, wider Fairlie, Edwards Stream, Lake Opuha): max <b>3 nights in 30 days</b>, at least 500 m from where you camped before, 20 m from the lake shore.",
+    "Lake Opuha sites are closed 23 Dec – 2nd Monday in January.",
+    "<b>Lake Pukaki</b> lakeside is not in the council bylaw (LINZ/DOC land): follow the signs on site. Fines $400."],
+  url:"https://www.mackenzie.govt.nz/__data/assets/pdf_file/0004/828193/Responsible-Freedom-Camping-Bylaw-2023.pdf"},
+ {id:"aoraki",r:22,name:"Aoraki / Mt Cook National Park (DOC)",pts:[[-43.73,170.1],[-43.85,170.13]],
+  sum:"National park: sleep at White Horse Hill DOC campground",
+  items:["Inside the national park, use <b>White Horse Hill campground</b> (DOC, at the Hooker Valley trailhead). Check whether the DOC pass covers it.",
+    "Freedom camping inside the park isn't the plan: the nearest free options are on the Mackenzie side (follow signs at Lake Pukaki)."],
+  url:"https://www.doc.govt.nz/parks-and-recreation/things-to-do/camping/freedom-camping/"},
+ {id:"adc",name:"Ashburton (Mt Somers, Hakatere, Rakaia Gorge)",pts:[[-43.7,171.4],[-43.6,171.2],[-43.63,171.65],[-43.6,171.05],[-43.75,171.72],[-43.9,171.75],[-43.45,171.1]],
+  sum:"Cheap council camps: Rakaia Gorge $10 pp, Rakaia Huts $10 donation",
+  items:["<b>Self-contained only, overnight:</b> Taylor Stream, Bowyers Stream and Hinds River picnic areas (no drinking water).",
+    "<b>Rakaia Gorge campground:</b> $10 pp, hot showers included in season.",
+    "<b>Lake Clearwater:</b> basic reserve at the south end, honesty box. No dogs.",
+    "<b>Hakatere</b> campground (unattended, toilets) and <b>Mt Somers Domain</b> (book online). Rakaia Huts: $10 donation, max 2 nights.",
+    "Dump stations: Mt Somers Domain, Mayfield Domain, Methven recycling centre, East St Ashburton."],
+  url:"https://ashburtondc.govt.nz/community-facilities/council-campgrounds"},
+ {id:"selwyn",name:"Selwyn (Castle Hill, Lake Coleridge, Springfield)",pts:[[-43.2,171.7],[-43.33,171.93],[-43.36,171.53],[-43.55,172.3],[-43.08,171.75]],
+  sum:"Free council sites: Coes Ford, Chamberlains Ford, Lakeside, Whitecliffs, Harper Intake",
+  items:["Council freedom camping sites: <b>Coes Ford</b>, <b>Chamberlains Ford</b>, <b>Lakeside Domain</b>, <b>Whitecliffs Domain</b>, <b>Harper Intake</b> (Lake Coleridge). Follow each site's signs for limits.",
+    "No fires at any site. Empty tanks only at dump stations."],
+  url:"https://www.selwyn.govt.nz/recreation-And-facilities/camping-and-caravaning/freedom-camping"},
+ {id:"ap",r:22,name:"Arthur's Pass (DOC)",pts:[[-42.94,171.56],[-43.03,171.6],[-43.1,171.68]],
+  sum:"DOC campsites along SH73 (pass covers standard sites)",
+  items:["Use the DOC campsites along SH73 (e.g. Klondyke Corner, Andrews Shelter, Greyney's, Hawdon Shelter). The DOC campsite pass covers standard sites.",
+    "No freedom camping in DOC scenic reserves: follow the signs. Kea will investigate your van!"],
+  url:"https://www.doc.govt.nz/parks-and-recreation/things-to-do/camping/freedom-camping/"},
+ {id:"ccc",name:"Christchurch & Banks Peninsula",pts:[[-43.53,172.63],[-43.8,172.97],[-43.6,172.72],[-43.75,172.8]],
+  sum:"SC allowed in parts; no camping in the central city or Akaroa",
+  items:["Christchurch's Freedom Camping Bylaw 2021 <b>prohibits</b> freedom camping in the <b>central city</b> and <b>Akaroa</b>, and restricts it elsewhere on Banks Peninsula.",
+    "We couldn't confirm the night limits and sites. Check the council map or CamperMate before parking up."],
+  url:"https://ccc.govt.nz/freedom-camping-bylaw"},
+ {id:"buller",name:"Buller (Reefton, Springs Junction)",pts:[[-42.12,171.86],[-42.33,172.18],[-41.75,171.6]],
+  sum:"SC only; max 2 nights per spot, 9 nights a month",
+  items:["Only <b>certified self-contained</b> vans can freedom camp.",
+    "Max <b>2 nights in a row</b> in one place and 9 nights a month.",
+    "Not in Bridge St, Reefton, or in cemeteries. Reefton has <b>The Strand freedom camping area</b>.",
+    "The council is reviewing the rules in 2026, so watch for new signs."],
+  url:"https://bullerdc.govt.nz/recreation/freedom-camping/"},
+ {id:"lewis",name:"Lewis Pass & Lake Sumner (DOC)",pts:[[-42.39,172.4],[-42.48,172.25],[-42.72,172.33],[-42.6,172.5]],
+  sum:"DOC campsites (Marble Hill, Deer Valley); Hurunui rules on council land",
+  items:["Lewis Pass is mostly DOC land: use DOC campsites like <b>Marble Hill</b> (start of the Lake Daniell track) and <b>Deer Valley</b>.",
+    "No freedom camping in DOC scenic reserves. On Hurunui council land the Hurunui rules apply (SC, 2 nights per site)."],
+  url:"https://www.doc.govt.nz/parks-and-recreation/things-to-do/camping/freedom-camping/"},
+ {id:"hdc",name:"Hurunui (Hanmer Springs)",pts:[[-42.52,172.83],[-42.77,172.85],[-42.9,172.6]],
+  sum:"SC allowed across the district; Hanmer only at 3 sites; 2 nights max",
+  items:["<b>Self-contained</b> vans may camp across most of the district, max <b>2 nights per site in 30 days</b> (a site = within 500 m).",
+    "<b>Hanmer Springs village is prohibited</b> except: <b>River Reserve</b> (692 Hanmer Springs Rd, SC only, 10 vehicles), <b>War Memorial Hall carpark</b> (Cheltenham St, SC, 8pm–8am, 2 vehicles), <b>Chisholm Park carpark</b> (8pm–8am, 2 vehicles).",
+    "No camping on Hanmer forestry roads (Jacks Pass, Jollies Pass, Hossack, Hydro, Tophouse) or at the cemetery."],
+  url:"https://www.hurunui.govt.nz/repository/libraries/id:23wyoavbi17q9ssstcjd/hierarchy/Support_Services/Policies/Freedom%20Camping/Amended%20Freedom%20Camping%20Bylaw%202025.pdf"},
+ {id:"kdc",name:"Kaikōura",pts:[[-42.4,173.68],[-42.2,173.85],[-42.5,173.5]],
+  sum:"5 free designated sites, 1 night per spot in 4 weeks",
+  items:["Free designated sites, <b>max 1 night</b> in the same spot (within 500 m) in any 4 weeks. No tents.",
+    "<b>West End car park</b> (10), <b>Scarborough St</b> (20, fenced), <b>Jimmy Armers Beach</b> (6, max 7.5 m, leave by 7am), South End Railway Station carpark (6, <b>max 5 m: our van is 5.5 m</b>). Pōhowera/South Bay is closed until the end of February.",
+    "Prohibited: the town & Point Kean (except the sites above), the coast from South Bay to the Kowhai River, Mangamaunu (Kiwa Rd)."],
+  url:"https://www.kaikoura.govt.nz/rules-regs-licenses/responsible-camping"},
+ {id:"mdcm",name:"Marlborough (Picton, Blenheim)",pts:[[-41.29,174.0],[-41.51,173.96],[-41.5,173.83]],
+  sum:"SC-only council sites around Blenheim; none listed near Picton",
+  items:["Outside designated sites you generally need to be <b>certified self-contained</b> to camp on council land.",
+    "Sites: <b>Renwick Domain</b> (20, 2 nights, 6pm–9am), <b>Wynen St carpark</b> Blenheim (2 nights, 6pm–9am), <b>Taylor Dam Reserve</b> (10, 2 nights), Lansdowne Park (4, 1 night, Mon–Thu).",
+    "No designated sites near Picton: use a DOC camp or holiday park before the ferry. Fines from $400."],
+  url:"https://www.marlborough.govt.nz/recreation/responsible-camping/camping-in-marlborough"}];
+function fcrAt(p){if(!p||!hasLL(p))return null;let best=null,bd=1e9;for(const r of FCR)for(const [a,b] of r.pts){const d=hav(p,{lat:a,lng:b})/((r.r||45)/45);if(d<bd){bd=d;best=r}}return bd<=45?best:null}
+const fcrLine=st=>{const r=fcrAt(st);return r?`<button type="button" class="fcrline" data-fcr="${r.id}"><span>🚐 <b>Where can we sleep?</b> ${esc(r.name)}</span><small>${esc(r.sum)} ›</small></button>`:""};
+function openFcr(id){
+  /* trip order: councils in the order we reach them */
+  const t=today(),cur=id||fcrAt(stopFor(t)||currentStop())?.id,list=[];
+  const c0=FCR.find(r=>r.id===cur);if(c0)list.push(c0);
+  sortStops().filter(s=>(s.end||s.start)>t).forEach(s=>{const r=fcrAt(s);if(r&&!list.includes(r))list.push(r)});
+  const past=FCR.filter(r=>!list.includes(r));
+  const blk=r=>`<details class="fcr" ${r.id===cur?"open":""}><summary><b>${esc(r.name)}</b><small>${esc(r.sum)}</small></summary><ul>${r.items.map(x=>`<li>${x}</li>`).join("")}</ul><a href="${r.url}" target="_blank" rel="noopener" class="linkx">Council / DOC page ↗</a></details>`;
+  sheet(head("Where can we sleep?")+`<p class="muted" style="margin:0;font-size:.86rem">Freedom camping rules for our certified self-contained van, per council. Signs on site always win.</p>
+    <details class="fcr"><summary><b>Everywhere in NZ</b><small>green warrant, signs, DOC land</small></summary><ul>${FCR_GEN.map(x=>`<li>${x}</li>`).join("")}</ul></details>
+    ${list.map(blk).join("")}
+    ${past.length?`<details class="fcr past"><summary><b>Already behind us</b><small>${past.map(r=>esc(r.name)).join(" · ")}</small></summary>${past.map(blk).join("")}</details>`:""}
+    <p class="muted" style="font-size:.76rem;margin:0">Checked Nov 2026 from council & DOC pages. Rules change, so look for signs.</p>`,"fcr")}
+document.addEventListener("click",e=>{const b=e.target.closest?.("[data-fcr]");if(!b)return;e.preventDefault();e.stopPropagation();openFcr(b.dataset.fcr||undefined)},true);
 
 /* ================= events ================= */
 document.addEventListener("change",e=>{if(e.target.id==="placerecap"&&e.target.value){const v=e.target.value;e.target.value="";openTripRecap("place:"+v)}});

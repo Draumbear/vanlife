@@ -2351,7 +2351,7 @@ function wireLoc(f){const box=f.querySelector(".locpick");if(!box)return;const l
     if(mini&&p){if(pin)pin.setLatLng([p.lat,p.lng]);else pin=window.L.marker([p.lat,p.lng]).addTo(mini)}};
   const set=(lat,lng)=>{la.value=(+lat).toFixed(5);ln.value=(+lng).toFixed(5);show();if(mini)mini.setView([+lat,+lng],Math.max(mini.getZoom(),13))};
   const near=()=>{const s=stopFor(state.day||today())||currentStop();return la.value?{lat:+la.value,lng:+ln.value}:s&&hasLL(s)?s:{lat:-44,lng:170}};
-  const find=async q=>{const nm=q||f.querySelector("[name=name]")?.value.trim();if(!nm)return toast("Type a name first");
+  const find=async q=>{const nm=q||(f.querySelector("[name=name]")||f.querySelector("[name=camp]"))?.value.trim();if(!nm)return toast("Type a name first");
     res.innerHTML=`<p class="muted">Searching…</p>`;const c=near();let hits=[];
     try{const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(nm)}&limit=8&lat=${c.lat}&lon=${c.lng}&lang=en`);if(r.ok){const j=await r.json();
       hits=(j.features||[]).filter(x=>x.properties?.countrycode==="NZ"||x.properties?.country==="New Zealand").map(x=>({lat:x.geometry.coordinates[1],lng:x.geometry.coordinates[0],t:x.properties.name,s:[x.properties.city||x.properties.county,x.properties.state].filter(Boolean).join(", ")}))}}catch{}
@@ -2512,17 +2512,26 @@ function shiftNight(id,delta){
   else if(nx&&delta>0&&end>nx.start)return toast(`That overlaps ${nx.name}`);
   S.docs.stops[s.id]={...S.docs.stops[s.id],end};S.pending["stops/"+s.id]=1;
   persist();refresh();scheduleSync();openStop({id:s.id,...S.docs.stops[s.id]})}
-function openNight(d){const n=nightInfo(d),multi=n.stop&&stopDays(n.stop).length>1;
+const campByName=nm=>{nm=(nm||"").trim();return nm?state.camps.find(x=>sameCamp(x.name,nm)):null};
+/* a campsite typed in by hand gets a location too, so it lands on the map like any other place */
+function nightCampLoc(v){const nm=(v.camp||"").trim(),la=parseFloat(v.lat),lg=parseFloat(v.lng),p=isFinite(la)&&isFinite(lg)?{lat:la,lng:lg}:parseLL(v.loc);
+  delete v.lat;delete v.lng;delete v.loc;if(!nm||!p)return;const m=campByName(nm);
+  if(m){if(!hasLL(m)||m.lat!==p.lat||m.lng!==p.lng)patch("camps",m.id,{lat:p.lat,lng:p.lng,llok:true,llcheck:null,llfix:null,region:m.region||regionNear(p)})}
+  else add("camps",{name:nm,type:v.campType||"unknown",lat:p.lat,lng:p.lng,llok:true,region:regionNear(p)||"",notes:"",fav:false})}
+function openNight(d){const n=nightInfo(d),multi=n.stop&&stopDays(n.stop).length>1,m0=campByName(n.camp);
   sheet(head(`Sleeping · ${wd(d)} ${fmt(d)}`)+`
     <label>Campsite<input name="camp" list="camp-names" value="${esc(n.camp)}" placeholder="Pick or type"></label>
     ${campChips(n.stop)}
     ${campList(n.stop)}
     <div class="two"><label>Type<select name="campType">${typeOpts(CAMPTYPES,n.type)}</select></label><label>Note<input name="notes" value="${esc(n.notes)}" placeholder="Booking ref…"></label></div>
+    <div id="n-loc" ${n.camp&&(!m0||hasLL(m0))?"hidden":""}><p class="muted" id="n-loc-h" style="margin:0 0 6px;font-size:.84rem">${m0?"📍 This campsite isn't on the map yet — add where it is:":"📍 New campsite? Add where it is so it shows on the map:"}</p>${locField(m0||{})}</div>
     ${multi?`<label class="check"><input type="checkbox" name="all"> All nights at ${esc(n.stop.name)}</label>`:""}
     ${d<=today()?`<label class="check"><input type="checkbox" name="stayed" ${n.stayed?"checked":""}> ✓ We slept here</label>`:""}
     <label class="check"><input type="checkbox" name="flex" ${n.flex?"checked":""}> Flexible night (could move elsewhere)</label>
     <div class="end"><div>${n.override?`<button type="button" class="btn" id="reset">Reset</button>`:""}</div><div><button class="btn primary" type="submit">Save</button></div></div>`,"night",d);
-  const c=$("#form [name=camp]"),sync=()=>{const m=state.camps.find(x=>x.name===c.value);if(m)$("#form [name=campType]").value=m.type||"unknown"};c.addEventListener("change",sync);
+  const c=$("#form [name=camp]"),sync=()=>{const m=campByName(c.value);if(m)$("#form [name=campType]").value=m.type||"unknown";
+    const box=$("#n-loc");if(box){box.hidden=!c.value.trim()||!!(m&&hasLL(m));$("#n-loc-h").textContent=m?"📍 This campsite isn't on the map yet — add where it is:":"📍 New campsite? Add where it is so it shows on the map:"}};
+  c.addEventListener("change",sync);c.addEventListener("input",sync);
   $("#form").querySelectorAll("[data-pickcamp]").forEach(b=>b.onclick=()=>{c.value=b.dataset.pickcamp;sync()});
   const r=$("#reset");if(r)r.onclick=()=>{const was=n.camp;del("nights",d);syncStayCamp(was,d);closeSheet();toast("Reset")}}
 /* move one night (date d) to another stop; every stop in between shifts a day, with its plans and campsite picks */
@@ -2664,7 +2673,7 @@ $("#form").addEventListener("submit",e=>{
     keaWrite(keaRec(nx,meta));
     try{const k=keaLocal();if(k&&k.settings&&meta.account){k.settings.lastAccount=meta.account;localStorage.setItem(KEA_LS,JSON.stringify(k))}}catch{}
     closeSheet();toast(`Logged ${nzd(amt)} in Kea`);return}
-  if(type==="night"){const oldCamp=nightInfo(id).camp;
+  if(type==="night"){const oldCamp=nightInfo(id).camp;nightCampLoc(v);
     if(v.all){const s=stopFor(id);patch("stops",s.id,{camp:v.camp,campType:v.campType});stopDays(s).forEach(d=>{const o=S.docs.nights[d];if(!o)return;if(o.flex&&d!==id)put("nights",d,{camp:v.camp,campType:v.campType,notes:"",flex:true,...(o.stayed?{stayed:true}:{})});else setNight(d,v.camp,v.campType,"",false)});setNight(id,v.camp,v.campType,v.notes,!!v.flex,id<=today()?!!v.stayed:undefined)}
     else setNight(id,v.camp,v.campType,v.notes,!!v.flex,id<=today()?!!v.stayed:undefined);
     syncStayCamp(v.camp,id);if(!sameCamp(oldCamp,v.camp))syncStayCamp(oldCamp,id);
